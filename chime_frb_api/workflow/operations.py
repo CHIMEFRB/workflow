@@ -9,8 +9,8 @@ from jwt import decode
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_exponential
 
 from chime_frb_api.core import API
-from chime_frb_api.modules.bucket import Bucket
-from chime_frb_api.tasks import Work
+from chime_frb_api.modules.buckets import Buckets
+from chime_frb_api.workflow import Work
 
 log = logging.getLogger(__name__)
 
@@ -20,13 +20,14 @@ class Tasks:
 
     def __init__(self, debug: bool = False, **kwargs):
         debug = True
-        kwargs = {"base_url": "http://localhost:4357/buckets", "authentication": False}
-        self.buckets = Bucket(debug=debug, **kwargs)
+        #kwargs = {"base_url": "http://localhost:4357/buckets", "authentication": False}
+        kwargs = {"authentication": False, "base_url": "http://0.0.0.0:8000"}
+        self.buckets = Buckets(debug=debug, **kwargs)
 
-    @retry(
-        stop=(stop_after_delay(30) | stop_after_attempt(3)),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-    )
+    #@retry(
+    #    stop=(stop_after_delay(30) | stop_after_attempt(3)),
+    #    wait=wait_exponential(multiplier=1, min=2, max=10),
+    #)
     def deposit(self, work: Work):
         """Deposit a work object into the bucket."""
         # Check if the user is defined
@@ -39,14 +40,22 @@ class Tasks:
         # If this is the first deposit, add work to the Tasks Database
         if not work.id:
             work.id = self.write(work)
-        work.status = "queued"
 
-        status = self.buckets.deposit(
-            work=work.payload,
-        )
+        status = self.buckets.deposit([work.payload])
 
+        # ISSUE: I am changing the status here, but buckets is supposed to handle that.
+        #
+        # But, since I don't have the work object that is in the buckets
+        # state machine here, and since I want to write it to the Tasks DB with
+        # the correct status, I am setting it here.
+        #
+        # I anticipate this will change depending on how the Tasks/Results w/e
+        # DB is implemented.
         if status == False:
             work.status = "failure"
+        else:
+            work.status = "queued"
+
         self.modify(work) # modify is update in the Tasks DB, to be implemented
 
     def deposit_many(self, pipeline: str, works: List[Work]):
@@ -79,6 +88,10 @@ class Tasks:
         payload = self.buckets.withdraw(
             pipeline=pipeline,
         )
+
+        if payload is None:
+            return None
+
         work = Work.from_dict(payload)
 
         # TODO: create a work.introspect() to do the
@@ -110,25 +123,27 @@ class Tasks:
         # Override site with TASK_SITE if env variable exists
         work.site = os.environ.get("TASK_SITE", work.site)
 
-        # Set status to "running"
-        work.status = "running"
         self.modify(work)
 
         return work
 
-    def complete(self, work: Work):
-        """[summary]
+    def update(self, work: Work, status="success"):
+        """Update work that has been completed.
 
         Parameters
         ----------
         work : Work
-            [description]
+            Work object whose status is being updated.
+        status : str, optional
+            Status of work after completion, either "success" or "failure", 
+            by default "success"
         """
-        # anything else complete needs to do other than change status?
-        # are we assuming the work is a success?? what if it fails?
-        # do we need a fail(Work) method for people to use?
-        work.status = "success" 
-        self.buckets.update(work.payload)
+
+        # Set work status to either "success" or "failure"
+        assert status in ["success", "failure"]
+        work.status = status
+        self.buckets.update([work.payload])
+        
         self.modify(work)
 
     ### Tasks DB operations

@@ -95,13 +95,14 @@ class Work:
         default=None, validator=optional(instance_of(dict))
     )
     # Results of the work performed.
-    # Set automatically by @make_pipeline decorator.
+    # Set automatically by @pipeline decorator.
     # Can also be set manually by user.
     results: Optional[Dict[Any, Any]] = attrib(
         default=None, validator=optional(instance_of(dict))
     )
     # Base data directory where the pipeline will store its data.
     # Overwritten automatically by tasks.fetch() when default.
+    # Value sourced from environment variable TASK_PATH.
     # Can also be set manually by user.
     path: str = attrib(default=".", validator=instance_of(str))
     # Name of the CHIME/FRB Event the work was performed against.
@@ -111,12 +112,15 @@ class Work:
     )
     # Searchable tags for the work.
     # Set by user.
+    # Automatically appended by tasks.fetch() for each unique tag.
+    # Value sourced from environment variable TASK_TAGS.
     tags: Optional[List[str]] = attrib(
         default=None, validator=optional(instance_of(list))
     )
     # Name of the working group responsible for managing the work.
-    # Automatically overwritten by tasks.fetch()
+    # Automatically overwritten by tasks.fetch() when default.
     # Can be set manually by user.
+    # Value sourced from environment variable TASK_GROUP.
     group: Optional[str] = attrib(default=None, validator=optional(instance_of(str)))
     # Timeout in seconds in which the work needs to be completed.
     # Defaults to 3600 seconds (1 hour).
@@ -175,6 +179,7 @@ class Work:
     stop: Optional[float] = attrib(default=None, validator=optional(instance_of(float)))
     # Configuration of the pipeline used to perform the work.
     # Automatically overwritten by tasks.fetch()
+    # Value sourced from environment variable TASK_CONFIG.
     config: Optional[str] = attrib(default=None, validator=optional(instance_of(str)))
     # Numbered attempt at performing the work.
     # Cannot be set manually.
@@ -188,6 +193,7 @@ class Work:
     status: str = attrib(default="created", validator=(in_(STATUSES)))
     # Name of the site where pipeline was executed.
     # Automatically overwritten by tasks.fetch()
+    # Value sourced from environment variable TASK_SITE.
     site: str = attrib(default="local", validator=in_(SITES))
     # Name of the user who submitted the work.
     # Set by tasks.deposit() and based on the access token.

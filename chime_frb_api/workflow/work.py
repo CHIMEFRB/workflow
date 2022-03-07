@@ -1,12 +1,16 @@
 """Work Object."""
 
 from json import dumps, loads
+from os import environ
 from time import time
 from typing import Any, Dict, List, Optional
 
 from attr import asdict, attrib, attrs
 from attr.setters import validate
 from attr.validators import in_, instance_of, optional
+from jwt import decode
+
+from chime_frb_api.modules.buckets import Buckets
 
 # Validator for the Work.site attribute.
 PRIORITIES = range(1, 6)
@@ -16,70 +20,48 @@ SITES = ["chime", "allenby", "gbo", "hatcreek", "canfar", "cedar", "local"]
 
 @attrs(auto_attribs=True, slots=True, on_setattr=validate)  # type: ignore
 class Work:
-    """Work Object.
+    """The Work Object.
 
-    Parameters
-    ----------
-        pipeline : str
-            Name of the pipeline. Required.
-        parameters : Optional[Dict[str, Any]]
-            Parameters to pass to the pipeline. None by default.
-        results : Optional[Dict[str, Any]]
-            Results from the pipeline. None by default.
-        path : str
-            Base data path where the results will be stored. "." by default.
-        events : Optional[List[int]]
-            List of CHIME/FRB event numbers related to work. None by default.
-        tags : Optional[List[str]]
-            List of searchable tags related to work. None by default.
-        group : Optional[str]
-            Name of the working group. None by default.
-        timeout : int
-            Timeout in seconds. 3600 by default.
-        priority : int
-            Priority of the work. Ranges from 1(lowest) to 5(highest).
-            3 by default.
-        precursors : Optional[List[Dict[str, str]]]
-            List of precursors work ids used as input. None by default.
-        products : Optional[List[str]]
-            Data products produced by the work. None by default.
-        plots : Optional[List[str]]
-            Plot files produced by the work. None by default.
-        id : Optional[str]
-            Work ID. Created when work is entered in the database. None by default.
-        creation: float
-            Unix timestamp of when the work was created. time.time() by default.
-        start : Optional[float]
-            Start time of the work. None by default.
-        stop : Optional[float]
-            Stop time of the work. None by default.
-        attempt: int
-            Attempt number at performing the work. 0 by default.
-        retries: int
-            Number of tries before the work is considered failed. 1 by default.
-        config : Optional[str]
-            Configuration ID of the pipeline. None by default.
-        status : str
-            Status of the work. "created" by default.
-            Valid values: "created", "queued", "running", "success", "failure"
-        site : str
-            Site where the work is being run. "local" by default.
-        user : Optional[str]
-            User who submitted the work. None by default.
-        archive : bool
-            Whether or not to archive the work. True by default.
+    Example:
+        >>> from chime_frb_api.workflow.work import Work
+        >>> work = Work(pipeline="test",)
+        >>> work.deposit()
 
-    Raises
-    ------
-        TypeError
-            If any of the parameters are not of the correct type.
-        ValueError
-            If any of the parameters are not of the correct value.
+    Args:
+        pipeline (str): Pipeline name. Required.
+        parameters (Optional[Dict[str, Any]]): Parameters for the pipeline.
+        results (Optional[Dict[str, Any]]): Results from the pipeline.
+        path (str): Path to the save directory. Defaults to ".".
+        event (Optional[List[int]]): Event IDs processed by the pipeline.
+        tags (Optional[List[str]]): Tags for the work. Defaults to None.
+        group (Optional[str]): Working group for the work. Defaults to None.
+        timeout (int): Timeout in seconds. 3600 by default.
+        priority (int): Priority of the work. Ranges from 1(lowest) to 5(highest).
+            Defaults to 3.
+        precursors(Optional[List[Dict[str, str]]]): List of previous works used as input.
+            None by default.
+        products (Optional[List[str]]): Data products produced by the work.
+        plots (Optional[List[str]]) Plot files produced by the work.
+        id (Optional[str]): Work ID. Created when work is entered in the database.
+        creation (Optional[float]): Unix timestamp of when the work was created.
+            If none, set to time.time() by default.
+        start (Optional[float]): Unix timestamp of when the work was started.
+        stop (Optional[float]): Unix timestamp of when the work was stopped.
+        attempt (int): Attempt number at performing the work. 0 by default.
+        retries (int): Number of retries before giving up. 1 by default.
+        config (Optional[str]): Configuration of the container used to run the work.
+        status (str): Status of the work.
+            One of "created", "queued", "running", "success", or "failure".
+        site (str): Site where the work was performed. "local" by default.
+        user (Optional[str]): User ID of the user who performed the work.
+        archive(bool): Whether or not to archive the work. True by default.
 
-    Returns
-    -------
-        work : Work
-            Work object.
+    Raises:
+        TypeError: If any of the arguments are of the wrong type.
+        ValueError: If any of the arguments are of the wrong value.
+
+    Returns:
+        Work: Work object.
     """
 
     ###########################################################################
@@ -90,19 +72,18 @@ class Work:
     ###########################################################################
     # Optional attributes provided by the user.
     ###########################################################################
-    # Parameters to pass the pipeline. Set by user.
+    # Parameters to pass the pipeline function. Set by user.
     parameters: Optional[Dict[str, Any]] = attrib(
         default=None, validator=optional(instance_of(dict))
     )
-    # Results of the work performed.
-    # Set automatically by @make_pipeline decorator.
+    # Results of the work performed. Set automatically by @pipeline decorator.
     # Can also be set manually by user.
     results: Optional[Dict[Any, Any]] = attrib(
         default=None, validator=optional(instance_of(dict))
     )
     # Base data directory where the pipeline will store its data.
-    # Overwritten automatically by tasks.fetch() when default.
-    # Can also be set manually by user.
+    # Overwritten automatically by work.withdraw() if `.` from  environment
+    # variable WORK_PATH. Can also be set manually by user.
     path: str = attrib(default=".", validator=instance_of(str))
     # Name of the CHIME/FRB Event the work was performed against.
     # Set by user.
@@ -111,11 +92,14 @@ class Work:
     )
     # Searchable tags for the work.
     # Set by user.
+    # Automatically appended by work.withdraw() for each unique tag.
+    # Value sourced from environment variable TASK_TAGS.
     tags: Optional[List[str]] = attrib(
         default=None, validator=optional(instance_of(list))
     )
     # Name of the working group responsible for managing the work.
-    # Automatically overwritten by tasks.fetch()
+    # Automatically overwritten by work.withdraw() when None.
+    # Sourced from environment variable WORK_GROUP.
     # Can be set manually by user.
     group: Optional[str] = attrib(default=None, validator=optional(instance_of(str)))
     # Timeout in seconds in which the work needs to be completed.
@@ -131,17 +115,15 @@ class Work:
     # Default is 1.
     priority: int = attrib(default=3, validator=in_(PRIORITIES))
     # Key, Value ("pipeline-name",id) pairs identifying previous works,
-    # used as inputs to the current work.
-    # Automatically appended whenever results.get() from ResultsAPI is called.
-    # Can also be set manually by user.
+    # used as inputs to the current work. Automatically appended whenever
+    # results.get() from Results API is called. Can also be set manually by user.
     precursors: Optional[List[Dict[str, str]]] = attrib(
         default=None, validator=optional(instance_of(list))
     )
     # Name of the non-human-readable data products generated by the pipeline.
     # Relative path from the current working directory.
-    # When saving the data products, the TasksAPI will autommatically move them
-    # to path + relative path.
-    # Set by user.
+    # When saving the data products, the Work API will autommatically move them
+    # to path + relative path. Set by user.
     products: Optional[List[str]] = attrib(
         default=None, validator=optional(instance_of(list))
     )
@@ -165,17 +147,20 @@ class Work:
         default=None, validator=optional(instance_of(float))
     )
     # Time when work was started, in seconds since the epoch.
-    # Automatically set by task.fetch()
+    # Automatically set by the buckets backend.
     start: Optional[float] = attrib(
         default=None, validator=optional(instance_of(float))
     )
     # Stop time of the work, in seconds since the epoch.
     # If the work is still running, this will be None.
-    # Automatically set by tasks.complete().
+    # Automatically set by the buckets backend.
     stop: Optional[float] = attrib(default=None, validator=optional(instance_of(float)))
     # Configuration of the pipeline used to perform the work.
-    # Automatically overwritten by tasks.fetch()
-    config: Optional[str] = attrib(default=None, validator=optional(instance_of(str)))
+    # Automatically overwritten by work.withdraw()
+    # Value sourced from environment variable WORK_CONFIG.
+    config: Optional[str] = attrib(
+        default=environ.get("WORK_CONFIG", None), validator=optional(instance_of(str))
+    )
     # Numbered attempt at performing the work.
     # Cannot be set manually.
     attempt: int = attrib(default=0, validator=instance_of(int))
@@ -183,16 +168,19 @@ class Work:
     # Default is "created"
     # Automatically set by the buckets backend at
     #   work.deposit to queued
-    #   Work.withdraw(pipeline="name") to running
-    #   work.finish(status=True|False) to success | failure
+    #   Work.withdraw(...) to running
+    # Set by the pipelines decorator to "success" or "failure"
+    # Can be set manually by user.
     status: str = attrib(default="created", validator=(in_(STATUSES)))
     # Name of the site where pipeline was executed.
-    # Automatically overwritten by tasks.fetch()
-    site: str = attrib(default="local", validator=in_(SITES))
+    # Automatically overwritten by Work.withdraw(...)
+    # Value sourced from environment variable WORK_SITE.
+    site: str = attrib(default=environ.get("WORK_SITE", "local"), validator=in_(SITES))
     # Name of the user who submitted the work.
-    # Set by tasks.deposit() and based on the access token.
+    # Set by work.deposit() and based on the access token.
+    # Can be set manually by user.
     user: Optional[str] = attrib(default=None, validator=optional(instance_of(str)))
-    # Whether the work will be archived after completion.
+    # Whether the work will be archived in the Results Backend after completion.
     #  Default is True.
     archive: bool = attrib(default=True, validator=instance_of(bool))
 
@@ -219,6 +207,20 @@ class Work:
         """Set default values for the work attributes."""
         if not self.creation:
             self.creation = time()
+        if self.path == ".":
+            self.path = environ.get("WORK_PATH", self.path)
+        # Update group from WORK_GROUP.
+        if not self.group:
+            self.group = environ.get("WORK_GROUP", self.group)
+        # Update tags from WORK_TAGS.
+        if environ.get("WORK_TAGS"):
+            tags = environ.get("WORK_TAGS").split(",")
+            # If tags are already set, append the new ones.
+            if self.tags:
+                self.tags.append(tags)
+            else:
+                self.tags = tags
+            self.tags = list(set(self.tags))
 
     ###########################################################################
     # Work methods
@@ -226,22 +228,44 @@ class Work:
 
     @property
     def payload(self) -> Dict[str, Any]:
-        """Return dictionary representation of the work object."""
+        """Return the dictioanary representation of the work.
+
+        Returns:
+            Dict[str, Any]: The payload of the work.
+        """
         return asdict(self)
 
     @property
     def json(self) -> str:
-        """Return json representation of the work object."""
+        """Return the json representation of the work.
+
+        Returns:
+            str: The json representation of the work.
+        """
         return dumps(self.payload)
 
     @classmethod
     def from_json(cls, json_str: str) -> "Work":
-        """Return Work object created from json string."""
+        """Create a work from a json string.
+
+        Args:
+            json_str (str): The json string.
+
+        Returns:
+            Work: The work.
+        """
         return cls(**loads(json_str))
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "Work":
-        """Return Work object created from dictionary."""
+        """Create a work from a dictionary.
+
+        Args:
+            payload (Dict[str, Any]): The dictionary.
+
+        Returns:
+            Work: The work.
+        """
         return cls(**payload)
 
     ###########################################################################
@@ -249,14 +273,63 @@ class Work:
     ###########################################################################
 
     @classmethod
-    def fetch(cls, pipeline: str) -> "Work":
-        """Fetch work from task queue and return a work object."""
-        pass
+    def withdraw(cls, pipeline: str, **kwargs: Dict[str, Any]) -> Optional["Work"]:
+        """Withdraw work from the buckets backend.
 
-    def deposit(self) -> bool:
-        """Deposits work payload into the task queue."""
-        pass
+        Args:
+            pipeline (str): Name of the pipeline.
+            **kwargs (Dict[str, Any]): Keyword arguments for the Buckets API.
 
-    def complete(self, status: str) -> bool:
-        """Complete work."""
-        pass
+        Returns:
+            Work: Work object.
+        """
+        buckets = Buckets(**kwargs)  # type: ignore
+        payload = buckets.withdraw(pipeline)
+        if payload:
+            return cls.from_dict(payload)
+        return None
+
+    def deposit(self, **kwargs: Dict[str, Any]) -> bool:
+        """Deposit work to the buckets backend.
+
+        Args:
+            **kwargs (Dict[str, Any]): Keyword arguments for the Buckets API.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        buckets = Buckets(**kwargs)  # type: ignore
+        token = buckets.access_token
+        if token:
+            # Try and decode the token for the user.
+            try:
+                self.user = decode(token, options={"verify_signature": False}).get(
+                    "user_id", None
+                )
+            except Exception:
+                pass
+        return buckets.deposit([self.payload])
+
+    def update(self, **kwargs: Dict[str, Any]) -> bool:
+        """Update work in the buckets backend.
+
+        Args:
+            **kwargs (Dict[str, Any]): Keyword arguments for the Buckets API.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        buckets = Buckets(**kwargs)  # type: ignore
+        return buckets.update([self.payload])
+
+    def delete(self, **kwargs: Dict[str, Any]) -> bool:
+        """Delete work from the buckets backend.
+
+        Args:
+            ids (List[str]): List of ids to delete.
+
+        Returns:
+            bool: True if successful, False otherwise.
+        """
+        buckets = Buckets(**kwargs)  # type: ignore
+        return buckets.delete_ids([str(self.id)])

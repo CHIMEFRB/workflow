@@ -3,32 +3,82 @@
 import logging
 from time import sleep
 from functools import wraps
-from multiprocess import Process, Pipe
+from multiprocessing import Process, Pipe
+from typing import Callable, Tuple, Dict, Any, List
 
 from .work import Work
+
 
 # Configure logger
 LOGGING_FORMAT = "[%(asctime)s] %(levelname)s %(message)s"
 logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def do_work(user_func, work):
-    """ Execute user func, track timeouts & update work """
-    
-    def apply_func(connection, func, *args, **kwargs):
-        """ Executes in child process & pipes results back """
+
+FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
+
+
+def pipeline(name: str, func: FUNC_TYPE, lifetime: int = -1) -> None:
+    """
+    Runs user function on work fetched from the appropriate queue (see buckets
+    api).  Success/failure are logged and handled; results and dataproduct paths
+    are propagated.
+
+    Parameters
+    ----------
+        name : str
+            The pipeline name associated with the work to be processed (e.g.
+            dm-pipeline, fitburst, fluence)
+
+        func : Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
+            User function, returning (results, products, plots), called using
+            parameters contained in the work object.
+
+        lifetime : int
+            Number of work items to process before exiting.
+            Default is -1 (run indefinitely).
+
+    """
+
+    while lifetime != 0:
+        work = Work.withdraw(pipeline=name)
+        attempt_work(func, work)
+        lifetime -= 1
+
+    return
+
+
+def attempt_work(user_func: FUNC_TYPE, work: "Work"):
+    """
+    Execute user func as a child process, terminating after work.timeout (s).
+    Logs and propagates success/failure status. If work.retries > 0, another
+    attempt is triggered.
+
+    Parameters
+    ----------
+        user_func : Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
+            Should return (results, products, plots). Called with
+            work.parameters.
+
+        work :
+            chime_frb_api.workflow.Work object
+
+    """
+
+    def apply_func(connection, func, **kwargs):
+        """Executes in child process & pipes results back"""
         connection.send(func(**kwargs))
         connection.close()
 
     receiver, sender = Pipe()  # used to pipe results back to parent
 
     process = Process(
-            target=apply_func,
-            args=(sender, user_func),
-            kwargs=work.parameters)
+        target=apply_func, args=(sender, user_func), kwargs=work.parameters
+    )
 
+    work.attempt += 1
     process.start()
-    process.join(work.timeout)
+    process.join(work.timeout if work.timeout > 0 else None)
 
     if process.is_alive():
         process.terminate()
@@ -52,38 +102,16 @@ def do_work(user_func, work):
         logger.error("user func output doesn't match chime/frb standard")
     elif process.exitcode is None:
         logger.error("user func timed out")
+    elif process.exitcode is not 0:
+        logger.error("user func raised an error")
     else:
         logger.info("user func was successful")
 
     work.update()
 
+    if work.status == "failure" and work.retries >= 0:
+        work.retries -= 1
+        sleep(10)
+        do_work(user_func, work)
 
-def pipeline(name=None, lifetime=-1, retry=True):
-    def _decorator(user_func):
-        @wraps(user_func)  # propagates func name & doc-string
-        def _wrapper(*args, **kwargs):
-            
-            if name is None:
-                logger.info("Ignoring decorator (no pipeline name given)")
-                return user_func(*args, **kwargs)
-
-            completed = 0
-            retrying = False
-
-            while True:
-
-                if retrying is False:
-                    work = Work.withdraw(pipeline=name)
-
-                do_work(user_func, work)
-                
-                retrying = work.status == "failure" and retry
-                if retrying:
-                    sleep(10)
-
-                completed += 0 if retrying else 1
-                if lifetime > 0 and completed >= lifetime:
-                    break
-
-        return _wrapper
-    return _decorator
+    return

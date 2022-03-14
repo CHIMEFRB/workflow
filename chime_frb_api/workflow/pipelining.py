@@ -48,17 +48,17 @@ def pipeline(name: str, func: FUNC_TYPE, lifetime: int = -1) -> None:
     return
 
 
-def attempt_work(user_func: FUNC_TYPE, work: "Work"):
+def attempt_work(user_func: FUNC_TYPE, work: Work):
     """
     Execute user func as a child process, terminating after work.timeout (s).
-    Logs and propagates success/failure status. If work.retries > 0, another
-    attempt is triggered.
+    Logs and propagates success/failure status.
 
     Parameters
     ----------
         user_func : Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
-            Should return (results, products, plots). Called with
-            work.parameters.
+            Function returns (results, products, plots) tuple.  'results' is a
+            generic dictionary, while 'products' and 'plots' are lists of paths.
+            Executed as user_func(**work.parameters)
 
         work :
             chime_frb_api.workflow.Work object
@@ -108,10 +108,4 @@ def attempt_work(user_func: FUNC_TYPE, work: "Work"):
         logger.info("user func was successful")
 
     work.update()
-
-    if work.status == "failure" and work.retries >= 0:
-        work.retries -= 1
-        sleep(10)
-        do_work(user_func, work)
-
     return

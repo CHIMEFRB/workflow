@@ -1,8 +1,7 @@
-""" Pipeline any method to be compatible with Tasks API. """
+""" Fetch and process Work using any method compatible with Tasks API. """
 
+import click
 import logging
-import argparse
-import textwrap
 from time import sleep
 from importlib import import_module
 from multiprocessing import Process, Pipe
@@ -20,55 +19,43 @@ logger = logging.getLogger(__name__)
 FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
 
 
-def main():
+@click.command()
+@click.argument("bucket")
+@click.argument("func")
+@click.option(
+    "--lifetime",
+    default=-1,
+    help="Work to do before exiting [default: -1 (forever)]",
+)
+def main(bucket, func, lifetime):
+    """
+    Fetches and attempts to process Work with user function,
+    propagating success/failure status and results.
 
-    parser = argparse.ArgumentParser(
-        prog="python -m chime_frb_api.workflow.pipeline",
-        description="(Continually) run user func as a pipeline",
-        formatter_class=argparse.RawTextHelpFormatter,
-    )
+    BUCKET is the labelled priority queue work is withdrawn from.
 
-    parser.add_argument(
-        "name",
-        metavar="NAME",
-        type=str,
-        help="pipeline name / bucket where work object is fetched from",
-    )
+    \b
+    FUNC   is a pythonic module & function path (e.g. time.sleep),
+           and is called with **work.parameters.
 
-    parser.add_argument(
-        "func",
-        metavar="FUNC",
-        type=str,
-        help="user function, called with work.parameters",
-    )
-
-    parser.add_argument(
-        "--lifetime",
-        default=-1,
-        type=int,
-        help=textwrap.dedent(
-            """\
-            number of work items to process before exiting
-            default is -1 (run indefinitely)"""
-        ),
-    )
-
-    args = parser.parse_args()
+    """
 
     try:
-        m, f = args.func.rsplit(".", 1)
+        m, f = func.rsplit(".", 1)
         module = import_module(m)
         function = getattr(module, f)
+    except ValueError:
+        logger.error("Use 'package.module.function' formatting for FUNC.")
+        return
     except ModuleNotFoundError:
         logger.error("Could not find module '%s'" % m)
         return
     except AttributeError:
-        logger.error("Could not find function '%s'" % f)
+        logger.error("Could not find function '%s' in module '%s'" % (f, m))
         return
 
-    lifetime = args.lifetime
     while lifetime != 0:
-        _ = attempt_work(args.name, function)
+        _ = attempt_work(bucket, function)
         lifetime -= 1
 
     return
@@ -76,7 +63,7 @@ def main():
 
 def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     """
-    Fetches 'work' object from appropriate pipeline bucket, then calls
+    Fetches 'work' object from appropriate bucket, then calls
     user_func(**work.parameters) in a child process, terminating after
     work.timeout (s). Sets results and success/failure status in work
     object, and then calls work.update().

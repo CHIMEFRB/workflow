@@ -20,23 +20,23 @@ FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
 
 
 @click.command()
-@click.argument("bucket")
+@click.argument("pipeline")
 @click.argument("func")
 @click.option(
     "--lifetime",
     default=-1,
     help="Work to do before exiting [default: -1 (forever)]",
 )
-def main(bucket, func, lifetime):
+def main(pipeline, func, lifetime):
     """
     Fetches and attempts to process Work with user function,
     propagating success/failure status and results.
 
-    BUCKET is the labelled priority queue work is withdrawn from.
+    PIPELINE is the labelled priority queue work is withdrawn from.
 
     \b
-    FUNC   is a pythonic module & function path (e.g. time.sleep),
-           and is called with **work.parameters.
+    FUNC     is a pythonic module & function path (e.g. time.sleep),
+             and is called with **work.parameters.
 
     """
 
@@ -55,7 +55,7 @@ def main(bucket, func, lifetime):
         return
 
     while lifetime != 0:
-        _ = attempt_work(bucket, function)
+        _ = attempt_work(pipeline, function)
         lifetime -= 1
 
     return
@@ -63,7 +63,7 @@ def main(bucket, func, lifetime):
 
 def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     """
-    Fetches 'work' object from appropriate bucket, then calls
+    Fetches 'work' object from appropriate pipeline, then calls
     user_func(**work.parameters) in a child process, terminating after
     work.timeout (s). Sets results and success/failure status in work
     object, and then calls work.update().
@@ -71,7 +71,7 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     Parameters
     ----------
     name : str
-        Specifies the bucket that the work object will be fetched from
+        Specifies the pipeline that the work object will be fetched from
         (e.g. dm-pipeline, fitburst, fitburst-some-dev-branch).
 
     user_func : Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]

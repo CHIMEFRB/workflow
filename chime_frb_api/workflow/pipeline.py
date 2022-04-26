@@ -66,6 +66,7 @@ def main():
         logger.error("Could not find function '%s'" % f)
         return
 
+    lifetime = args.lifetime
     while lifetime != 0:
         _ = attempt_work(args.name, function)
         lifetime -= 1

@@ -9,34 +9,32 @@ from typing import Callable, Tuple, Dict, Any, List
 
 from chime_frb_api.workflow import Work
 
-
 # Configure logger
 LOGGING_FORMAT = "[%(asctime)s] %(levelname)s %(message)s"
 logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
 
 
-@click.command()
-@click.argument("pipeline")
-@click.argument("func")
+@click.command("run", short_help="Execute user function on Work objects")
+@click.argument("pipeline", type=str)
+@click.argument("func", type=str)
 @click.option(
     "--lifetime",
+    type=int,
     default=-1,
     help="Work to do before exiting [default: -1 (forever)]",
 )
-def main(pipeline, func, lifetime):
+def run(pipeline, func, lifetime):
     """
-    Fetches and attempts to process Work with user function,
-    propagating success/failure status and results.
+    Withdraws Work object from appropriate bucket/pipeline,
+    attempts to execute "func(**work.parameters)",
+    then updates results and success/failure status.
 
-    PIPELINE is the labelled priority queue work is withdrawn from.
+    PIPELINE  bucket/pipeline Work is withdrawn from.
 
-    \b
-    FUNC     is a pythonic module & function path (e.g. time.sleep),
-             and is called with **work.parameters.
+    FUNC      pythonic path for user func (package.module.function)
 
     """
 
@@ -44,14 +42,8 @@ def main(pipeline, func, lifetime):
         m, f = func.rsplit(".", 1)
         module = import_module(m)
         function = getattr(module, f)
-    except ValueError:
-        logger.error("Use 'package.module.function' formatting for FUNC.")
-        return
-    except ModuleNotFoundError:
-        logger.error("Could not find module '%s'" % m)
-        return
-    except AttributeError:
-        logger.error("Could not find function '%s' in module '%s'" % (f, m))
+    except:
+        logger.error("Imports failed (use 'package.module.function' format)")
         return
 
     while lifetime != 0:
@@ -63,7 +55,7 @@ def main(pipeline, func, lifetime):
 
 def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     """
-    Fetches 'work' object from appropriate pipeline, then calls
+    Fetches 'work' object from appropriate pipeline/bucket, then calls
     user_func(**work.parameters) in a child process, terminating after
     work.timeout (s). Sets results and success/failure status in work
     object, and then calls work.update().
@@ -71,7 +63,7 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     Parameters
     ----------
     name : str
-        Specifies the pipeline that the work object will be fetched from
+        Specifies the pipeline/bucket that work objects will be fetched from
         (e.g. dm-pipeline, fitburst, fitburst-some-dev-branch).
 
     user_func : Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
@@ -96,7 +88,9 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     work = Work.withdraw(pipeline=name)
 
     process = Process(
-        target=apply_func, args=(sender, user_func), kwargs=work.parameters
+        target=apply_func,
+        args=(sender, user_func),
+        kwargs=work.parameters or {},
     )
 
     work.attempt += 1
@@ -133,6 +127,5 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
     work.update()
     return work
 
-
 if __name__ == "__main__":
-    main()
+    run()

@@ -5,7 +5,7 @@ import logging
 from time import sleep
 from importlib import import_module
 from multiprocessing import Process, Pipe
-from typing import Callable, Tuple, Dict, Any, List
+from typing import Optional, Callable, Tuple, Dict, Any, List
 
 from chime_frb_api.workflow import Work
 
@@ -47,13 +47,16 @@ def run(pipeline, func, lifetime):
         return
 
     while lifetime != 0:
-        _ = attempt_work(pipeline, function)
-        lifetime -= 1
+        work = attempt_work(pipeline, function)
+        if work is None:
+            sleep(1)
+        else:
+            lifetime -= 1
 
     return
 
 
-def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
+def attempt_work(name: str, user_func: FUNC_TYPE) -> Optional["Work"]:
     """
     Fetches 'work' object from appropriate pipeline/bucket, then calls
     user_func(**work.parameters) in a child process, terminating after
@@ -78,14 +81,16 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
 
     """
 
+    work = Work.withdraw(pipeline=name)
+    if work is None:
+        return
+
     def apply_func(connection, func, **kwargs):
         """Executes in child process & pipes results back"""
         connection.send(func(**kwargs))
         connection.close()
 
     receiver, sender = Pipe()  # to communicate with child
-
-    work = Work.withdraw(pipeline=name)
 
     process = Process(
         target=apply_func,
@@ -126,6 +131,7 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Work:
 
     work.update()
     return work
+
 
 if __name__ == "__main__":
     run()

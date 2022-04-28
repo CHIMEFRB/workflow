@@ -87,6 +87,10 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Optional["Work"]:
 
     def apply_func(connection, func, **kwargs):
         """Executes in child process & pipes results back"""
+        if isinstance(func, click.Command):
+            for param in func.params:
+                kwargs.setdefault(param.name, param.default)
+            func = func.callback
         connection.send(func(**kwargs))
         connection.close()
 

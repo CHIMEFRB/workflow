@@ -23,7 +23,7 @@ def audit_work(limit_per_run=1000,**kwargs):
             "status": "failure",
             "$expr": {"$gte": ["attempt","retries"]},
         },
-        projection = {"_id": True},
+        projection = {"id": True},
         skip = 0,
         limit = limit_per_run,
     )

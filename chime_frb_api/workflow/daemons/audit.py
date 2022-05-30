@@ -1,4 +1,5 @@
 from chime_frb_api.modules.buckets import Buckets
+from time import time
 
 def audit_work(limit_per_run=1000,**kwargs):
     """Audit the Buckets DB for work that is failed, expired, or stale work.
@@ -22,6 +23,7 @@ def audit_work(limit_per_run=1000,**kwargs):
         query = {
             "status": "failure",
             "$expr": {"$gte": ["attempt","retries"]},
+            "$expr": {"$lt": ["stop", time() - 86400]},
         },
         projection = {"id": True},
         skip = 0,

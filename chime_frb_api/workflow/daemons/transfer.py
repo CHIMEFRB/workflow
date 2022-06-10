@@ -1,6 +1,24 @@
+import time
+
 from chime_frb_api.modules.buckets import Buckets
 from chime_frb_api.modules.results import Results
-from time import time
+
+
+def deposit_work_to_results(buckets, results, works):
+    """Deposit work to results, and remove them from buckets
+
+    Args:
+        buckets (Buckets): Buckets module.
+        results (Results): Results module.
+        works (List[Dict[str, Any]]): Work to deposit.
+    """
+    if len(works) == 0:
+        return True
+    results_deposit_status = results.deposit(works)
+    if all(results_deposit_status.values()) == True:
+        buckets.delete_ids([work["id"] for work in works])
+        return True
+    return False
 
 def transfer_work(limit_per_run=1000,buckets_kwargs={},results_kwargs={}):
     """Transfer successful Work from Buckets DB to Results DB
@@ -13,43 +31,43 @@ def transfer_work(limit_per_run=1000,buckets_kwargs={},results_kwargs={}):
     """
     buckets = Buckets(**buckets_kwargs)
     results = Results(**results_kwargs)
-    # 1. fetch all successful work from buckets
+    # 1. Transfer successful Work
     # TODO: decide projection fields
     successful_work = buckets.view(
-        query = {"status": "success"},
-        projection = {},
-        skip = 0, 
-        limit = limit_per_run,
+        query={"status": "success"},
+        projection={},
+        skip=0,
+        limit=limit_per_run,
     )
-    # 2. deposit successful work into results; delete them from buckets
-    if len(successful_work) > 0:
-        results_deposit_status = results.deposit(successful_work)
-        if all(results_deposit_status.values()) == True:
-            buckets.delete_ids([work["id"] for work in successful_work])
-            return True
-        else:
-            # TODO: decide what to do if deposit fails
-            return False
-    # 3. fetch failed work (attempt >= retries) from buckets
+    deposit_successful_work_status = deposit_work_to_results(buckets, results, successful_work)
+
+    # 2. Transfer failed Work
     # TODO: decide projection fields
     failed_work = buckets.view(
-        query = {
+        query={
             "status": "failure",
             "$expr": {"$gte": ["attempt","retries"]},
         },
-        projection = {},
-        skip = 0,
-        limit = limit_per_run,
+        projection={},
+        skip=0,
+        limit=limit_per_run,
     )
-    # 4. deposit failed work into results; delete them from buckets
-    if len(failed_work) > 0:
-        results_deposit_status = results.deposit(failed_work)
-        if all(results_deposit_status.values()) == True:
-            buckets.delete_ids([work["id"] for work in failed_work])
-            return True
-        else:
-            # TODO: decide what to do if deposit fails
-            return False
+    deposit_failed_work_status = deposit_work_to_results(buckets, results, failed_work)
+
+    # 3. Delete stale Work (cut off time: 14 days)
+    cutoff_creation_time = time.time() - (60 * 60 * 24 * 14)
+    stale_work = buckets.view(
+        query={
+            "status": "failure",
+            "creation": {"$lt": cutoff_creation_time},
+        },
+        projection={},
+        skip=0,
+        limit=limit_per_run,
+    )
+    if len(stale_work) > 0:
+        buckets.delete_ids([work["id"] for work in stale_work])
+    return deposit_successful_work_status and deposit_failed_work_status
 
 
 if __name__ == "__main__":

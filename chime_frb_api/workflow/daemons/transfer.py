@@ -17,16 +17,14 @@ def deposit_work_to_results(
         works (List[Dict[str, Any]]): Work to deposit.
 
     Returns:
-        transferred_count (int): Number of works deposited to results.
+        transfer_status (bool): Number of works deposited to results.
     """
-    transferred_count: int = 0
-    if len(works) == 0:
-        return transferred_count
+    transfer_status = False
     results_deposit_status = results.deposit(works)
-    transferred_count = sum(results_deposit_status.values())
-    if transferred_count == len(works):
+    if all(results_deposit_status.values()):
         buckets.delete_ids([work["id"] for work in works])
-    return transferred_count
+        transfer_status = True
+    return transfer_status
 
 
 def transfer_work(
@@ -56,10 +54,10 @@ def transfer_work(
         skip=0,
         limit=limit_per_run,
     )
-    transfer_successful_work_count = deposit_work_to_results(
-        buckets, results, successful_work
-    )
-    transfer_status["successful_work_transferred"] = transfer_successful_work_count
+    if successful_work:
+        transfer_status["successful_work_transferred"] = deposit_work_to_results(
+            buckets, results, successful_work
+        )
 
     # 2. Transfer failed Work
     # TODO: decide projection fields
@@ -72,8 +70,10 @@ def transfer_work(
         skip=0,
         limit=limit_per_run,
     )
-    transfer_failed_work_count = deposit_work_to_results(buckets, results, failed_work)
-    transfer_status["failed_work_transferred"] = transfer_failed_work_count
+    if failed_work:
+        transfer_status["failed_work_transferred"] = deposit_work_to_results(
+            buckets, results, failed_work
+        )
 
     # 3. Delete stale Work (cut off time: 14 days)
     cutoff_creation_time = time.time() - (60 * 60 * 24 * 14)
@@ -86,9 +86,9 @@ def transfer_work(
         skip=0,
         limit=limit_per_run,
     )
-    if len(stale_work) > 0:
+    if stale_work:
         buckets.delete_ids([work["id"] for work in stale_work])
-    transfer_status["stale_work_deleted"] = len(stale_work)
+        transfer_status["stale_work_deleted"] = True
     return transfer_status
 
 

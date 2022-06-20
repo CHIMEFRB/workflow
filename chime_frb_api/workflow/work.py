@@ -273,7 +273,15 @@ class Work:
     ###########################################################################
 
     @classmethod
-    def withdraw(cls, pipeline: str, **kwargs: Dict[str, Any]) -> Optional["Work"]:
+    def withdraw(
+        cls,
+        pipeline: str,
+        event: Optional[List[int]] = None,
+        site: Optional[str] = None,
+        priority: Optional[int] = None,
+        user: Optional[str] = None,
+        **kwargs: Dict[str, Any]
+    ) -> Optional["Work"]:
         """Withdraw work from the buckets backend.
 
         Args:
@@ -284,7 +292,7 @@ class Work:
             Work: Work object.
         """
         buckets = Buckets(**kwargs)  # type: ignore
-        payload = buckets.withdraw(pipeline)
+        payload = buckets.withdraw(pipeline=pipeline, event=event, site=site, priority=priority, user=user)
         if payload:
             return cls.from_dict(payload)
         return None

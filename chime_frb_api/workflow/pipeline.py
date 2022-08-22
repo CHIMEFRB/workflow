@@ -1,8 +1,8 @@
 """ Fetch and process Work using any method compatible with Tasks API. """
 
+import time
 import click
 import logging
-from time import sleep
 from importlib import import_module
 from multiprocessing import Process, Pipe
 from typing import Optional, Callable, Tuple, Dict, Any, List
@@ -26,7 +26,25 @@ FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
     default=-1,
     help="Work to do before exiting [default: -1 (forever)]",
 )
-def run(pipeline, func, lifetime):
+@click.option(
+    "--sleep-time",
+    type=int,
+    default=10,
+    help="Seconds to sleep between fetch attempts [default: 10]",
+)
+@click.option(
+    "--base-url",
+    type=str,
+    default="http://frb-vsop.chime:8001",
+    help="frb-master url [default: http://frb-vsop.chime:8001]",
+)
+@click.option(
+    "--site",
+    type=str,
+    default="chime",
+    help="site where work is being performed [default: chime]",
+)
+def run(pipeline, func, lifetime, sleep_time, base_url, site):
     """
     Withdraws Work object from appropriate bucket/pipeline,
     attempts to execute "func(**work.parameters)",
@@ -35,6 +53,7 @@ def run(pipeline, func, lifetime):
     PIPELINE  bucket/pipeline Work is withdrawn from.
 
     FUNC      pythonic path for user func (package.module.function)
+
 
     """
 
@@ -47,16 +66,18 @@ def run(pipeline, func, lifetime):
         return
 
     while lifetime != 0:
-        work = attempt_work(pipeline, function)
+        work = attempt_work(pipeline, function, base_url, site)
         if work is None:
-            sleep(1)
+            sleep(sleep_time)
         else:
             lifetime -= 1
 
     return
 
 
-def attempt_work(name: str, user_func: FUNC_TYPE) -> Optional["Work"]:
+def attempt_work(
+    name: str, user_func: FUNC_TYPE, base_url: str, site: str
+) -> Optional["Work"]:
     """
     Fetches 'work' object from appropriate pipeline/bucket, then calls
     user_func(**work.parameters) in a child process, terminating after
@@ -74,6 +95,13 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Optional["Work"]:
         generic dictionary, while 'products' and 'plots' are lists of paths.
         Executed as user_func(**work.parameters).
 
+    base_url : str
+        frb-master url (default http://frb-vsop.chime:8001)
+
+    site : str
+        site where work is processed (default chime). Options are chime,
+        allenby, gbo, hatcreek, canfar, cedar, local.
+
     Returns
     -------
     work.Work object
@@ -81,7 +109,7 @@ def attempt_work(name: str, user_func: FUNC_TYPE) -> Optional["Work"]:
 
     """
 
-    work = Work.withdraw(pipeline=name)
+    work = Work.withdraw(pipeline=name, site=site, base_url=base_url)
     if work is None:
         return
 

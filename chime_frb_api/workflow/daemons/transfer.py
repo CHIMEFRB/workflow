@@ -30,7 +30,7 @@ def deposit_work_to_results(
 @click.command()
 @click.option("--sleep", "-s", default=5, help="Time to sleep between transfers")
 @click.option("--buckets-base-url", "-b", default="http://frb-vsop.chime:8004", help="Location of the Buckets backend.")
-@click.option("--results-base-url", "-b", default="http://frb-vsop.chime:8005", help="Location of the Results backend.")
+@click.option("--results-base-url", "-r", default="http://frb-vsop.chime:8005", help="Location of the Results backend.")
 def transfer_work(
     sleep: int,
     buckets_base_url: str,
@@ -60,10 +60,15 @@ def transfer_work(
             skip=0,
             limit=limit_per_run,
         )
-        if successful_work:
+        successful_work_to_delete = [work for work in successful_work if work['archive'] is False]
+        successful_work_to_transfer = [work for work in successful_work if work['archive'] is True]
+        if successful_work_to_transfer:
             transfer_status["successful_work_transferred"] = deposit_work_to_results(
-                buckets, results, successful_work
+                buckets, results, successful_work_to_transfer
             )
+        if successful_work_to_delete:
+            buckets.delete_ids([work["id"] for work in successful_work_to_delete])
+            transfer_status["successful_work_deleted"] = True
 
         # 2. Transfer failed Work
         # TODO: decide projection fields
@@ -76,13 +81,19 @@ def transfer_work(
             skip=0,
             limit=limit_per_run,
         )
-        if failed_work:
-            transfer_status["failed_work_transferred"] = deposit_work_to_results(
-                buckets, results, failed_work
-            )
+        failed_work_to_delete = [work for work in failed_work if work['archive'] is False]
+        failed_work_to_transfer = [work for work in failed_work if work['archive'] is True]
 
-        # 3. Delete stale Work (cut off time: 14 days)
-        cutoff_creation_time = time.time() - (60 * 60 * 24 * 14)
+        if failed_work_to_transfer:
+            transfer_status["failed_work_transferred"] = deposit_work_to_results(
+                buckets, results, failed_work_to_transfer
+            )
+        if failed_work_to_delete:
+            buckets.delete_ids([work["id"] for work in failed_work_to_delete])
+            transfer_status["failed_work_deleted"] = True
+
+        # 3. Delete stale Work (cut off time: 7 days)
+        cutoff_creation_time = time.time() - (60 * 60 * 24 * 7)
         stale_work = buckets.view(
             query={
                 "status": "failure",

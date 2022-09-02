@@ -135,7 +135,7 @@ def transfer_work(
         if stale_work:
             buckets.delete_ids([work["id"] for work in stale_work])
             transfer_status["stale_work_deleted"] = True
-        if test_mode:
+        if test_flag:
             return transfer_status
         else:
             print(transfer_status)

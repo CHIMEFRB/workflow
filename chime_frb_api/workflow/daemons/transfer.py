@@ -35,7 +35,7 @@ def transfer_work(
     sleep: int,
     buckets_base_url: str,
     results_base_url: str,
-    limit_per_run: int = 1000,
+    limit_per_run: int = 81,
 ) -> Dict[str, Any]:
     """Transfer successful Work from Buckets DB to Results DB.
 

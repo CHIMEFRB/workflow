@@ -35,7 +35,9 @@ def transfer_work(
     sleep: int,
     buckets_base_url: str,
     results_base_url: str,
-    limit_per_run: int = 81,
+    limit_per_run: int = 50,
+    buckets_kwargs: Dict[str, Any] = {},
+    results_kwargs: Dict[str, Any] = {},
 ) -> Dict[str, Any]:
     """Transfer successful Work from Buckets DB to Results DB.
 
@@ -46,8 +48,8 @@ def transfer_work(
         limit_per_run (int): Max number of failed Work entires to transfer per
         run of daemon.
     """
-    buckets_kwargs = {"base_url": buckets_base_url}
-    results_kwargs = {"base_url": results_base_url}
+    buckets_kwargs['base_url'] = buckets_base_url
+    results_kwargs['base_url'] = results_base_url
     while True:
         buckets = Buckets(**buckets_kwargs)
         results = Results(**results_kwargs)

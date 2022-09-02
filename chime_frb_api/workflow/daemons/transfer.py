@@ -1,7 +1,8 @@
 """Transfer Daemon."""
 import time
-import click
 from typing import Any, Dict, List
+
+import click
 
 from chime_frb_api.modules.buckets import Buckets
 from chime_frb_api.modules.results import Results
@@ -27,11 +28,24 @@ def deposit_work_to_results(
         transfer_status = True
     return transfer_status
 
+
 @click.command()
 @click.option("--sleep", "-s", default=5, help="Time to sleep between transfers")
-@click.option("--buckets-base-url", "-b", default="http://frb-vsop.chime:8004", help="Location of the Buckets backend.")
-@click.option("--results-base-url", "-r", default="http://frb-vsop.chime:8005", help="Location of the Results backend.")
-@click.option("--test-mode", default=False, help="Enable test mode to avoid while True loop")
+@click.option(
+    "--buckets-base-url",
+    "-b",
+    default="http://frb-vsop.chime:8004",
+    help="Location of the Buckets backend.",
+)
+@click.option(
+    "--results-base-url",
+    "-r",
+    default="http://frb-vsop.chime:8005",
+    help="Location of the Results backend.",
+)
+@click.option(
+    "--test-mode", default=False, help="Enable test mode to avoid while True loop"
+)
 def transfer_work(
     sleep: int,
     buckets_base_url: str,
@@ -48,9 +62,10 @@ def transfer_work(
         limit_per_run (int): Max number of failed Work entires to transfer per
         run of daemon.
     """
+
     def transfer(test_flag):
-        buckets = Buckets({'base_url': buckets_base_url, 'debug' : test_mode})
-        results = Results({'base_url': results_base_url, 'debug' : test_mode})
+        buckets = Buckets({"base_url": buckets_base_url, "debug": test_mode})
+        results = Results({"base_url": results_base_url, "debug": test_mode})
         transfer_status = {}
         # 1. Transfer successful Work
         # TODO: decide projection fields
@@ -60,8 +75,12 @@ def transfer_work(
             skip=0,
             limit=limit_per_run,
         )
-        successful_work_to_delete = [work for work in successful_work if work['archive'] is False]
-        successful_work_to_transfer = [work for work in successful_work if work['archive'] is True]
+        successful_work_to_delete = [
+            work for work in successful_work if work["archive"] is False
+        ]
+        successful_work_to_transfer = [
+            work for work in successful_work if work["archive"] is True
+        ]
         if successful_work_to_transfer:
             transfer_status["successful_work_transferred"] = deposit_work_to_results(
                 buckets, results, successful_work_to_transfer
@@ -81,8 +100,12 @@ def transfer_work(
             skip=0,
             limit=limit_per_run,
         )
-        failed_work_to_delete = [work for work in failed_work if work['archive'] is False]
-        failed_work_to_transfer = [work for work in failed_work if work['archive'] is True]
+        failed_work_to_delete = [
+            work for work in failed_work if work["archive"] is False
+        ]
+        failed_work_to_transfer = [
+            work for work in failed_work if work["archive"] is True
+        ]
 
         if failed_work_to_transfer:
             transfer_status["failed_work_transferred"] = deposit_work_to_results(

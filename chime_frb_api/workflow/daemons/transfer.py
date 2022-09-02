@@ -31,13 +31,13 @@ def deposit_work_to_results(
 @click.option("--sleep", "-s", default=5, help="Time to sleep between transfers")
 @click.option("--buckets-base-url", "-b", default="http://frb-vsop.chime:8004", help="Location of the Buckets backend.")
 @click.option("--results-base-url", "-r", default="http://frb-vsop.chime:8005", help="Location of the Results backend.")
+@click.option("--test-mode", default=False, help="Enable test mode to avoid while True loop")
 def transfer_work(
     sleep: int,
     buckets_base_url: str,
     results_base_url: str,
+    test_mode: bool,
     limit_per_run: int = 50,
-    buckets_kwargs: Dict[str, Any] = {},
-    results_kwargs: Dict[str, Any] = {},
 ) -> Dict[str, Any]:
     """Transfer successful Work from Buckets DB to Results DB.
 
@@ -48,11 +48,9 @@ def transfer_work(
         limit_per_run (int): Max number of failed Work entires to transfer per
         run of daemon.
     """
-    buckets_kwargs['base_url'] = buckets_base_url
-    results_kwargs['base_url'] = results_base_url
-    while True:
-        buckets = Buckets(**buckets_kwargs)
-        results = Results(**results_kwargs)
+    def transfer(test_flag):
+        buckets = Buckets({'base_url': buckets_base_url, 'debug' : test_mode})
+        results = Results({'base_url': results_base_url, 'debug' : test_mode})
         transfer_status = {}
         # 1. Transfer successful Work
         # TODO: decide projection fields
@@ -108,8 +106,15 @@ def transfer_work(
         if stale_work:
             buckets.delete_ids([work["id"] for work in stale_work])
             transfer_status["stale_work_deleted"] = True
-        
-        print(transfer_status)
+        if test_mode:
+            return transfer_status
+        else:
+            print(transfer_status)
+
+    if test_mode:
+        return transfer(test_flag=True)
+    while True:
+        transfer(test_flag=False)
         time.sleep(sleep)
 
 

@@ -68,7 +68,7 @@ def run(pipeline, func, lifetime, sleep_time, base_url, site):
     while lifetime != 0:
         work = attempt_work(pipeline, function, base_url, site)
         if work is None:
-            sleep(sleep_time)
+            time.sleep(sleep_time)
         else:
             lifetime -= 1
 

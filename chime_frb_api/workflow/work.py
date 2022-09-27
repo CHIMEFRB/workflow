@@ -292,7 +292,9 @@ class Work:
             Work: Work object.
         """
         buckets = Buckets(**kwargs)  # type: ignore
-        payload = buckets.withdraw(pipeline=pipeline, event=event, site=site, priority=priority, user=user)
+        payload = buckets.withdraw(
+            pipeline=pipeline, event=event, site=site, priority=priority, user=user
+        )
         if payload:
             return cls.from_dict(payload)
         return None

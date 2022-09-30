@@ -62,7 +62,8 @@ def run(pipeline, func, lifetime, sleep_time, base_url, site):
         m, f = func.rsplit(".", 1)
         module = import_module(m)
         function = getattr(module, f)
-    except:
+    except (ImportError, AttributeError) as error:
+        logger.error(error)
         logger.error("Imports failed (use 'package.module.function' format)")
         return
 
@@ -147,7 +148,9 @@ def attempt_work(
             work.products = products
             work.plots = plots
             work.status = "success"
-        except:
+        except (TypeError, ValueError) as error:
+            logger.error(error)
+            logger.error("User function must return (results, products, plots)")
             work.status = "failure"
     else:
         work.status = "failure"
@@ -155,7 +158,7 @@ def attempt_work(
     # Log possible outcomes
     if process.exitcode == 0 and work.status == "failure":
         logger.error("user func output doesn't match chime/frb standard")
-    elif process.exitcode == None:
+    elif process.exitcode is None:
         logger.error("user func timed out")
     elif process.exitcode != 0:
         logger.error("user func raised an error")

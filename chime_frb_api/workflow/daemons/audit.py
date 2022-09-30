@@ -25,10 +25,7 @@ def workflow(sleep: int, base_url: str, test_mode: bool) -> Dict[str, Any]:
         sleep (int): number of seconds to sleep between audits
         base_url (str): location of the Buckets backend
     """
-    buckets: Buckets = Buckets(
-        base_url=base_url,
-        debug=test_mode
-    )
+    buckets: Buckets = Buckets(base_url=base_url, debug=test_mode)
     if test_mode:
         return buckets.audit()
     while True:

@@ -64,14 +64,8 @@ def transfer_work(
     """
 
     def transfer(test_flag):
-        buckets = Buckets(
-            base_url=buckets_base_url,
-            debug=test_mode
-        )
-        results = Results(
-            base_url=results_base_url,
-            debug=test_mode
-        )
+        buckets = Buckets(base_url=buckets_base_url, debug=test_mode)
+        results = Results(base_url=results_base_url, debug=test_mode)
         transfer_status = {}
         # 1. Transfer successful Work
         # TODO: decide projection fields

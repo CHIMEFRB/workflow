@@ -1,11 +1,12 @@
 """ Fetch and process Work using any method compatible with Tasks API. """
 
-import time
-import click
 import logging
+import time
 from importlib import import_module
-from multiprocessing import Process, Pipe
-from typing import Optional, Callable, Tuple, Dict, Any, List
+from multiprocessing import Pipe, Process
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import click
 
 from chime_frb_api.workflow import Work
 

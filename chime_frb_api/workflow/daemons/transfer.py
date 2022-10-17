@@ -21,13 +21,22 @@ def deposit_work_to_results(
     Returns:
         transfer_status (bool): Number of works deposited to results.
     """
-    transfer_status = False
-    work_to_deposit = [work for work in works if is_work_already_deposited(results, work) is False]
-    results_deposit_status = results.deposit(work_to_deposit)
-    if all(results_deposit_status.values()):
-        buckets.delete_ids([work["id"] for work in works])
-        transfer_status = True
-    return transfer_status
+    try:
+        transfer_status = False
+        results_deposit_status = results.deposit(works)
+        if all(results_deposit_status.values()):
+            buckets.delete_ids([work["id"] for work in works])
+            transfer_status = True
+        return transfer_status
+    except Exception as error:
+        print(error)
+        transfer_status = False
+        work_to_deposit = [work for work in works if is_work_already_deposited(results, work) is False]
+        results_deposit_status = results.deposit(work_to_deposit)
+        if all(results_deposit_status.values()):
+            buckets.delete_ids([work["id"] for work in works])
+            transfer_status = True
+        return transfer_status
 
 
 def is_work_already_deposited(results: Results, work: Dict[str, Any]) -> bool:

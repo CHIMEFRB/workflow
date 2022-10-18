@@ -29,11 +29,11 @@ def deposit_work_to_results(
             transfer_status = True
         return transfer_status
     except Exception as error:
-        print(error)
+        print(f"Exception occurred: {error}")
         transfer_status = False
         work_to_deposit = [work for work in works if is_work_already_deposited(results, work) is False]
         results_deposit_status = results.deposit(work_to_deposit)
-        if all(results_deposit_status.values()):
+        if all(results_deposit_status.values()) or results_deposit_status == {}:
             buckets.delete_ids([work["id"] for work in works])
             transfer_status = True
         return transfer_status

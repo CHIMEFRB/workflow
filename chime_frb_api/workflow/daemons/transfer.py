@@ -31,7 +31,9 @@ def deposit_work_to_results(
     except Exception as error:
         print(f"Exception occurred: {error}")
         transfer_status = False
-        work_to_deposit = [work for work in works if is_work_already_deposited(results, work) is False]
+        work_to_deposit = [
+            work for work in works if is_work_already_deposited(results, work) is False
+        ]
         results_deposit_status = results.deposit(work_to_deposit)
         if all(results_deposit_status.values()) or results_deposit_status == {}:
             buckets.delete_ids([work["id"] for work in works])
@@ -44,15 +46,12 @@ def is_work_already_deposited(results: Results, work: Dict[str, Any]) -> bool:
 
     Args:
         results (Results): Results module.
-        work (Dict[str, Any]): work to check 
+        work (Dict[str, Any]): work to check
 
     Returns:
         bool: _description_
     """
-    return results.count(
-        pipeline=work['pipeline'],
-        query={'id': work['id']}
-    ) == 1
+    return results.count(pipeline=work["pipeline"], query={"id": work["id"]}) == 1
 
 
 @click.command()

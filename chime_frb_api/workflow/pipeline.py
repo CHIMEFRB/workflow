@@ -3,7 +3,6 @@
 import logging
 import time
 from importlib import import_module
-from multiprocessing import Pipe, Process
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
@@ -70,12 +69,13 @@ def run(
     base_urls: List[str],
     site: str,
     log_level: str,
-):
-    """Run workflow pipeline.
+) -> None:
+    """Run a workflow pipeline.
 
-    Withdraws Work object from appropriate bucket/pipeline,
-    attempts to execute "func(**work.parameters)",
-    then updates results and success/failure status.
+    Following Actions are performed:
+        1. Withdraws `Work` from appropriate pipeline.
+        2. Attempt to execute `func(**work.parameters)` in a child process.
+        3. Updates results, plots, products and status.
 
     Args:
         pipeline (str): pipeline/bucket that work objects will be fetched from
@@ -92,12 +92,12 @@ def run(
     """
     # Set logging level
     logger.setLevel(log_level)
-    logger.info("Connecting to the workflow backend...")
+    logger.info("Connecting to workflow backend...")
     base_url: Optional[str] = None
     for url in base_urls:
         try:
             requests.get(url).headers
-            logger.info(f"Connected to {url}")
+            logger.info(f"Connected @ {url}")
             base_url = url
         except requests.exceptions.RequestException:
             logger.warning(f"Unable to connect to {url}")
@@ -125,19 +125,18 @@ def run(
         return
 
     while lifetime != 0:
-        work = attempt_work(pipeline, function, base_url, site)
-        if work is None:
-            logger.debug(f"No work found, sleeping for {sleep_time} seconds")
-            time.sleep(sleep_time)
+        done = attempt_work(pipeline, function, base_url, site)
+        if not done:
+            logger.debug("Failed or No work performed.")
         else:
+            logger.debug("Successfully performed work.")
             lifetime -= 1
+        logger.debug(f"Sleeping for {sleep_time} seconds")
+        time.sleep(sleep_time)
+    return None
 
-    return
 
-
-def attempt_work(
-    name: str, user_func: FUNC_TYPE, base_url: str, site: str
-) -> Optional["Work"]:
+def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> bool:
     """Attempt pipeline work.
 
     Fetches 'work' object from appropriate pipeline/bucket, then calls
@@ -156,7 +155,7 @@ def attempt_work(
         allenby, gbo, hatcreek, canfar, cedar, local.
 
     Returns:
-        Optional[Work]: Work object if successful, None otherwise.
+        bool: If work was successful.
     """
     kwargs: Dict[str, Any] = {"base_url": base_url}
     work: Optional["Work"] = None
@@ -164,62 +163,65 @@ def attempt_work(
         work = Work.withdraw(pipeline=name, site=site, **kwargs)
     except requests.RequestException as error:
         logger.error(error)
-        logger.error("Failed to withdraw work, retrying in 10 seconds")
+        logger.error("failed to withdraw work, will retry soon...")
     finally:
         if not work:
-            return None
+            return False
+        else:
+            logger.info("Successfully withdrew work")
+            logger.debug(f"Withdrew work {work.payload}")
+            logger.info("Starting to perform work")
 
-    def apply_func(connection, func, **kwargs):
-        """Executes in child process & pipes results back."""
-        if isinstance(func, click.Command):
-            for param in func.params:
-                kwargs.setdefault(param.name, param.default)
-            func = func.callback
-        connection.send(func(**kwargs))
-        connection.close()
+    # If the function is a click command, gather all the default options
+    defaults: Dict[Any, Any] = {}
+    if isinstance(user_func, click.Command):
+        logger.debug("user function is a click cli command")
+        logger.debug("gathering default options not specified in work.parameters")
+        # Get default options from the click command
+        for parameter in user_func.params:
+            if parameter.name not in work.parameters.keys():  # type: ignore
+                defaults[parameter.name] = parameter.default
+        logger.debug(f"CLI Defaults: {defaults}")
+        user_func = user_func.callback  # type: ignore
 
-    receiver, sender = Pipe()  # to communicate with child
+    # Merge the defaults with the work parameters
+    parameters: Dict[Any, Any] = {**defaults, **work.parameters}  # type: ignore
 
-    process = Process(
-        target=apply_func,
-        args=(sender, user_func),
-        kwargs=work.parameters or {},
-    )
-
-    process.start()
-    process.join(work.timeout if work.timeout > 0 else None)
-
-    if process.is_alive():
-        process.terminate()
-
-    output = receiver.recv() if receiver.poll() else None
-
-    if output and process.exitcode == 0:
-        try:
-            results, products, plots = output
-            work.results = results
-            work.products = products
-            work.plots = plots
-            work.status = "success"
-        except (TypeError, ValueError) as error:
-            logger.error(error)
-            logger.error("User function must return (results, products, plots)")
+    # Execute the user function
+    try:
+        logger.debug(f"Executing {user_func.__name__}(**{parameters})")
+        start = time.time()
+        results, products, plots = user_func(**parameters)
+        end = time.time()
+        logger.debug(f"Execution time: {end - start:.2f} s")
+        logger.debug(f"Results: {results}")
+        logger.debug(f"Products: {products}")
+        logger.debug(f"Plots: {plots}")
+        work.results = results
+        work.products = products
+        work.plots = plots
+        work.status = "success"
+        if int(work.timeout) + int(work.creation) < time.time():  # type: ignore
+            logger.warning("even though work was successful, it timed out")
+            logger.warning("setting status to failure")
             work.status = "failure"
-    else:
+    except (TypeError, ValueError) as error:
+        logger.error(error)
+        logger.error("user function must return (results, products, plots)")
         work.status = "failure"
-
-    # Log possible outcomes
-    if process.exitcode == 0 and work.status == "failure":
-        logger.error("user func output doesn't match chime/frb standard")
-    elif process.exitcode is None:
-        logger.error("user func timed out")
-    elif process.exitcode != 0:
-        logger.error("user func raised an error")
-    else:
-        logger.info("user func was successful")
-
-    work.update()
-    return work
+    except Exception as error:
+        logger.error("failed to execute user function")
+        logger.error(error)
+        work.status = "failure"
+    finally:
+        try:
+            logger.debug(f"Updating work {work.payload}")
+            work.update(**kwargs)
+        except requests.RequestException as error:
+            logger.error(error)
+            logger.error("failed to update work, will retry soon...")
+            return False
+    return True
 
 
 if __name__ == "__main__":

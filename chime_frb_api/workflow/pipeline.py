@@ -168,7 +168,7 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
     try:
         work = Work.withdraw(pipeline=name, site=site, **kwargs)
         logger.info(f"Work Withdrawn: {CHECKMARK if work else CIRCLE}")
-    except requests.RequestException as error:
+    except Exception as error:
         logger.error(f"Work Withdrawn: {CROSS}")
         logger.error(error)
     finally:

@@ -229,13 +229,24 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
         work.status = "failure"
     finally:
         try:
+            updated: bool = False
+            work.stop = time.time()
             logger.debug(f"Updated Work: {work.payload}")
-            work.update(**kwargs)
-            logger.info(f"Work Updated: {CHECKMARK}")
-        except requests.RequestException as error:
-            logger.error(f"Work Updated: {CROSS}")
+            # Try to update work multiple times
+            for _ in range(10):
+                try:
+                    work.update(**kwargs)
+                    logger.info(f"Work Updated: {CHECKMARK}")
+                    updated = True
+                    break
+                except requests.RequestException as error:
+                    logger.debug("retrying work update...")
+                    time.sleep(1)
+            if not updated:
+                logger.error(f"Work Updated: {CROSS}")
+                raise RuntimeError("work completed, but failed to update it!!!")
+        except Exception as error:
             logger.error(error)
-            logger.error("failed to update work, will retry soon...")
             return False
     return True
 

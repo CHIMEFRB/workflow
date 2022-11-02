@@ -11,9 +11,16 @@ import requests
 from chime_frb_api.workflow import Work
 
 BASE_URLS: List[str] = ["http://frb-vsop.chime:8001", "https://frb.chimenet.ca/buckets"]
+# Checkmark & Cross and other Unicode characters
+CHECKMARK = "\u2713"
+CROSS = "\u2717"
+CIRCLE = "\u25CB"
+WARNING_SIGN = "\u26A0"
 
 # Configure logger
-LOGGING_FORMAT = "[%(asctime)s] %(levelname)s %(message)s"
+LOGGING_FORMAT = (
+    "[%(asctime)s] %(levelname)s %(name)s %(lineno)d %(funcName)s: %(message)s"
+)
 logging.basicConfig(format=LOGGING_FORMAT, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -28,7 +35,7 @@ FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
     type=int,
     default=-1,
     show_default=True,
-    help="Work to do before exiting, -1 for infinite.",
+    help="Works to perform before exiting, -1 for infinite.",
 )
 @click.option(
     "--sleep-time",
@@ -54,7 +61,6 @@ FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
     help="Site where work is being performed.",
 )
 @click.option(
-    "-l",
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     default="INFO",
@@ -72,66 +78,66 @@ def run(
 ) -> None:
     """Run a workflow pipeline.
 
-    Following Actions are performed:
-        1. Withdraws `Work` from appropriate pipeline.
-        2. Attempt to execute `func(**work.parameters)` in a child process.
-        3. Updates results, plots, products and status.
-
-    Args:
-        pipeline (str): pipeline/bucket that work objects will be fetched from
-        func (str): module.function to be executed on the work object
-        lifetime (int): number of work objects to be processed before exiting
-        sleep_time (int): number of seconds to sleep between fetch attempts
-        base_urls (List[str]): url(s) of the workflow backend
-        site (str): site for which work is being performed
-        log_level (str): logging level to use
-
-    Raises:
-        RuntimeError: If we cannot run workflow processing.
-        TypeError: If we cannot import the user function.
+    Performs the following steps: \n
+    \t1. Withdraws `Work` from appropriate pipeline.\t\t\t\t
+    \t2. Attempt to execute `func(**work.parameters)`.\t\t\t\t
+    \t3. Updates results, plots, products and status.
     """
     # Set logging level
     logger.setLevel(log_level)
-    logger.info("Connecting to workflow backend...")
     base_url: Optional[str] = None
+    # Setup and connect to the workflow backend
+    logger.info("=" * 80)
+    logger.info("Workflow Backend")
     for url in base_urls:
         try:
             requests.get(url).headers
-            logger.info(f"Connected @ {url}")
+            logger.info(f"Connection: {CHECKMARK}")
+            logger.debug(f"URL: {url}")
             base_url = url
+            break
         except requests.exceptions.RequestException:
-            logger.warning(f"Unable to connect to {url}")
+            logger.debug(f"Unable to connect to {url}")
 
     if not base_url:
-        logger.error("Unable to connect to any workflow backend")
+        logger.error(f"Connection: {CROSS}")
+        logger.debug("Unable to connect to any of the provided base_urls.")
+        logger.debug(f"Attempted URLS: {base_urls}")
         raise RuntimeError("Unable to connect to any workflow backend")
 
+    logger.info("=" * 80)
+    logger.info("Pipeline Configuration")
+
     # Always print the logging level in the log message
-    logger.info("Starting pipeline %s with func %s", pipeline, func)
+    logger.info(f"Pipeline: {pipeline}")
+    logger.info(f"Function: {func}")
     try:
         # Name of the module containing the user function
         module_name, func_name = func.rsplit(".", 1)
-        logger.debug(f"Module  : {module_name}")
-        logger.debug(f"Function: {func_name}")
         module = import_module(module_name)
         function = getattr(module, func_name)
-        logger.debug(f"Successfully imported {func}")
+        logger.info(f"Imports: {CHECKMARK}")
         # Check if the function is callable
         if not callable(function):
             raise TypeError(f"{func} is not callable")
-    except (ImportError, AttributeError, TypeError) as error:
+        logger.info(f"Callable: {CHECKMARK}")
+    except ImportError as error:
+        logger.error(f"Imports: {CROSS}")
+        logger.debug(error)
+        raise error
+    except (AttributeError, TypeError) as error:
+        logger.error(f"Function: {CROSS}")
         logger.error(error)
-        logger.error("Imports failed (use 'package.module.function' format)")
-        return
+        raise error
 
+    logger.info("=" * 80)
+    logger.info("Work Lifecycle")
+    logger.info("=" * 80)
     while lifetime != 0:
         done = attempt_work(pipeline, function, base_url, site)
-        if not done:
-            logger.debug("Failed or No work performed.")
-        else:
-            logger.debug("Successfully performed work.")
-            lifetime -= 1
-        logger.debug(f"Sleeping for {sleep_time} seconds")
+        logger.info(f"Work Performed: {CHECKMARK if done else CROSS}")
+        lifetime -= 1
+        logger.debug(f"Sleeping: {sleep_time} seconds")
         time.sleep(sleep_time)
     return None
 
@@ -161,63 +167,73 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
     work: Optional["Work"] = None
     try:
         work = Work.withdraw(pipeline=name, site=site, **kwargs)
+        logger.info(f"Work Withdrawn: {CHECKMARK if work else CIRCLE}")
     except requests.RequestException as error:
+        logger.error(f"Work Withdrawn: {CROSS}")
         logger.error(error)
-        logger.error("failed to withdraw work, will retry soon...")
     finally:
         if not work:
             return False
         else:
-            logger.info("Successfully withdrew work")
-            logger.debug(f"Withdrew work {work.payload}")
-            logger.info("Starting to perform work")
+            logger.debug(f"Work: {work.payload}")
 
     # If the function is a click command, gather all the default options
     defaults: Dict[Any, Any] = {}
     if isinstance(user_func, click.Command):
-        logger.debug("user function is a click cli command")
+        logger.info(f"CLI Detected: {CHECKMARK}")
         logger.debug("gathering default options not specified in work.parameters")
         # Get default options from the click command
         for parameter in user_func.params:
             if parameter.name not in work.parameters.keys():  # type: ignore
                 defaults[parameter.name] = parameter.default
-        logger.debug(f"CLI Defaults: {defaults}")
+        if defaults:
+            logger.info(f"CLI Defaults: {CHECKMARK}")
+            logger.debug(f"CLI Defaults: {defaults}")
         user_func = user_func.callback  # type: ignore
 
     # Merge the defaults with the work parameters
     parameters: Dict[Any, Any] = {**defaults, **work.parameters}  # type: ignore
+    logger.info(f"Work Parameters: {parameters}")
 
     # Execute the user function
     try:
+        logger.info(f"Work Started: {CHECKMARK}")
         logger.debug(f"Executing {user_func.__name__}(**{parameters})")
         start = time.time()
         results, products, plots = user_func(**parameters)
+        logger.info(f"Work Completed: {CHECKMARK}")
         end = time.time()
-        logger.debug(f"Execution time: {end - start:.2f} s")
+        logger.info(f"Execution Time: {end - start:.2f} s")
         logger.debug(f"Results: {results}")
         logger.debug(f"Products: {products}")
         logger.debug(f"Plots: {plots}")
         work.results = results
         work.products = products
         work.plots = plots
+        logger.info(f"Work Results: {CHECKMARK}")
         work.status = "success"
+        logger.info(f"Work Status: {CHECKMARK}")
         if int(work.timeout) + int(work.creation) < time.time():  # type: ignore
             logger.warning("even though work was successful, it timed out")
             logger.warning("setting status to failure")
             work.status = "failure"
     except (TypeError, ValueError) as error:
+        logger.error(f"Work Results: {CROSS}")
         logger.error(error)
         logger.error("user function must return (results, products, plots)")
         work.status = "failure"
     except Exception as error:
+        logger.error(f"Work Status: {CROSS}")
         logger.error("failed to execute user function")
         logger.error(error)
         work.status = "failure"
     finally:
         try:
-            logger.debug(f"Updating work {work.payload}")
+            logger.debug(f"Updated Work: {work.payload}")
             work.update(**kwargs)
+            logger.info(f"Work Updated: {CHECKMARK}")
         except requests.RequestException as error:
+            logger.error(f"Work Updated: {CROSS}")
             logger.error(error)
             logger.error("failed to update work, will retry soon...")
             return False

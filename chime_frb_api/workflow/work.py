@@ -23,9 +23,14 @@ class Work:
     """The Work Object.
 
     Example:
-        >>> from chime_frb_api.workflow.work import Work
-        >>> work = Work(pipeline="test",)
-        >>> work.deposit()
+        ```python
+        from chime_frb_api.workflow.work import Work
+
+        work = Work(
+            pipeline="test",
+        )
+        work.deposit()
+        ```
 
     Args:
         pipeline (str): Pipeline name. Required.

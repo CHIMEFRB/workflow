@@ -233,7 +233,7 @@ class Work:
 
     @property
     def payload(self) -> Dict[str, Any]:
-        """Return the dictioanary representation of the work.
+        """Return the dictionary representation of the work.
 
         Returns:
             Dict[str, Any]: The payload of the work.

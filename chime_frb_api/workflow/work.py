@@ -117,11 +117,11 @@ class Work(BaseModel):
     )
     timeout: int = Field(
         default=3600,
-        ge=60,
+        ge=1,
         le=86400,
         description="""
         Timeout in seconds for the work to finish.
-        Defaults 3600s (1 hr) with range of [60, 86400] (60s-24hrs).
+        Defaults 3600s (1 hr) with range of [1, 86400] (1s-24hrs).
         """,
         example=7200,
     )
@@ -206,7 +206,7 @@ class Work(BaseModel):
         description="Unix timestamp when the work was stopped, reset at each attempt.",
     )
     attempt: StrictInt = Field(
-        default=None, description="Attempt number at performing the work."
+        default=1, description="Attempt number at performing the work."
     )
     status: Literal["created", "queued", "running", "success", "failure"] = Field(
         default="created", description="Status of the work."

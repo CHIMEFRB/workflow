@@ -1,31 +1,16 @@
 """Work Object."""
 
-from json import dumps, loads
+from json import loads
 from os import environ
+from pathlib import Path
 from time import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
+from warnings import warn
 
-from pydantic import (
-    BaseModel,
-    Field,
-    DirectoryPath,
-    validator,
-    StrictStr,
-    StrictFloat,
-    StrictInt,
-    ValidationError,
-    root_validator,
-    conint,
-)
-from pydantic.tools import parse_obj_as
 from jwt import decode
+from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr, root_validator
 
 from chime_frb_api.modules.buckets import Buckets
-
-# Validator for the Work.site attribute.
-PRIORITIES = range(1, 6)
-STATUSES = ["created", "queued", "running", "success", "failure"]
-SITES = ["chime", "allenby", "gbo", "hatcreek", "canfar", "cedar", "local"]
 
 
 class Work(BaseModel):
@@ -52,8 +37,6 @@ class Work(BaseModel):
         timeout (int): Timeout in seconds. 3600 by default.
         priority (int): Priority of the work. Ranges from 1(lowest) to 5(highest).
             Defaults to 3.
-        precursors(Optional[List[Dict[StrictStr, StrictStr]]]): List of previous works used as input.
-            None by default.
         products (Optional[List[StrictStr]]): Data products produced by the work.
         plots (Optional[List[StrictStr]]) Plot files produced by the work.
         id (Optional[StrictStr]): Work ID. Created when work is entered in the database.
@@ -63,7 +46,6 @@ class Work(BaseModel):
         stop (Optional[float]): Unix timestamp of when the work was stopped.
         attempt (StrictInt): Attempt number at performing the work. 0 by default.
         retries (int): Number of retries before giving up. 1 by default.
-        config (Optional[StrictStr]): Configuration of the container used to run the work.
         status (StrictStr): Status of the work.
             One of "created", "queued", "running", "success", or "failure".
         site (StrictStr): Site where the work was performed. "local" by default.
@@ -78,185 +60,196 @@ class Work(BaseModel):
     """
 
     class Config:
+        """Pydantic Config."""
+
         validate_all = True
         validate_assignment = True
 
     ###########################################################################
-    # Required attributes provided by the user
+    # Required Attributes. Set by user.
     ###########################################################################
-    # Name of the pipeline. Set by user.
-    pipeline: StrictStr = Field(...)
+    pipeline: StrictStr = Field(
+        ...,
+        min_length=1,
+        description="Name of the pipeline.",
+        example="example-pipeline",
+    )
     ###########################################################################
-    # Optional attributes provided by the user.
+    # Optional attributes, might be provided by the user.
     ###########################################################################
-    # Parameters to pass the pipeline function. Set by user.
-    parameters: Optional[Dict[str, Any]] = Field(default=None)
-    # Results of the work performed. Set automatically by @pipeline decorator.
-    # Can also be set manually by user.
-    results: Optional[Dict[str, Any]] = Field(default=None)
-    # Base data directory where the pipeline will store its data.
-    # Overwritten automatically by work.withdraw() if `.` from  environment
-    # variable WORK_PATH. Can also be set manually by user.
-    path: Optional[DirectoryPath] = Field(default=".", type=DirectoryPath)
-    # Name of the CHIME/FRB Event the work was performed against.
-    # Set by user.
-    event: Optional[List[int]] = Field(default=None)
-    # Searchable tags for the work.
-    # Set by user.
-    # Automatically appended by work.withdraw() for each unique tag.
-    # Value sourced from environment variable TASK_TAGS.
-    tags: Optional[List[str]] = Field(default=None)
-    # Name of the working group responsible for managing the work.
-    # Automatically overwritten by work.withdraw() when None.
-    # Sourced from environment variable WORK_GROUP.
-    # Can be set manually by user.
-    group: Optional[StrictStr] = Field(default=None)
-    # Timeout in seconds in which the work needs to be completed.
-    # Defaults to 3600 seconds (1 hour).
-    # Maximum timeout is 86400 seconds (24 hours).
-    timeout: int = Field(default=3600, lt=86401)
-    # Number of times the work has been attempted.
-    # Can be set manually by user.
-    # Maximum number of retries is 5.
-    retries: int = Field(default=2, lt=6)
-    # Priorities of the work. Set by user.
-    # Ranges between 1 and 5 (5 being the highest priority.)
-    # Default is 1.
-    priority: int = Field(default=3)
-    # Key, Value ("pipeline-name",id) pairs identifying previous works,
-    # used as inputs to the current work. Automatically appended whenever
-    # results.get() from Results API is called. Can also be set manually by user.
-    precursors: Optional[List[Dict[StrictStr, StrictStr]]] = Field(default=None)
-    # Name of the non-human-readable data products generated by the pipeline.
-    # Relative path from the current working directory.
-    # When saving the data products, the Work API will autommatically move them
-    # to path + relative path. Set by user.
-    products: Optional[List[StrictStr]] = Field(default=None)
-    # Name of visual data products generated by the pipeline.
-    # Relative path from the current working directory.
-    # When saving the plots, the TasksAPI will autommatically move them
-    # the path + relative path.
-    # Set by user.
-    plots: Optional[List[StrictStr]] = Field(default=None)
+    parameters: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Parameters to pass the pipeline function.",
+        example={"event_number": 9385707},
+    )
+    results: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results of the work performed, if any.",
+        example={"dm": 100.0, "snr": 10.0},
+    )
+    path: Optional[str] = Field(
+        default=environ.get("WORK_PATH", "."),
+        description="""
+        Base path where the pipeline results are stored.
+        Defaults to "." or the value of the WORK_PATH environment variable.
+        Used by downstream pipelines to locate work products and plots.
+        """,
+        example="/arc/projects/chimefrb/",
+    )
+    event: Optional[List[int]] = Field(
+        default=None,
+        description="CHIME/FRB Event ID[s] the work was performed against.",
+        example=[9385707, 9385708],
+    )
+    tags: Optional[List[str]] = Field(
+        default=None,
+        description="""
+        Searchable tags for the work. Merged with values from env WORK_TAGS.
+        """,
+        example=["dm-analysis"],
+    )
+    group: Optional[StrictStr] = Field(
+        default=environ.get("WORK_GROUP", None),
+        description="""
+        CHIME/FRB Working Group. Can be sourced from env WORK_GROUP.
+        """,
+        example="properties-wg",
+    )
+    timeout: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,
+        description="""
+        Timeout in seconds for the work to finish.
+        Defaults 3600s (1 hr) with range of [60, 86400] (60s-24hrs).
+        """,
+        example=7200,
+    )
+    retries: int = Field(
+        default=2,
+        lt=6,
+        description="Number of retries before giving up. Defaults to 2.",
+        example=4,
+    )
+    priority: int = Field(
+        default=3,
+        ge=1,
+        le=5,
+        description="Priority of the work. Defaults to 3.",
+        example=1,
+    )
+    products: Optional[List[StrictStr]] = Field(
+        default=None,
+        description="""
+        Name of the non-human-readable data products generated by the pipeline.
+        These are direct paths to the data products or paths relative to work.path.
+        If archive is True, these data paths will be automatically archived by the
+        Datatrail API.
+        """,
+        example=["spectra.h5", "dm_vs_time.png"],
+    )
+    plots: Optional[List[StrictStr]] = Field(
+        default=None,
+        description="""
+        Name of visual data products generated by the pipeline.
+        These are direct paths to the data products or paths relative to work.path.
+        If archive is True, these data paths will be automatically archived by the
+        Datatrail API.
+        """,
+        example=["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"],
+    )
+    site: Literal[
+        "chime", "allenby", "gbo", "hatcreek", "canfar", "cedar", "local"
+    ] = Field(
+        default=environ.get("WORK_SITE", "local"),
+        description="Site where the work will be performed.",
+        example="chime",
+    )
+    user: Optional[StrictStr] = Field(
+        default=None, description="User ID who created the work.", example="shiny"
+    )
+    archive: bool = Field(
+        default=True,
+        description="""
+        Whether or not to archive the work object, results, plots & products.
+        """,
+        example=True,
+    )
+
+    # Deprecated Attributes to be removed in future versions.
+    precursors: Optional[List[Dict[StrictStr, StrictStr]]] = Field(
+        default=None,
+        deprecated=True,
+        description="This field has been deprecated.",
+    )
+    config: Optional[str] = Field(
+        default=None,
+        deprecated=True,
+        description="This field has been deprecated.",
+    )
 
     ###########################################################################
     # Automaticaly set attributes
     ###########################################################################
-    # ID of the work performed.
-    # Created only when the work is added into the database upon conclusion.
-    id: Optional[StrictStr] = Field(default=None)
-    # Time the work was created, in seconds since the epoch.
-    # Set automatically when work is created.
-    creation: Optional[StrictFloat] = Field(default=None)
-    # Time when work was started, in seconds since the epoch.
-    # Automatically set by the buckets backend.
-    start: Optional[StrictFloat] = Field(default=None)
-    # Stop time of the work, in seconds since the epoch.
-    # If the work is still running, this will be None.
-    # Automatically set by the buckets backend.
-    stop: Optional[StrictFloat] = Field(default=None)
-    # Configuration of the pipeline used to perform the work.
-    # Automatically overwritten by work.withdraw()
-    # Value sourced from environment variable WORK_CONFIG.
-    config: Optional[StrictStr] = Field(default=environ.get("WORK_CONFIG", None))
-    # Numbered attempt at performing the work.
-    # Cannot be set manually.
-    attempt: StrictInt = Field(default=None)
-    # Status of the work.
-    # Default is "created"
-    # Automatically set by the buckets backend at
-    #   work.deposit to queued
-    #   Work.withdraw(...) to running
-    # Set by the pipelines decorator to "success" or "failure"
-    # Can be set manually by user.
-    status: StrictStr = Field(default="created")
-    # Name of the site where pipeline was executed.
-    # Automatically overwritten by Work.withdraw(...)
-    # Value sourced from environment variable WORK_SITE.
-    site: StrictStr = Field(default=environ.get("WORK_SITE", "local"))
-    # Name of the user who submitted the work.
-    # Set by work.deposit() and based on the access token.
-    # Can be set manually by user.
-    user: Optional[StrictStr] = Field(default=None)
-    # Whether the work will be archived in the Results Backend after completion.
-    #  Default is True.
-    archive: bool = Field(default=True)
-
-    ###########################################################################
-    # Validators for the work attributes
-    ###########################################################################
-
-    @validator("pipeline", pre=True)
-    def pipeline_not_none(cls, value):
-        """Check that pipeline field is not None."""
-        if not value:
-            raise ValidationError("pipeline must not be empty.")
-        return value
-
-    @validator("parameters")
-    def parameters_is_dict_instance(cls, value):
-        """Check that parameters field is dict() instance."""
-        if value and not isinstance(value, dict):
-            print("raising")
-            raise ValidationError("parameters must be a dict() object.")
-        return value
-
-    @validator("results", pre=True)
-    def results_is_dict_instance(cls, value):
-        """Check that results field is dict() instance"""
-        if value and not isinstance(value, dict):
-            raise ValidationError("results must be a dict() object.")
-        return value
-
-    @validator("priority", pre=True)
-    def priority_under_right_value_range(cls, value):
-        """Check that priority field is in range defined on PRIORITIES variable."""
-        if value not in PRIORITIES:
-            raise ValidationError(
-                f"priority must be between {PRIORITIES[0]}-{PRIORITIES[-1]}"
-            )
-        return value
-
-    @validator("status", pre=True)
-    def status_is_valid(cls, value):
-        """Check that status value is on the predefined values on STATUSES"""
-        if value not in STATUSES:
-            raise ValidationError(
-                f"bad status value, please select one of the following {STATUSES}"
-            )
-        return value
-
-    @validator("site", pre=True)
-    def site_is_valid(cls, value):
-        """Check that site value is on the predefined values on SITES"""
-        if value not in SITES:
-            raise ValidationError(
-                f"bad site value, please select one of the following {SITES}"
-            )
-        return value
-
+    id: Optional[StrictStr] = Field(
+        default=None, description="Work ID created by the database."
+    )
+    creation: Optional[StrictFloat] = Field(
+        default=None, description="Unix timestamp of when the work was created."
+    )
+    start: Optional[StrictFloat] = Field(
+        default=None,
+        description="Unix timestamp when the work was started, reset at each attempt.",
+    )
+    stop: Optional[StrictFloat] = Field(
+        default=None,
+        description="Unix timestamp when the work was stopped, reset at each attempt.",
+    )
+    attempt: StrictInt = Field(
+        default=None, description="Attempt number at performing the work."
+    )
+    status: Literal["created", "queued", "running", "success", "failure"] = Field(
+        default="created", description="Status of the work."
+    )
     ###########################################################################
     # Attribute setters for the work attributes
     ###########################################################################
+
     @root_validator
-    def post_init(cls, values):
-        """Set default values for the work attributes."""
-        if not values["creation"]:
+    def post_init(cls, values: Dict[str, Any]):
+        """Initialize work attributes after validation."""
+        # Set creation time if not already set
+        if values.get("creation") is None:
             values["creation"] = time()
-        if values["path"] == ".":
-            values["path"] = environ.get("WORK_PATH", values["path"])
-        # Update group from WORK_GROUP.
-        if not values["group"]:
-            values["group"] = environ.get("WORK_GROUP", values["group"])
-        # Update tags from WORK_TAGS
+        # Update tags from environment variable WORK_TAGS
         if environ.get("WORK_TAGS"):
-            tags = environ.get("WORK_TAGS").split(",")
+            env_tags: List[str] = str(environ.get("WORK_TAGS")).split(",")
             # If tags are already set, append the new ones
-            if values["tags"] and isinstance(values["tags"], list):
-                values["tags"].append(tags)
+            if values.get("tags"):
+                values["tags"] = values["tags"] + env_tags
             else:
-                values["tags"] = tags
+                values["tags"] = env_tags
+            # Remove duplicates
             values["tags"] = list(set(values["tags"]))
+
+        # Check path exists and is a directory
+        if values.get("path"):
+            path = Path(values.get("path"))  # type: ignore
+            assert path.exists(), f"{values.get('path')} does not exist."
+            assert path.is_dir(), f"{values.get('path')} is not a directory."
+
+        # Display deprecation warning for precursors & config
+        if values.get("precursors") or values.get("config"):
+            warn(
+                """\n
+                The `precursors` & `config` attributes have been deprecated.
+                They will be removed in chime-frb-api v3.0.0.
+                Please remove them from your code.\n""",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            values["precursors"] = None
+            values["config"] = None
         return values
 
     ###########################################################################
@@ -269,25 +262,10 @@ class Work(BaseModel):
 
         Returns:
             Dict[str, Any]: The payload of the work.
+            Non-instanced attributes are excluded from the payload.
         """
-        payload: dict = self.dict()
-        for k, v in payload.items():
-            try:
-                dumps(v)  # There could be some field that are not JSON serializable
-            except TypeError:
-                payload[k] = str(v)
-            else:
-                payload[k] = v
+        payload: Dict[str, Any] = self.dict()
         return payload
-
-    @property
-    def json(self) -> str:
-        """Return the json representation of the work.
-
-        Returns:
-            str: The json representation of the work.
-        """
-        return dumps(self.payload)
 
     @classmethod
     def from_json(cls, json_str: str) -> "Work":
@@ -354,7 +332,7 @@ class Work(BaseModel):
             bool: True if successful, False otherwise.
         """
         buckets = Buckets(**kwargs)  # type: ignore
-        token = buckets.access_token
+        token: Any = buckets.access_token
         if token:
             # Try and decode the token for the user.
             try:

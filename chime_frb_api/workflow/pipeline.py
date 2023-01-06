@@ -10,7 +10,7 @@ import requests
 
 from chime_frb_api.workflow import Work
 
-BASE_URLS: List[str] = ["http://frb-vsop.chime:8001", "https://frb.chimenet.ca/buckets"]
+BASE_URLS: List[str] = ["http://frb-vsop.chime:8004", "https://frb.chimenet.ca/buckets"]
 # Checkmark & Cross and other Unicode characters
 CHECKMARK = "\u2713"
 CROSS = "\u2717"

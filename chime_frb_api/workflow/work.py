@@ -159,7 +159,7 @@ class Work(BaseModel):
         example=["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"],
     )
     site: Literal[
-        "chime", "allenby", "gbo", "hatcreek", "canfar", "cedar", "local"
+        "chime", "allenby", "kko", "gbo", "hco", "canfar", "cedar", "local", "aro"
     ] = Field(
         default=environ.get("WORK_SITE", "local"),
         description="Site where the work will be performed.",
@@ -250,6 +250,15 @@ class Work(BaseModel):
             )
             values["precursors"] = None
             values["config"] = None
+
+        if values.get("site") == "allenby":
+            warn(
+                """\n
+                The `allenby` site name has been deprecated and will be
+                removed from chime-frb-api by summer 2023 release.
+                Please use site name `kko` instead.\n
+                """,
+            )
         return values
 
     ###########################################################################

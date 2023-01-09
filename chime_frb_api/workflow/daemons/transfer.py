@@ -1,4 +1,5 @@
 """Transfer Daemon."""
+import logging
 import time
 from typing import Any, Dict, List
 
@@ -6,6 +7,12 @@ import click
 
 from chime_frb_api.modules.buckets import Buckets
 from chime_frb_api.modules.results import Results
+
+# Setup logging and formatter
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
+log = logging.getLogger(__name__)
 
 
 def deposit_work_to_results(
@@ -84,14 +91,32 @@ def transfer_work(
         sleep (int): number of seconds to sleep between transfers
         buckets_base_url (str): location of the Buckets backend
         results_base_url (str): location of the Results backend
+        test_mode (bool): Enable test mode to avoid while True loop
         limit_per_run (int): Max number of failed Work entires to transfer per
         run of daemon.
     """
+    buckets = Buckets(base_url=buckets_base_url, debug=test_mode)
+    results = Results(base_url=results_base_url, debug=test_mode)
 
-    def transfer(test_flag):
-        buckets = Buckets(base_url=buckets_base_url, debug=test_mode)
-        results = Results(base_url=results_base_url, debug=test_mode)
-        transfer_status = {}
+    log.info("Starting Transfer Daemon")
+    log.info(f"Sleeptime: {sleep}")
+    log.info(f"Buckets@ : {buckets_base_url}")
+    log.info(f"Results@ : {results_base_url}")
+    log.info(f"Test Mode: {test_mode}")
+    log.info(f"Limit/Tx : {limit_per_run}")
+
+    def transfer(test_flag: bool, buckets: Buckets, results: Results) -> Dict[str, Any]:
+        """Transfer Work from Buckets to Results.
+
+        Args:
+            test_flag (bool): If True, run once and exit.
+            buckets (Buckets): Buckets module.
+            results (Results): Results module.
+
+        Returns:
+            Dict[str, Any]: Transfer status.
+        """
+        transfer_status: Dict[str, Any] = {}
         # 1. Transfer successful Work
         # TODO: decide projection fields
         successful_work = buckets.view(
@@ -114,12 +139,13 @@ def transfer_work(
             buckets.delete_ids([work["id"] for work in successful_work_to_delete])
             transfer_status["successful_work_deleted"] = True
 
-        # 2. Transfer failed Work
-        # TODO: decide projection fields
+        cutoff_creation_time = time.time() - (60 * 60 * 24 * 7)
+        # 2. Transfer failed Work which is not stale
         failed_work = buckets.view(
             query={
                 "status": "failure",
                 "$expr": {"$gte": ["$attempt", "$retries"]},
+                "creation": {"$gt": cutoff_creation_time},
             },
             projection={},
             skip=0,
@@ -141,7 +167,6 @@ def transfer_work(
             transfer_status["failed_work_deleted"] = True
 
         # 3. Delete stale Work (cut off time: 7 days)
-        cutoff_creation_time = time.time() - (60 * 60 * 24 * 7)
         stale_work = buckets.view(
             query={
                 "status": "failure",
@@ -154,15 +179,13 @@ def transfer_work(
         if stale_work:
             buckets.delete_ids([work["id"] for work in stale_work])
             transfer_status["stale_work_deleted"] = True
-        if test_flag:
-            return transfer_status
-        else:
-            print(transfer_status)
+        log.info(f"Transfer Status: {transfer_status}")
+        return transfer_status
 
     if test_mode:
-        return transfer(test_flag=True)
+        return transfer(test_flag=True, buckets=buckets, results=results)
     while True:
-        transfer(test_flag=False)
+        transfer(test_flag=False, buckets=buckets, results=results)
         time.sleep(sleep)
 
 

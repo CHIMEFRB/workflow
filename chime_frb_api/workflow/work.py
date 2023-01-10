@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Literal, Optional
 from warnings import warn
 
 from jwt import decode
-from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr, root_validator
+from pydantic import BaseModel, Field, StrictFloat, StrictStr, root_validator
 
 from chime_frb_api.modules.buckets import Buckets
 
@@ -205,8 +205,8 @@ class Work(BaseModel):
         default=None,
         description="Unix timestamp when the work was stopped, reset at each attempt.",
     )
-    attempt: StrictInt = Field(
-        default=1, description="Attempt number at performing the work."
+    attempt: int = Field(
+        default=0, ge=0, description="Attempt number at performing the work."
     )
     status: Literal["created", "queued", "running", "success", "failure"] = Field(
         default="created", description="Status of the work."

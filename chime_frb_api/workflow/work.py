@@ -4,10 +4,9 @@ from json import loads
 from os import environ
 from pathlib import Path
 from time import time
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
 
-from jwt import decode
 from pydantic import BaseModel, Field, StrictFloat, StrictStr, root_validator
 
 from chime_frb_api.modules.buckets import Buckets
@@ -331,7 +330,9 @@ class Work(BaseModel):
             return cls.from_dict(payload)
         return None
 
-    def deposit(self, **kwargs: Dict[str, Any]) -> bool:
+    def deposit(
+        self, return_ids: bool = False, **kwargs: Dict[str, Any]
+    ) -> Union[bool, List[str]]:
         """Deposit work to the buckets backend.
 
         Args:
@@ -341,16 +342,7 @@ class Work(BaseModel):
             bool: True if successful, False otherwise.
         """
         buckets = Buckets(**kwargs)  # type: ignore
-        token: Any = buckets.access_token
-        if token:
-            # Try and decode the token for the user.
-            try:
-                self.user = decode(token, options={"verify_signature": False}).get(
-                    "user_id", None
-                )
-            except Exception:
-                pass
-        return buckets.deposit([self.payload])
+        return buckets.deposit(works=[self.payload], return_ids=return_ids)
 
     def update(self, **kwargs: Dict[str, Any]) -> bool:
         """Update work in the buckets backend.

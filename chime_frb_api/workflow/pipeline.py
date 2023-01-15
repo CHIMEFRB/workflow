@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
 import requests
+from rich.console import Console
 
 from chime_frb_api.workflow import Work
 
@@ -76,12 +77,19 @@ def run(
     site: str,
     log_level: str,
 ) -> bool:
-    r"""Run a workflow pipeline.
+    """Fetch and process Work using any method compatible with Workflow API.
 
-    Performs the following steps: \n
-    \t1. Withdraws `Work` from appropriate pipeline.\t\t\t\t
-    \t2. Attempt to execute `func(**work.parameters)`.\t\t\t\t
-    \t3. Updates results, plots, products and status.
+    Args:
+        pipeline (str): Name of the pipeline to fetch work from.
+        func (str): Name of the function to call on the work object.
+        lifetime (int): Number of works to perform before exiting, -1 for infinite.
+        sleep_time (int): Seconds to sleep between fetch attempts.
+        base_urls (List[str]): Workflow backend url(s).
+        site (str): Site where work is being performed.
+        log_level (str): Logging level to use.
+
+    Returns:
+        bool: True if successful, False otherwise.
     """
     # Set logging level
     logger.setLevel(log_level)
@@ -92,53 +100,59 @@ def run(
     for url in base_urls:
         try:
             requests.get(url).headers
-            logger.info(f"Connection: {CHECKMARK}")
-            logger.debug(f"URL: {url}")
+            logger.info(f"connection: {CHECKMARK}")
+            logger.debug(f"url: {url}")
             base_url = url
             break
         except requests.exceptions.RequestException:
-            logger.debug(f"Unable to connect to {url}")
+            logger.debug(f"unable to connect: {url}")
 
     if not base_url:
-        logger.error(f"Connection: {CROSS}")
-        logger.debug("Unable to connect to any of the provided base_urls.")
-        logger.debug(f"Attempted URLS: {base_urls}")
-        raise RuntimeError("Unable to connect to any workflow backend")
+        logger.error(f"connection: {CROSS}")
+        logger.error("unable to connect to workflow backend.")
+        logger.error(f"attempted urls: {base_urls}")
+        raise RuntimeError("unable to connect to workflow backend")
 
     logger.info("=" * 80)
     logger.info("Pipeline Configuration")
 
     # Always print the logging level in the log message
-    logger.info(f"Pipeline: {pipeline}")
-    logger.info(f"Function: {func}")
+    logger.info(f"name : {pipeline}")
+    logger.info(f"func : {func}")
     try:
         # Name of the module containing the user function
         module_name, func_name = func.rsplit(".", 1)
         module = import_module(module_name)
         function = getattr(module, func_name)
-        logger.info(f"Imports: {CHECKMARK}")
+        logger.info(f"import: {CHECKMARK}")
         # Check if the function is callable
         if not callable(function):
             raise TypeError(f"{func} is not callable")
-        logger.info(f"Callable: {CHECKMARK}")
+        logger.info(f"func callable: {CHECKMARK}")
     except ImportError as error:
-        logger.error(f"Imports: {CROSS}")
+        logger.error(f"imports: {CROSS}")
         logger.debug(error)
         raise error
     except (AttributeError, TypeError) as error:
-        logger.error(f"Function: {CROSS}")
+        logger.error(f"func : {CROSS}")
         logger.error(error)
         raise error
 
     logger.info("=" * 80)
-    logger.info("Work Lifecycle")
+    logger.info("Starting Work Lifecycle")
     logger.info("=" * 80)
-    while lifetime != 0:
-        done = attempt_work(pipeline, function, base_url, site)
-        logger.info(f"Work Performed: {CHECKMARK if done else CROSS}")
-        lifetime -= 1
-        logger.debug(f"Sleeping: {sleep_time} seconds")
-        time.sleep(sleep_time)
+    console = Console()
+    with console.status(
+        status=f"[bold] running workflow pipeline {pipeline}",
+        spinner="aesthetic",
+        spinner_style="bold green",
+    ):
+        while lifetime != 0:
+            done = attempt_work(pipeline, function, base_url, site)
+            logger.debug(f"Work Performed: {CHECKMARK if done else CROSS}")
+            lifetime -= 1
+            logger.debug(f"sleeping: {sleep_time}s")
+            time.sleep(sleep_time)
     return True
 
 
@@ -167,7 +181,10 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
     work: Optional["Work"] = None
     try:
         work = Work.withdraw(pipeline=name, site=site, **kwargs)
-        logger.info(f"Work Withdrawn: {CHECKMARK if work else CIRCLE}")
+        if work:
+            logger.info(f"work withdrawn: {CHECKMARK}")
+        else:
+            logger.debug(f"work withdrawn: {CIRCLE}")
     except Exception as error:
         logger.error(f"Work Withdrawn: {CROSS}")
         logger.error(error)
@@ -180,7 +197,7 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
     # If the function is a click command, gather all the default options
     defaults: Dict[Any, Any] = {}
     if isinstance(user_func, click.Command):
-        logger.info(f"Click CLI Detected: {CHECKMARK}")
+        logger.debug(f"click cli: {CHECKMARK}")
         logger.debug("Gathering CLI Defaults")
         # Get default options from the click command
         known: List[Any] = list(work.parameters.keys()) if work.parameters else []
@@ -188,11 +205,11 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
             if parameter.name not in known:  # type: ignore
                 defaults[parameter.name] = parameter.default
         if defaults:
-            logger.info(f"CLI Defaults: {CHECKMARK}")
-            logger.debug(f"CLI Defaults: {defaults}")
+            logger.debug(f"cli defaults: {CHECKMARK}")
+            logger.debug(f"cli defaults: {defaults}")
         user_func = user_func.callback  # type: ignore
     else:
-        logger.info(f"CLI Detected: {CIRCLE}")
+        logger.debug(f"cli detected: {CIRCLE}")
 
     # If work.parameters is empty, merge an empty dict with the defaults
     # Otherwise, merge the work.parameters with the defaults
@@ -201,61 +218,52 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
         parameters = {**work.parameters, **defaults}
     else:
         parameters = defaults
-    logger.info(f"Parameters: {CHECKMARK}")
-    logger.debug(f"Parameters: {parameters}")
+    logger.info(f"work parameters: {parameters}")
 
     # Execute the user function
     try:
-        logger.info(f"Work Started: {CHECKMARK}")
+        logger.info(f"attempting work: {CHECKMARK}")
         logger.debug(f"Executing {user_func.__name__}(**{parameters})")
         start = time.time()
         results, products, plots = user_func(**parameters)
-        logger.info(f"Work Completed: {CHECKMARK}")
+        logger.info(f"work completed : {CHECKMARK}")
         end = time.time()
-        logger.info(f"Execution Time: {end - start:.2f} s")
-        logger.debug(f"Results: {results}")
-        logger.debug(f"Products: {products}")
-        logger.debug(f"Plots: {plots}")
+        logger.info(f"execution time: {end - start:.2f} s")
+        logger.debug(f"results: {results}")
+        logger.debug(f"products: {products}")
+        logger.debug(f"plots: {plots}")
         work.results = results
         work.products = products
         work.plots = plots
-        logger.info(f"Work Results: {CHECKMARK}")
         work.status = "success"
-        logger.info(f"Work Status: {CHECKMARK}")
+        logger.info(f"work status: {CHECKMARK}")
         if int(work.timeout) + int(work.creation) < time.time():  # type: ignore
             logger.warning("even though work was successful, it timed out")
             logger.warning("setting status to failure")
             work.status = "failure"
     except (TypeError, ValueError) as error:
-        logger.error(f"Work Results: {CROSS}")
+        logger.error(f"work results: {CROSS}")
         logger.error(error)
         logger.error("user function must return (results, products, plots)")
         work.status = "failure"
     except Exception as error:
-        logger.error(f"Work Status: {CROSS}")
+        logger.error(f"work status: {CROSS}")
         logger.error("failed to execute user function")
         logger.error(error)
         work.status = "failure"
     finally:
+        updated: bool = False
         try:
-            updated: bool = False
             work.stop = time.time()
-            logger.debug(f"Updated Work: {work.payload}")
-            # Try to update work multiple times
-            for _ in range(10):
-                try:
-                    work.update(**kwargs)
-                    logger.info(f"Work Updated: {CHECKMARK}")
-                    updated = True
-                    break
-                except requests.RequestException:
-                    logger.debug("retrying work update...")
-                    time.sleep(1)
-            if not updated:
-                logger.error(f"Work Updated: {CROSS}")
-                raise RuntimeError("work completed, but failed to update it!!!")
+            work.update(**kwargs)
+            updated = True
+            logger.info(f"work completed: {CHECKMARK}")
         except Exception as error:
+            logger.error(f"work completed: {CROSS}")
             logger.error(error)
+            updated = False
+            raise RuntimeError("work completed, but failed to update it!!!")
+        if not updated:
             return False
     return True
 

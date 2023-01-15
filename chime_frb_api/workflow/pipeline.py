@@ -181,10 +181,9 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
     work: Optional["Work"] = None
     try:
         work = Work.withdraw(pipeline=name, site=site, **kwargs)
-        if work:
-            logger.info(f"work withdrawn: {CHECKMARK}")
-        else:
-            logger.debug(f"work withdrawn: {CIRCLE}")
+        logger.info(f"work withdrawn: {CHECKMARK}") if work else logger.debug(
+            f"work withdrawn: {CROSS}"
+        )
     except Exception as error:
         logger.error(f"Work Withdrawn: {CROSS}")
         logger.error(error)
@@ -198,18 +197,14 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
     defaults: Dict[Any, Any] = {}
     if isinstance(user_func, click.Command):
         logger.debug(f"click cli: {CHECKMARK}")
-        logger.debug("Gathering CLI Defaults")
         # Get default options from the click command
         known: List[Any] = list(work.parameters.keys()) if work.parameters else []
         for parameter in user_func.params:
             if parameter.name not in known:  # type: ignore
                 defaults[parameter.name] = parameter.default
         if defaults:
-            logger.debug(f"cli defaults: {CHECKMARK}")
             logger.debug(f"cli defaults: {defaults}")
         user_func = user_func.callback  # type: ignore
-    else:
-        logger.debug(f"cli detected: {CIRCLE}")
 
     # If work.parameters is empty, merge an empty dict with the defaults
     # Otherwise, merge the work.parameters with the defaults
@@ -222,12 +217,13 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
 
     # Execute the user function
     try:
-        logger.info(f"attempting work: {CHECKMARK}")
+        logger.info(f"work started  : {CHECKMARK}")
         logger.debug(f"Executing {user_func.__name__}(**{parameters})")
         start = time.time()
         results, products, plots = user_func(**parameters)
-        logger.info(f"work completed : {CHECKMARK}")
+        logger.info(f"work complete : {CHECKMARK}")
         end = time.time()
+        work.stop = end
         logger.info(f"execution time: {end - start:.2f} s")
         logger.debug(f"results: {results}")
         logger.debug(f"products: {products}")
@@ -236,36 +232,32 @@ def attempt_work(name: str, user_func: FUNC_TYPE, base_url: str, site: str) -> b
         work.products = products
         work.plots = plots
         work.status = "success"
-        logger.info(f"work status: {CHECKMARK}")
+        logger.info(f"work output : {CHECKMARK}")
         if int(work.timeout) + int(work.creation) < time.time():  # type: ignore
             logger.warning("even though work was successful, it timed out")
             logger.warning("setting status to failure")
             work.status = "failure"
     except (TypeError, ValueError) as error:
-        logger.error(f"work results: {CROSS}")
+        logger.error(f"work output: {CROSS}")
         logger.error(error)
         logger.error("user function must return (results, products, plots)")
         work.status = "failure"
     except Exception as error:
-        logger.error(f"work status: {CROSS}")
+        logger.error(f"work complete : {CROSS}")
         logger.error("failed to execute user function")
         logger.error(error)
         work.status = "failure"
     finally:
-        updated: bool = False
+        status: bool = False
         try:
-            work.stop = time.time()
             work.update(**kwargs)
-            updated = True
             logger.info(f"work completed: {CHECKMARK}")
+            status = True
         except Exception as error:
             logger.error(f"work completed: {CROSS}")
             logger.error(error)
-            updated = False
             raise RuntimeError("work completed, but failed to update it!!!")
-        if not updated:
-            return False
-    return True
+        return status
 
 
 if __name__ == "__main__":

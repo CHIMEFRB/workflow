@@ -8,6 +8,9 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
 
 from pydantic import BaseModel, Field, StrictFloat, StrictStr, root_validator
+from tenacity import retry
+from tenacity.stop import stop_after_delay
+from tenacity.wait import wait_random
 
 from chime_frb_api.modules.buckets import Buckets
 
@@ -330,6 +333,7 @@ class Work(BaseModel):
             return cls.from_dict(payload)
         return None
 
+    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     def deposit(
         self, return_ids: bool = False, **kwargs: Dict[str, Any]
     ) -> Union[bool, List[str]]:
@@ -344,6 +348,7 @@ class Work(BaseModel):
         buckets = Buckets(**kwargs)  # type: ignore
         return buckets.deposit(works=[self.payload], return_ids=return_ids)
 
+    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     def update(self, **kwargs: Dict[str, Any]) -> bool:
         """Update work in the buckets backend.
 

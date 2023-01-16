@@ -361,6 +361,7 @@ class Work(BaseModel):
         buckets = Buckets(**kwargs)  # type: ignore
         return buckets.update([self.payload])
 
+    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     def delete(self, **kwargs: Dict[str, Any]) -> bool:
         """Delete work from the buckets backend.
 

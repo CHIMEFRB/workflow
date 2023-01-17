@@ -3,7 +3,7 @@
 import click
 
 from chime_frb_api.workflow.pipeline import run
-from chime_frb_api.workflow.utils import prune_work
+from chime_frb_api.workflow.utils import pipeline
 
 
 @click.group()
@@ -13,7 +13,8 @@ def cli():
 
 
 cli.add_command(run)
-cli.add_command(prune_work)
+cli.add_command(pipeline)
+# cli.add_command(prune_work)
 
 if __name__ == "__main__":
     cli()

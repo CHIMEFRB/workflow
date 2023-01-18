@@ -10,20 +10,29 @@ from chime_frb_api.modules.buckets import Buckets
 
 pretty.install()
 console = Console()
-table = Table(title="Workflow Status", show_header=True, header_style="bold magenta")
+table = Table(
+    title="\nWorkflow Buckets",
+    show_header=True,
+    header_style="magenta",
+    title_style="bold magenta",
+)
 
 
-@click.group(name="pipeline", help="Manage workflow pipelines.")
-def pipeline():
+@click.group(name="buckets", help="Manage workflow buckets.")
+def buckets():
     """Manage workflow pipelines."""
     pass
 
 
-@pipeline.command("prune", help="Prune work[s] from a workflow pipeline.")
-@click.option("name", "--name", type=str, required=True, help="Name of the pipeline.")
+@buckets.command("prune", help="Prune work[s] from a workflow bucket.")
+@click.option("name", "--name", type=str, required=True, help="Name of the bucket.")
 @click.option("event", "--event", type=int, required=False, help="CHIME/FRB Event ID.")
 @click.option(
-    "status", "--status", type=str, required=False, help="Status of the work."
+    "status",
+    "--status",
+    type=str,
+    required=False,
+    help="To prune work of particular status.",
 )
 def prune_work(name: str, event: Optional[int] = None, status: Optional[str] = None):
     """Prune work[s] from the workflow backend.
@@ -40,9 +49,9 @@ def prune_work(name: str, event: Optional[int] = None, status: Optional[str] = N
     buckets.delete_many(pipeline=name, status=status, events=events)
 
 
-@pipeline.command("ls", help="List all active pipelines.")
-def ls(details: bool = False):
-    """List all available pipelines."""
+@buckets.command("ls", help="List all active buckets.")
+def ls():
+    """List all active buckets."""
     buckets = Buckets()
     pipelines = buckets.pipelines()
     table.add_column("Active Pipelines", max_width=50, justify="left")
@@ -51,35 +60,45 @@ def ls(details: bool = False):
     console.print(table)
 
 
-@pipeline.command("details", help="List the details of pipeline[s].")
-@click.option("all", "-a", "--all", is_flag=True, help="List details of all pipelines.")
-@click.argument("name", type=str, required=False)
+@buckets.command("details", help="List the detail of buckets[s].")
+@click.option("all", "-a", "--all", is_flag=True, help="List details of all buckets.")
+@click.argument("name", type=str, required=False, default=None)
 def details(name: Optional[str] = None, all: bool = False):
-    """List the details of a pipeline."""
+    """List the details of the bucket[s].
+
+    Args:
+        name (Optional[str], optional): Name of the bucket. Defaults to None.
+        all (bool, optional): Whether to show all buckets. Defaults to False.
+    """
     buckets = Buckets()
-    details = buckets.status(pipeline=name)
-    table.add_column("", justify="left")
-    tablify("total", details)
+    details = buckets.status(pipeline=None)
+    table.add_column("name", justify="left")
+    for key in details.keys():
+        table.add_column(key, justify="right")
+    table.add_row("total", *create_row(details))
     if all:
         pipelines = buckets.pipelines()
         for pipeline in pipelines:
             details = buckets.status(pipeline=pipeline)
-            tablify(pipeline, details)
+            row = create_row(details)
+            table.add_row(pipeline, *row)
     elif name:
         details = buckets.status(pipeline=name)
-        tablify(name, details)
+        row = create_row(details)
+        table.add_row(name, *row)
     console.print(table)
 
 
-def tablify(name: str, details: Dict[str, Any]):
-    """Format the details of a pipeline into a table.
+def create_row(details: Dict[str, Any]) -> List[str]:
+    """Create a row of data for the table.
 
     Args:
-        name (str): Name of the pipeline.
-        details (Dict[str, Any]): Details of the pipeline.
+        details (Dict[str, Any]): Details of the bucket.
+
+    Returns:
+        List[str]: List of values.
     """
-    row = [name]
-    for key, value in details.items():
-        table.add_column(key, justify="right")
-        row.append(str(value))
-    table.add_row(*row)
+    row_data: List[str] = []
+    for value in details.values():
+        row_data.append(str(value))
+    return row_data

@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Optional
 
 import click
-from rich import pretty
+from rich import pretty, print
 from rich.console import Console
 from rich.table import Table
 
@@ -87,6 +87,29 @@ def details(name: Optional[str] = None, all: bool = False):
         row = create_row(details)
         table.add_row(name, *row)
     console.print(table)
+
+
+@buckets.command("view", help="View work in a bucket.")
+@click.argument("name", type=str, required=True)
+@click.option(
+    "count",
+    "-c",
+    "--count",
+    type=int,
+    required=False,
+    default=3,
+    help="Number of work to show.",
+)
+def view(name: str, count: int = 3):
+    """View work in a bucket.
+
+    Args:
+        name (str): Name of the bucket.
+        count (int, optional): Number of work to show. Defaults to 3.
+    """
+    buckets = Buckets()
+    work = buckets.view(query={"pipeline": name}, projection={}, limit=count)
+    print(work)
 
 
 def create_row(details: Dict[str, Any]) -> List[str]:

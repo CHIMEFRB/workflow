@@ -206,51 +206,41 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
         # Get work from the workflow backend
         try:
             work = Work.withdraw(pipeline=bucket, site=site, **kwargs)
+            logger.info(f"work retrieved: {CHECKMARK}")
         except Exception as error:
             logger.exception(error)
-        finally:
-            if work:
-                logger.info(f"found work: {CHECKMARK}")
-                logger.debug(f"work payload: {work.payload}")
-            else:
-                logger.debug(f"found work: {CROSS}")
-                return False
 
-        # Set the work id for the logger
-        set_work_id_for_logger(work.id)  # type: ignore
-        if mode == "dynamic":
-            # Get the user function from the work object
-            function = work.function
-            command = work.command
-            assert command or function, "neither function or command provided"
+        if work:
+            # Set the work id for the logger
+            set_work_id_for_logger(work.id)  # type: ignore
+            logger.info(f"work retrieved: {CHECKMARK}")
+            logger.debug(f"work payload  : {work.payload}")
+            if mode == "dynamic":
+                # Get the user function from the work object
+                function = work.function
+                command = work.command
+                assert command or function, "neither function or command provided"
 
-        if mode == "dynamic" and function:
-            # Get the user function from the work object
-            user_func = validate_function(function)
+            # Get the user function from the work object dynamically
+            if function:
+                user_func = validate_function(function)
+                work = execute_function(user_func, work)
 
-        if user_func:
-            work = execute_function(user_func, work)
-
-        if command:
-            work = execute_command(command, work)
-
-        if int(work.timeout) + int(work.start) < time.time():  # type: ignore
-            raise TimeoutError("work timed out")
+            # If we have a valid command, execute it
+            if command:
+                work = execute_command(command, work)
+            if int(work.timeout) + int(work.start) < time.time():  # type: ignore
+                raise TimeoutError("work timed out")
+            status = True
     except Exception as error:
         logger.exception(error)
         work.status = "failure"  # type: ignore
     finally:
-        try:
+        unset_work_id_for_logger()
+        if work:
             work.update(**kwargs)  # type: ignore
             logger.info(f"work completed: {CHECKMARK}")
-            status = True
-        except Exception as error:
-            logger.exception(error)
-            logger.error(f"work completed: {CROSS}")
-        finally:
-            # Remove the work id from the logger
-            unset_work_id_for_logger()
-            return status
+        return status
 
 
 def execute_function(user_func: FUNC_TYPE, work: Work) -> Work:
@@ -331,6 +321,7 @@ def execute_command(command: List[str], work: Work) -> Work:
         logger.info(f"work complete : {CHECKMARK}")
         # Convert stdout and stderr to strings
         stdout = process.stdout.decode("utf-8").splitlines()
+        stderr = process.stderr.decode("utf-8").splitlines()
         # Convert last line of stdout to a Tuple
         response: Any = ast.literal_eval(stdout[-1])
         if isinstance(response, tuple):
@@ -340,8 +331,13 @@ def execute_command(command: List[str], work: Work) -> Work:
                 work.products = response[1]
             if isinstance(response[2], list):
                 work.plots = response[2]
-        if isinstance(response, dict):
-            work.results = response
+        if not (work.results or work.products or work.plots):
+            work.results = {
+                "args": process.args,
+                "stdout": stdout,
+                "stderr": stderr,
+                "returncode": process.returncode,
+            }
         work.status = "success"
         logger.info(f"work complete : {CHECKMARK}")
     except Exception as error:

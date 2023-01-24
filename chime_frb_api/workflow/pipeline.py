@@ -55,7 +55,7 @@ FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
 @click.option(
     "--site",
     type=click.Choice(
-        ["chime", "allenby", "gbo", "hatcreek", "canfar", "cedar", "local"]
+        ["chime", "allenby", "gbo", "hatcreek", "canfar", "cedar", "local", "aro"]
     ),
     default="chime",
     show_default=True,

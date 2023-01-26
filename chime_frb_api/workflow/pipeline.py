@@ -323,7 +323,11 @@ def execute_command(command: List[str], work: Work) -> Work:
         stdout = process.stdout.decode("utf-8").splitlines()
         stderr = process.stderr.decode("utf-8").splitlines()
         # Convert last line of stdout to a Tuple
-        response: Any = ast.literal_eval(stdout[-1])
+        try:
+            response: Any = ast.literal_eval(stdout[-1])
+        except SyntaxError as error:
+            logger.warning(f"could not parse stdout: {error}")
+            response = stdout
         if isinstance(response, tuple):
             if isinstance(response[0], dict):
                 work.results = response[0]
@@ -331,6 +335,8 @@ def execute_command(command: List[str], work: Work) -> Work:
                 work.products = response[1]
             if isinstance(response[2], list):
                 work.plots = response[2]
+        if isinstance(response, dict):
+            work.results = response
         if not (work.results or work.products or work.plots):
             work.results = {
                 "args": process.args,

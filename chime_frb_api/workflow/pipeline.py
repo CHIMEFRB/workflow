@@ -144,7 +144,7 @@ def run(
         logger.info("=" * 80)
         console = Console()
         with console.status(
-            status=f"[bold]Performing work from bucket {bucket}[/bold]\n",
+            status=f"[bold]Performing work from bucket {bucket}[/bold]",
             spinner="aesthetic",
             spinner_style="bold green",
         ):
@@ -206,7 +206,6 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
         # Get work from the workflow backend
         try:
             work = Work.withdraw(pipeline=bucket, site=site, **kwargs)
-            logger.info(f"work retrieved: {CHECKMARK}")
         except Exception as error:
             logger.exception(error)
 

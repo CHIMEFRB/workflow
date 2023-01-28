@@ -12,7 +12,7 @@ import requests
 from rich.console import Console
 
 from chime_frb_api import get_logger
-from chime_frb_api.core.logger import set_work_id_for_logger, unset_work_id_for_logger
+from chime_frb_api.core.logger import set_tag, unset_tag
 from chime_frb_api.workflow import Work
 
 FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
@@ -96,7 +96,8 @@ def run(
 ):
     """Perform work retrieved from the workflow backend."""
     # Set logging level
-    logger.setLevel(log_level)
+    logger.root.setLevel(log_level)
+    logger.root.handlers[0].setLevel(log_level)
     base_url: Optional[str] = None
     # Setup and connect to the workflow backend
     logger.info("=" * 80)
@@ -211,7 +212,7 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
 
         if work:
             # Set the work id for the logger
-            set_work_id_for_logger(work.id)  # type: ignore
+            set_tag(work.id)  # type: ignore
             logger.info(f"work retrieved: {CHECKMARK}")
             logger.debug(f"work payload  : {work.payload}")
             if mode == "dynamic":
@@ -235,7 +236,7 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
         logger.exception(error)
         work.status = "failure"  # type: ignore
     finally:
-        unset_work_id_for_logger()
+        unset_tag()
         if work:
             work.update(**kwargs)  # type: ignore
             logger.info(f"work completed: {CHECKMARK}")

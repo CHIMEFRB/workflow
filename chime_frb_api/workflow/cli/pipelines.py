@@ -4,8 +4,12 @@ from typing import Any, Dict, Optional
 
 import click
 import requests
-from rich.console import Console, pretty
+from rich import pretty
+from rich.console import Console
 from rich.table import Table
+
+pretty.install()
+console = Console()
 
 BASE_URL = "https://frb.chimenet.ca/pipelines"
 DOTS: Dict[str, str] = {
@@ -16,8 +20,6 @@ DOTS: Dict[str, str] = {
     "failure": "[red]●[/red]",
     "unknown": "[grey]●[/grey]",
 }
-pretty.install()
-console = Console()
 
 
 @click.group(name="pipelines", help="Manage workflow pipelines.")

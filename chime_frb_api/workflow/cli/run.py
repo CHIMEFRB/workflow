@@ -231,6 +231,7 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
                 work = execute_command(command, work)
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")
+            # TODO: Add support for moving plots and products to id directories
             status = True
     except Exception as error:
         logger.exception(error)

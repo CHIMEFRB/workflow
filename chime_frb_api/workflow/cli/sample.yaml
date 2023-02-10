@@ -1,0 +1,15 @@
+version: "1"
+name: "sample"
+pipeline:
+  stage: 1
+  matrix:
+    scale:
+      range: [1,64,1]
+  work:
+    name: "skaha"
+    function: "skaha.session.create"
+    parameters:
+      image: "chimefrb/baseband"
+      cores: 1
+      memory: 4
+      command: workflow run baseband

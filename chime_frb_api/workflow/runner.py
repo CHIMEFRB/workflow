@@ -2,8 +2,9 @@
 
 import click
 
-from chime_frb_api.workflow.pipeline import run
-from chime_frb_api.workflow.utils import buckets
+from chime_frb_api.workflow.cli.buckets import buckets
+from chime_frb_api.workflow.cli.pipelines import pipelines
+from chime_frb_api.workflow.cli.run import run
 
 
 @click.group()
@@ -14,6 +15,7 @@ def cli():
 
 cli.add_command(run)
 cli.add_command(buckets)
+cli.add_command(pipelines)
 
 if __name__ == "__main__":
     cli()

@@ -54,16 +54,16 @@ def ls():
     """List all active buckets."""
     buckets = Buckets()
     pipelines = buckets.pipelines()
-    table.add_column("Active Pipelines", max_width=50, justify="left")
+    table.add_column("Active Buckets", max_width=50, justify="left")
     for pipeline in pipelines:
         table.add_row(pipeline)
     console.print(table)
 
 
-@buckets.command("details", help="List the detail of buckets[s].")
+@buckets.command("ps", help="List the detail of buckets[s].")
 @click.option("all", "-a", "--all", is_flag=True, help="List details of all buckets.")
 @click.argument("name", type=str, required=False, default=None)
-def details(name: Optional[str] = None, all: bool = False):
+def ps(name: Optional[str] = None, all: bool = False):
     """List the details of the bucket[s].
 
     Args:

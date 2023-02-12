@@ -4,9 +4,11 @@ from typing import Any, Dict, Optional
 
 import click
 import requests
+import yaml
 from rich import pretty
 from rich.console import Console
 from rich.table import Table
+from yaml.loader import SafeLoader
 
 pretty.install()
 console = Console()
@@ -22,13 +24,13 @@ DOTS: Dict[str, str] = {
 }
 
 
-@click.group(name="pipelines", help="Manage workflow pipelines.")
+@click.group(name="pipelines", help="Manage Workflow Pipelines.")
 def pipelines():
     """Manage workflow pipelines."""
     pass
 
 
-@pipelines.command("ls", help="List all active pipelines.")
+@pipelines.command("ls", help="List pipelines.")
 def ls():
     """List all active pipelines."""
     pipelines = status()
@@ -45,7 +47,7 @@ def ls():
     console.print(table)
 
 
-@pipelines.command("ps", help="List all pipeline in detail.")
+@pipelines.command("ps", help="Get pipeline details.")
 @click.argument("pipeline", type=str, required=True)
 @click.argument("id", type=str, required=False)
 def ps(pipeline: str, id: str):
@@ -74,10 +76,44 @@ def ps(pipeline: str, id: str):
         console.print(info)
 
 
-@pipelines.command("version", help="Get version of the pipelines backend.")
+@pipelines.command("version", help="Backend version.")
 def version():
     """Get version of the pipelines service."""
     response = requests.get(f"{BASE_URL}/version")
+    console.print(response.json())
+
+
+@pipelines.command("deploy", help="Deploy a workflow pipeline.")
+@click.argument(
+    "filename",
+    type=click.Path(exists=True, dir_okay=False, readable=True),
+    required=True,
+)
+def deploy(filename: click.Path):
+    """Deploy a workflow pipeline."""
+    filepath: str = str(filename)
+    data: Dict[str, Any] = {}
+    with open(filepath) as reader:
+        data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
+    response = requests.post(f"{BASE_URL}/v1/pipelines", json=data)
+    response.raise_for_status()
+    pipeline: str = response.json().get("id")
+    console.print(f"Pipeline deployed: {pipeline}")
+
+
+@pipelines.command("rm", help="Remove a pipeline.")
+@click.argument("pipeline", type=str, required=True)
+@click.argument("id", type=str, required=True)
+def rm(pipeline: str, id: str):
+    """Remove a pipeline."""
+    filter: str = json.dumps({"id": id})
+    name: str = json.dumps({"name": pipeline})
+    response = requests.delete(
+        f"{BASE_URL}/v1/pipelines",
+        params={"name": name, "query": filter},
+    )
+    response.raise_for_status()
+    console.print(f"Pipeline removed: {pipeline}")
     console.print(response.json())
 
 

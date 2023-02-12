@@ -1,15 +1,28 @@
 version: "1"
 name: "sample"
 pipeline:
-  stage: 1
-  matrix:
-    scale:
-      range: [1,64,1]
-  work:
-    name: "skaha"
-    function: "skaha.session.create"
-    parameters:
-      image: "chimefrb/baseband"
-      cores: 1
-      memory: 4
-      command: workflow run baseband
+  alpha:
+    stage: 1
+    matrix:
+      job: [1,3,5]
+    work:
+      name: "workflow-demo"
+      command:
+        - "echo Hello from $whoami on $hostname doing alpha job ${{ matrix.job }}"
+  beta:
+    stage: 1
+    matrix:
+      job:
+        range: [7,13,2] # start, stop, step
+    work:
+      name: "workflow-demo"
+      command:
+        - "echo Hello from $whoami on $hostname doing beta job ${{ matrix.job }}"
+  gamma:
+    stage: 3
+    work:
+      name: "workflow-demo"
+      function: "chime_frb_api.workflow.cli.sample.sample"
+      parameters:
+        numerator: 33.3
+        denominator: 11.1

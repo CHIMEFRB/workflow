@@ -198,14 +198,14 @@ class Work(BaseModel):
         """,
         example=True,
     )
+    config: Optional[str] = Field(
+        default=None,
+        description="UUID of parent pipeline configuration.",
+        example="e6b7c8d9-e0a1-2b3c-4d5e-6f7a8b9c0d1e",
+    )
 
     # Deprecated Attributes to be removed in future versions.
     precursors: Optional[List[Dict[StrictStr, StrictStr]]] = Field(
-        default=None,
-        deprecated=True,
-        description="This field has been deprecated.",
-    )
-    config: Optional[str] = Field(
         default=None,
         deprecated=True,
         description="This field has been deprecated.",
@@ -266,12 +266,12 @@ class Work(BaseModel):
             assert path.is_dir(), f"{values.get('path')} is not a directory."
 
         # Display deprecation warning for precursors & config
-        if values.get("precursors") or values.get("config"):
+        if values.get("precursors"):
             warn(
                 """\n
-                The `precursors` & `config` attributes have been deprecated.
-                They will be removed in chime-frb-api v3.0.0.
-                Please remove them from your code.\n""",
+                The `precursors` attribute has been deprecated.
+                It will be removed in chime-frb-api v3.0.0.
+                Please remove it from your code.\n""",
                 DeprecationWarning,
                 stacklevel=2,
             )

@@ -14,7 +14,7 @@ pretty.install()
 console = Console()
 
 BASE_URL = "https://frb.chimenet.ca/pipelines"
-STATUS = ["created", "queued", "running", "success", "failure", "cancelled", ""]
+STATUS = ["created", "queued", "running", "success", "failure", "cancelled"]
 
 
 @click.group(name="pipelines", help="Manage Workflow Pipelines.")

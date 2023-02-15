@@ -28,7 +28,7 @@ INIFINITY = "\u221E"
 logger = get_logger("workflow")
 
 
-@click.command("run", short_help="Perform work retrieved from the workflow backend.")
+@click.command("run", short_help="Perform work.")
 @click.argument("bucket", type=str, required=True)
 @click.argument(
     "function",

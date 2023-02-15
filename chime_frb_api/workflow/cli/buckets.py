@@ -24,6 +24,13 @@ def buckets():
     pass
 
 
+@buckets.command("version", help="Show the version.")
+def version():
+    """Show the version."""
+    buckets = Buckets()
+    console.print(buckets.version())
+
+
 @buckets.command("prune", help="Prune work[s] from a workflow bucket.")
 @click.option("name", "--name", type=str, required=True, help="Name of the bucket.")
 @click.option("event", "--event", type=int, required=False, help="CHIME/FRB Event ID.")

@@ -145,8 +145,8 @@ def run(
         logger.info("=" * 80)
         console = Console()
         with console.status(
-            status=f"[bold]Performing work from bucket {bucket}[/bold]",
-            spinner="aesthetic",
+            status=f"[bold]Performing work for {bucket}[/bold]",
+            spinner="dots",
             spinner_style="bold green",
         ):
             lifecycle(bucket, function, lifetime, sleep_time, site, base_url)

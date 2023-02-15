@@ -6,23 +6,25 @@ pipeline:
     matrix:
       job: [1,3,5]
     work:
-      name: "workflow-demo"
       command:
-        - "echo Hello from $whoami on $hostname doing alpha job ${{ matrix.job }}"
+        - "echo"
+        - "Hello from $(whoami) on $(hostname) doing alpha job ${{ matrix.job }}"
   beta:
-    stage: 1
+    stage: 2
     matrix:
       job:
         range: [7,13,2] # start, stop, step
     work:
-      name: "workflow-demo"
       command:
-        - "echo Hello from $whoami on $hostname doing beta job ${{ matrix.job }}"
+        - "echo"
+        - "Hello from $(whoami) on $(hostname) doing beta job ${{ matrix.job }}"
   gamma:
     stage: 3
+    matrix:
+      denominator: [1,2,3]
     work:
-      name: "workflow-demo"
-      function: "chime_frb_api.workflow.cli.sample.sample"
+      pipeline: "fraction"
+      function: "chime_frb_api.workflow.cli.sample.fraction"
       parameters:
-        numerator: 33.3
-        denominator: 11.1
+        numerator: 5
+        denominator: ${{ matrix.denominator }}

@@ -13,6 +13,7 @@ from rich.console import Console
 
 from chime_frb_api import get_logger
 from chime_frb_api.core.logger import set_tag, unset_tag
+from chime_frb_api.utils import move
 from chime_frb_api.workflow import Work
 
 FUNC_TYPE = Callable[..., Tuple[Dict[str, Any], List[str], List[str]]]
@@ -231,16 +232,17 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
                 work = execute_command(command, work)
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")
-            # TODO: Add support for moving plots and products to id directories
+            if work.archive:
+                move.work_products(work)
             status = True
     except Exception as error:
         logger.exception(error)
         work.status = "failure"  # type: ignore
     finally:
-        unset_tag()
         if work:
             work.update(**kwargs)  # type: ignore
             logger.info(f"work completed: {CHECKMARK}")
+        unset_tag()
         return status
 
 

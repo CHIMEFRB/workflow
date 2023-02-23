@@ -326,11 +326,13 @@ def execute_command(command: List[str], work: Work) -> Work:
         stdout = process.stdout.decode("utf-8").splitlines()
         stderr = process.stderr.decode("utf-8").splitlines()
         # Convert last line of stdout to a Tuple
+        response: Optional[Any] = None
         try:
-            response: Any = ast.literal_eval(stdout[-1])
+            response = ast.literal_eval(stdout[-1])
         except SyntaxError as error:
             logger.warning(f"could not parse stdout: {error}")
-            response = stdout
+        except IndexError as error:
+            logger.exception(error)
         if isinstance(response, tuple):
             if isinstance(response[0], dict):
                 work.results = response[0]

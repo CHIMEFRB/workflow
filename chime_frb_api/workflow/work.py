@@ -48,6 +48,73 @@ class Archive(BaseModel):
     )
 
 
+class Slack(BaseModel):
+    """Work Object Slack Configuration.
+
+    Args:
+        BaseModel (BaseModel): Pydantic BaseModel.
+
+    Attributes:
+        channel_id (str): Slack channel to send notifications to.
+        message (str): Slack message to send notifications with.
+        results (bool): Send slack notifications with the work results.
+        products (bool): Send slack notifications with the work product links.
+        plots (bool): Send slack notifications with the work plot links.
+        blocks (Dict[str, Any]): Slack blocks to send notifications with.
+        acknowledged (bool): Status of the slack notification.
+    """
+
+    class Config:
+        """Pydantic Config."""
+
+        validate_all = True
+        validate_assignment = True
+
+    channel_id: Optional[StrictStr] = Field(
+        default=None,
+        description="Slack channel to send notifications to.",
+        example="C01JYQZQX0Y",
+    )
+    message: Optional[StrictStr] = Field(
+        default=None,
+        description="Slack message to send notifications with.",
+        example="Hello World!",
+    )
+    results: Optional[bool] = Field(
+        default=None,
+        description="Send slack notifications with the work results.",
+    )
+    products: Optional[bool] = Field(
+        default=None,
+        description="Send slack notifications with the work product links.",
+    )
+    plots: Optional[bool] = Field(
+        default=None,
+        description="Send slack notifications with the work plot links.",
+    )
+    blocks: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Slack blocks to send notifications with.",
+    )
+    acknowledged: Optional[bool] = Field(
+        default=None,
+        description="Status of the slack notification.",
+    )
+
+
+class Notify(BaseModel):
+    """Work Object Notification Configuration.
+
+    Args:
+        BaseModel (BaseModel): Pydantic BaseModel.
+
+    Attributes:
+        slack (Slack): Send slack notifications for the work.
+    """
+
+    slack: Slack = Slack()
+
+
 class WorkConfig(BaseModel):
     """Work Object Configuration.
 
@@ -66,7 +133,7 @@ class WorkConfig(BaseModel):
         default=False,
         description="Generate grafana metrics for the work.",
     )
-    pipeline: Optional[str] = Field(
+    parent: Optional[str] = Field(
         default=None,
         description="ID of the parent workflow pipeline.",
         example="5f9b5c5d7b54b5a9c5e5b5c5",
@@ -106,7 +173,7 @@ class WorkConfig(BaseModel):
         ),
         description="Github Personal Access Token.",
         example="ghp_1234567890abcdefg",
-        repr=False,
+        exclude=True,
     )
 
 
@@ -162,6 +229,7 @@ class Work(BaseModel):
 
         validate_all = True
         validate_assignment = True
+        exclude_none = True
 
     ###########################################################################
     # Required Attributes. Set by user.
@@ -264,6 +332,7 @@ class Work(BaseModel):
         example=1,
     )
     config: WorkConfig = WorkConfig()
+    notify: Notify = Notify()
     ###########################################################################
     # Deprecated attributes, will be removed in future versions.
     ###########################################################################
@@ -378,7 +447,7 @@ class Work(BaseModel):
             Dict[str, Any]: The payload of the work.
             Non-instanced attributes are excluded from the payload.
         """
-        payload: Dict[str, Any] = self.dict(exclude={"token": True})
+        payload: Dict[str, Any] = self.dict(exclude_none=True, exclude={"config.token"})
         return payload
 
     @classmethod

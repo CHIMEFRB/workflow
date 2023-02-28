@@ -2,7 +2,6 @@
 
 from json import loads
 from os import environ
-from pathlib import Path
 from time import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
@@ -15,53 +14,147 @@ from tenacity.wait import wait_random
 from chime_frb_api.modules.buckets import Buckets
 
 
+class Archive(BaseModel):
+    """Work Object Archive Configuration.
+
+    Args:
+        BaseModel (BaseModel): Pydantic BaseModel.
+
+    Attributes:
+        results (bool): Archive results for the work.
+        products (Literal["pass", "copy", "move", "delete", "upload"]):
+            Archive strategy for the products.
+        plots (Literal["pass", "copy", "move", "delete", "upload"]):
+            Archive strategy for the plots.
+        logs (Literal["pass", "copy", "move", "delete", "upload"]):
+            Archive strategy for the logs.
+    """
+
+    results: bool = Field(
+        default=True,
+        description="Archive results for the work.",
+    )
+    products: Literal["pass", "copy", "move", "delete", "upload"] = Field(
+        default="copy",
+        description="Archive strategy for the products.",
+    )
+    plots: Literal["pass", "copy", "move", "delete", "upload"] = Field(
+        default="copy",
+        description="Archive strategy for the plots.",
+    )
+    logs: Literal["pass", "copy", "move", "delete", "upload"] = Field(
+        default="move",
+        description="Archive strategy for the logs.",
+    )
+
+
+class WorkConfig(BaseModel):
+    """Work Object Configuration.
+
+    Args:
+        BaseModel (BaseModel): Pydantic BaseModel.
+    """
+
+    class Config:
+        """Pydantic Config."""
+
+        validate_all = True
+        validate_assignment = True
+
+    archive: Archive = Archive()
+    metrics: bool = Field(
+        default=False,
+        description="Generate grafana metrics for the work.",
+    )
+    pipeline: Optional[str] = Field(
+        default=None,
+        description="ID of the parent workflow pipeline.",
+        example="5f9b5c5d7b54b5a9c5e5b5c5",
+    )
+    orgs: List[str] = Field(
+        default=["chimefrb"],
+        description="""
+        List of organization[s] the work belongs to.
+        Maps to the Github organization.
+        """,
+        example=["chimefrb", "chime-sps"],
+    )
+    teams: Optional[List[str]] = Field(
+        default=None,
+        description="""
+        List of team[s] the work belongs to.
+        Maps to the Github team within the organization.
+        """,
+        example=["frb-tsars", "frb-ops"],
+    )
+    token: Optional[str] = Field(
+        default=next(
+            (
+                value
+                for value in [
+                    environ.get("GITHUB_TOKEN"),
+                    environ.get("WORKFLOW_TOKEN"),
+                    environ.get("GITHUB_PAT"),
+                    environ.get("GITHUB_ACCESS_TOKEN"),
+                    environ.get("GITHUB_PERSONAL_ACCESS_TOKEN"),
+                    environ.get("GITHUB_OAUTH_TOKEN"),
+                    environ.get("GITHUB_OAUTH_ACCESS_TOKEN"),
+                ]
+                if value is not None
+            ),
+            None,
+        ),
+        description="Github Personal Access Token.",
+        example="ghp_1234567890abcdefg",
+        repr=False,
+    )
+
+
 class Work(BaseModel):
-    """The Work Object.
+    """Work Object.
+
+    Args:
+        BaseModel (BaseModel): Pydantic BaseModel.
+
+    Attributes:
+        pipeline (str): Name of the pipeline. Automatically reformated to hyphen-case.
+        site (str): Site where the work will be performed.
+        user (str): Github ID who created the work.
+        function (str): Name of the function to run as `function(**parameters)`.
+        parameters (Dict[str, Any]): Parameters to pass to the function.
+        command (List[str]): Command to run as `subprocess.run(command)`.
+        results (Dict[str, Any]): Results of the work.
+        products (Dict[str, Any]): Products of the work.
+        plots (Dict[str, Any]): Plots of the work.
+        event (List[str]): List of CHIME/FRB events associated with the work.
+        tags (List[str]): List of tags associated with the work.
+        timeout (float): Timeout in seconds for the work.
+        retries (int): Number of retries for the work.
+        priority (int): Priority of the work.
+        config (WorkConfig): Work configuration.
+        id (str): ID of the work.
+        creation (float): Creation time of the work.
+        start (float): Start time of the work.
+        stop (float): Stop time of the work.
+        status (str): Status of the work.
+
+    Deprecated Attributes:
+        precursors (List[str]): List of precursors of the work.
+        path (str): Path to the work.
+        archive (bool): Archive configuration.
+        group (List[str]): Group of the work.
+
+    Raises:
+        ValueError: If the work is not valid.
+
+    Returns:
+        Work: Work object.
 
     Example:
         ```python
-        from chime_frb_api.workflow.work import Work
-
-        work = Work(
-            pipeline="test",
-        )
-        work.deposit()
-        ```
-
-    Args:
-        pipeline (str): Name of the pipeline.
-        function (str, optional): Name of the function ran as `function(**parameters)`.
-        command (List[str], optional): Command to run as `subprocess.run(command)`.
-        parameters (Dict[str, Any], optional): Parameters to pass the function.
-        results (Dict[str, Any], optional): Results of the work performed, if any.
-        plots (List[str], optional): Path to visual data products. These are
-            direct paths to the data products or paths relative to work.path.
-            If archive is True, these data paths will be automatically archived
-            by the Datatrail API.
-        products (List[str], optional): Path to the non-human-readable data products
-            generated by the pipeline. These are direct paths to the data products
-            or paths relative to work.path. If archive is True, these data paths
-            will be automatically archived by the Datatrail API.
-        path (str, optional): Base path where the pipeline results are stored.
-            Defaults to "." or the value of the WORK_PATH environment variable.
-            Used by downstream pipelines to locate work products and plots.
-        event (List[int], optional): CHIME/FRB Event ID[s].
-        tags (List[str], optional): Searchable tags for the work.
-            Merged with env WORK_TAGS.
-        group (str, optional): CHIME/FRB Working Group. Also sourced from env WORK_GROUP.
-        timeout (int, optional): Timeout in seconds for the work to finish.
-            Defaults 3600s (1 hr) with range of [1, 86400] (1s-24hrs).
-        retries (int, optional): Number of retries before giving up. Defaults to 2.
-        priority (int, optional): Priority of the work. Defaults to 3. Range [1, 5].
-        site (str, optional): Site where the work was performed. Defaults to "local".
-        user (str, optional): User who performed the work. Defaults to None.
-        archive (bool, optional): Whether to archive the work products and plots.
-
-    Raises:
-        pydantic.ValidationError: If any of the arguments are of wrong type or value.
-
-    Returns:
-        Work: Work Object.
+        from chime_frb_api.workflow import Work
+        work = Work(pipeline="test")
+        work.deposit(return_ids=True)
     """
 
     class Config:
@@ -76,9 +169,20 @@ class Work(BaseModel):
     pipeline: StrictStr = Field(
         ...,
         min_length=1,
-        description="Name of the pipeline.",
+        description="Name of the pipeline. Automatically reformated to hyphen-case.xw",
         example="example-pipeline",
     )
+    site: Literal[
+        "chime", "kko", "gbo", "hco", "canfar", "cedar", "local", "aro", "allenby"
+    ] = Field(
+        default=environ.get("WORKFLOW_SITE", "local"),
+        description="Site where the work will be performed.",
+        example="chime",
+    )
+    user: Optional[StrictStr] = Field(
+        default=None, description="User ID who created the work.", example="shinybrar"
+    )
+
     ###########################################################################
     # Optional attributes, might be provided by the user.
     ###########################################################################
@@ -101,7 +205,7 @@ class Work(BaseModel):
         default=None,
         description="""
         Command to run as `subprocess.run(command)`.
-        Only either `function` or `command` can be provided.
+        Note, only either `function` or `command` can be provided.
         """,
         example=["python", "example.py", "--example", "example"],
     )
@@ -110,34 +214,19 @@ class Work(BaseModel):
         description="Results of the work performed, if any.",
         example={"dm": 100.0, "snr": 10.0},
     )
-    plots: Optional[List[StrictStr]] = Field(
-        default=None,
-        description="""
-        Name of visual data products generated by the pipeline.
-        These are direct paths to the data products or paths relative to work.path.
-        If archive is True, these data paths will be automatically archived by the
-        Datatrail API.
-        """,
-        example=["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"],
-    )
     products: Optional[List[StrictStr]] = Field(
         default=None,
         description="""
         Name of the non-human-readable data products generated by the pipeline.
-        These are direct paths to the data products or paths relative to work.path.
-        If archive is True, these data paths will be automatically archived by the
-        Datatrail API.
         """,
         example=["spectra.h5", "dm_vs_time.png"],
     )
-    path: Optional[str] = Field(
-        default=environ.get("WORK_PATH", "."),
+    plots: Optional[List[StrictStr]] = Field(
+        default=None,
         description="""
-        Base path where the pipeline results are stored.
-        Defaults to "." or the value of the WORK_PATH environment variable.
-        Used by downstream pipelines to locate work products and plots.
+        Name of visual data products generated by the pipeline.
         """,
-        example="/arc/projects/chimefrb/",
+        example=["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"],
     )
     event: Optional[List[int]] = Field(
         default=None,
@@ -147,16 +236,9 @@ class Work(BaseModel):
     tags: Optional[List[str]] = Field(
         default=None,
         description="""
-        Searchable tags for the work. Merged with values from env WORK_TAGS.
+        Searchable tags for the work. Merged with values from env WORKFLOW_TAGS.
         """,
         example=["dm-analysis"],
-    )
-    group: Optional[StrictStr] = Field(
-        default=environ.get("WORK_GROUP", None),
-        description="""
-        CHIME/FRB Working Group. Can be sourced from env WORK_GROUP.
-        """,
-        example="properties-wg",
     )
     timeout: int = Field(
         default=3600,
@@ -181,34 +263,28 @@ class Work(BaseModel):
         description="Priority of the work. Defaults to 3.",
         example=1,
     )
-    site: Literal[
-        "chime", "allenby", "kko", "gbo", "hco", "canfar", "cedar", "local", "aro"
-    ] = Field(
-        default=environ.get("WORK_SITE", "local"),
-        description="Site where the work will be performed.",
-        example="chime",
-    )
-    user: Optional[StrictStr] = Field(
-        default=None, description="User ID who created the work.", example="shiny"
-    )
-    archive: bool = Field(
-        default=True,
-        description="""
-        Whether or not to archive the work object, results, plots & products.
-        """,
-        example=True,
-    )
-    config: Optional[str] = Field(
-        default=None,
-        description="UUID of parent pipeline configuration.",
-        example="e6b7c8d9-e0a1-2b3c-4d5e-6f7a8b9c0d1e",
-    )
-
-    # Deprecated Attributes to be removed in future versions.
+    config: WorkConfig = WorkConfig()
+    ###########################################################################
+    # Deprecated attributes, will be removed in future versions.
+    ###########################################################################
     precursors: Optional[List[Dict[StrictStr, StrictStr]]] = Field(
         default=None,
         deprecated=True,
         description="This field has been deprecated.",
+    )
+    path: Optional[str] = Field(
+        default=None, description="This field has been deprecated.", deprecated=True
+    )
+    archive: bool = Field(
+        default=None,
+        description="""
+        This field has been deprecated. Use `config.archive` instead.
+        """,
+        example=True,
+    )
+    group: Optional[StrictStr] = Field(
+        default=None,
+        description="This field has been deprecated. Use config.orgs|teams instead.",
     )
 
     ###########################################################################
@@ -241,12 +317,16 @@ class Work(BaseModel):
     @root_validator
     def post_init(cls, values: Dict[str, Any]):
         """Initialize work attributes after validation."""
+        # Change pipeline to be lowercase and replace spaces/underscores with dashes
+        values["pipeline"] = (
+            values["pipeline"].lower().replace(" ", "-").replace("_", "-")
+        )
         # Set creation time if not already set
         if values.get("creation") is None:
             values["creation"] = time()
-        # Update tags from environment variable WORK_TAGS
-        if environ.get("WORK_TAGS"):
-            env_tags: List[str] = str(environ.get("WORK_TAGS")).split(",")
+        # Update tags from environment variable WORKFLOW_TAGS
+        if environ.get("WORKFLOW_TAGS"):
+            env_tags: List[str] = str(environ.get("WORKFLOW_TAGS")).split(",")
             # If tags are already set, append the new ones
             if values.get("tags"):
                 values["tags"] = values["tags"] + env_tags
@@ -259,33 +339,31 @@ class Work(BaseModel):
         if values.get("command") and values.get("function"):
             raise ValueError("command and function cannot be set together.")
 
-        # Check path exists and is a directory
-        if values.get("path"):
-            path = Path(values.get("path"))  # type: ignore
-            assert path.exists(), f"{values.get('path')} does not exist."
-            assert path.is_dir(), f"{values.get('path')} is not a directory."
-
-        # Display deprecation warning for precursors & config
-        if values.get("precursors"):
+        if not values.get("config").token:  # type: ignore
+            msg = "token not set, this will be required in v3.0.0."
             warn(
-                """\n
-                The `precursors` attribute has been deprecated.
-                It will be removed in chime-frb-api v3.0.0.
-                Please remove it from your code.\n""",
-                DeprecationWarning,
+                FutureWarning(msg),
                 stacklevel=2,
             )
-            values["precursors"] = None
-            values["config"] = None
+
+        # Display deprecation warning for precursors & config
+        deprecations: List[str] = ["precursors", "path", "archive", "group"]
+        for deprecation in deprecations:
+            msg = f"`{deprecation}` has been deprecated and will be removed in v3.0.0."
+            if values.get(deprecation):
+                warn(msg, DeprecationWarning, stacklevel=2)
+                values[deprecation] = None
 
         if values.get("site") == "allenby":
             warn(
                 """\n
-                The `allenby` site name has been deprecated and will be
-                removed from chime-frb-api by summer 2023 release.
-                Please use site name `kko` instead.\n
+                Site `allenby` been changed to `kko`.
+                With release v3.0.0 this will be a required change.
                 """,
+                FutureWarning,
+                stacklevel=2,
             )
+            values["site"] = "kko"
         return values
 
     ###########################################################################
@@ -300,7 +378,7 @@ class Work(BaseModel):
             Dict[str, Any]: The payload of the work.
             Non-instanced attributes are excluded from the payload.
         """
-        payload: Dict[str, Any] = self.dict()
+        payload: Dict[str, Any] = self.dict(exclude={"token": True})
         return payload
 
     @classmethod

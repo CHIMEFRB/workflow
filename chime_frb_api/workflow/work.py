@@ -339,28 +339,6 @@ class Work(BaseModel):
     )
     config: WorkConfig = WorkConfig()
     notify: Notify = Notify()
-    ###########################################################################
-    # Deprecated attributes, will be removed in future versions.
-    ###########################################################################
-    precursors: Optional[List[Dict[StrictStr, StrictStr]]] = Field(
-        default=None,
-        deprecated=True,
-        description="This field has been deprecated.",
-    )
-    path: Optional[str] = Field(
-        default=None, description="This field has been deprecated.", deprecated=True
-    )
-    archive: bool = Field(
-        default=None,
-        description="""
-        This field has been deprecated. Use `config.archive` instead.
-        """,
-        example=True,
-    )
-    group: Optional[StrictStr] = Field(
-        default=None,
-        description="This field has been deprecated. Use config.orgs|teams instead.",
-    )
 
     ###########################################################################
     # Automaticaly set attributes

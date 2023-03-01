@@ -21,6 +21,7 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
         payload (List[str]): List of products to copy.
         site (str): Site name.
     """
+    status: bool = False
     try:
         path.mkdir(parents=True, exist_ok=True)
         if path.exists() and path.is_dir() and os.access(path, os.W_OK) and payload:
@@ -44,6 +45,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
         path (Path): Destination path.
         payload (List[str]): List of products to move.
     """
+    status: bool = False
     try:
         path.mkdir(parents=True, exist_ok=True)
         if path.exists() and path.is_dir() and os.access(path, os.W_OK) and payload:

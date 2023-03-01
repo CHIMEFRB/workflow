@@ -30,6 +30,12 @@ class Archive(BaseModel):
             Archive strategy for the logs.
     """
 
+    class Config:
+        """Pydantic Config."""
+
+        validate_all = True
+        validate_assignment = True
+
     results: bool = Field(
         default=True,
         description="Archive results for the work.",
@@ -447,7 +453,7 @@ class Work(BaseModel):
             Dict[str, Any]: The payload of the work.
             Non-instanced attributes are excluded from the payload.
         """
-        payload: Dict[str, Any] = self.dict(exclude_none=True, exclude={"config.token"})
+        payload: Dict[str, Any] = self.dict(exclude={"config.token"})
         return payload
 
     @classmethod

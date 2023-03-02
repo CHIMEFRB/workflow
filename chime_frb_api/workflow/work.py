@@ -102,9 +102,10 @@ class Slack(BaseModel):
         default=None,
         description="Slack blocks to send notifications with.",
     )
-    acknowledged: Optional[bool] = Field(
+    reply: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Status of the slack notification.",
+        example={"ok": True},
     )
 
 

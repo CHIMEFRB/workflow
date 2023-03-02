@@ -62,12 +62,13 @@ class Slack(BaseModel):
 
     Attributes:
         channel_id (str): Slack channel to send notifications to.
+        member_ids (List[str]): Slack members to send notifications to.
         message (str): Slack message to send notifications with.
         results (bool): Send slack notifications with the work results.
         products (bool): Send slack notifications with the work product links.
         plots (bool): Send slack notifications with the work plot links.
         blocks (Dict[str, Any]): Slack blocks to send notifications with.
-        acknowledged (bool): Status of the slack notification.
+        reply (Dict[str, Any]): Status of the slack notification.
     """
 
     class Config:
@@ -80,6 +81,11 @@ class Slack(BaseModel):
         default=None,
         description="Slack channel to send notifications to.",
         example="C01JYQZQX0Y",
+    )
+    member_ids: Optional[List[StrictStr]] = Field(
+        default=None,
+        description="Slack members to send notifications to.",
+        example=["U01JYQZQX0Y"],
     )
     message: Optional[StrictStr] = Field(
         default=None,
@@ -191,32 +197,29 @@ class Work(BaseModel):
         BaseModel (BaseModel): Pydantic BaseModel.
 
     Attributes:
-        pipeline (str): Name of the pipeline. Automatically reformated to hyphen-case.
-        site (str): Site where the work will be performed.
-        user (str): Github ID who created the work.
-        function (str): Name of the function to run as `function(**parameters)`.
-        parameters (Dict[str, Any]): Parameters to pass to the function.
-        command (List[str]): Command to run as `subprocess.run(command)`.
-        results (Dict[str, Any]): Results of the work.
-        products (Dict[str, Any]): Products of the work.
-        plots (Dict[str, Any]): Plots of the work.
-        event (List[str]): List of CHIME/FRB events associated with the work.
-        tags (List[str]): List of tags associated with the work.
-        timeout (float): Timeout in seconds for the work.
-        retries (int): Number of retries for the work.
-        priority (int): Priority of the work.
-        config (WorkConfig): Work configuration.
+        pipeline (str): Name of the pipeline. (Required)
+            Automatically reformated to hyphen-case.
+        site (str): Site where the work will be performed. (Required)
+        user (str): User who created the work. (Required)
+        function (Optional[str]): Name of the function ran as `function(**parameters)`.
+        command (Optional[List[str]]): Command to run as `subprocess.run(command)`.
+        parameters (Optional[Dict[str, Any]]): Parameters to pass to the function.
+        command (Optional[List[str]]): Command to run as `subprocess.run(command)`.
+        results (Optional[Dict[str, Any]]): Results of the work.
+        products (Optional[Dict[str, Any]]): Products of the work.
+        plots (Optional[Dict[str, Any]]): Plots of the work.
+        event (Optional[List[int]]): Event ID of the work.
+        tags (Optional[List[str]]): Tags of the work.
+        timeout (int): Timeout for the work in seconds. Default is 3600 seconds.
+        retries (int): Number of retries for the work. Default is 2 retries.
+        priority (int): Priority of the work. Default is 3.
+        config (WorkConfig): Configuration of the work.
+        notify (Notify): Notification configuration of the work.
         id (str): ID of the work.
         creation (float): Creation time of the work.
         start (float): Start time of the work.
         stop (float): Stop time of the work.
         status (str): Status of the work.
-
-    Deprecated Attributes:
-        precursors (List[str]): List of precursors of the work.
-        path (str): Path to the work.
-        archive (bool): Archive configuration.
-        group (List[str]): Group of the work.
 
     Raises:
         ValueError: If the work is not valid.
@@ -227,8 +230,10 @@ class Work(BaseModel):
     Example:
         ```python
         from chime_frb_api.workflow import Work
-        work = Work(pipeline="test")
+
+        work = Work(pipeline="test-pipeline", site="chime", user="shinybrar")
         work.deposit(return_ids=True)
+        ```
     """
 
     class Config:
@@ -248,14 +253,21 @@ class Work(BaseModel):
         example="example-pipeline",
     )
     site: Literal[
-        "chime", "kko", "gbo", "hco", "canfar", "cedar", "local", "aro", "allenby"
+        "canfar",
+        "cedar",
+        "chime",
+        "aro",
+        "hco",
+        "gbo",
+        "kko",
+        "local",
     ] = Field(
-        default=environ.get("WORKFLOW_SITE", "local"),
+        ...,
         description="Site where the work will be performed.",
         example="chime",
     )
-    user: Optional[StrictStr] = Field(
-        default=None, description="User ID who created the work.", example="shinybrar"
+    user: StrictStr = Field(
+        ..., description="User ID who created the work.", example="shinybrar"
     )
 
     ###########################################################################
@@ -394,30 +406,11 @@ class Work(BaseModel):
             raise ValueError("command and function cannot be set together.")
 
         if not values.get("config").token:  # type: ignore
-            msg = "token not set, this will be required in v3.0.0."
+            msg = "token not set, this will be required in v4.0.0."
             warn(
                 FutureWarning(msg),
                 stacklevel=2,
             )
-
-        # Display deprecation warning for precursors & config
-        deprecations: List[str] = ["precursors", "path", "archive", "group"]
-        for deprecation in deprecations:
-            msg = f"`{deprecation}` has been deprecated and will be removed in v3.0.0."
-            if values.get(deprecation):
-                warn(msg, DeprecationWarning, stacklevel=2)
-                values[deprecation] = None
-
-        if values.get("site") == "allenby":
-            warn(
-                """\n
-                Site `allenby` been changed to `kko`.
-                With release v3.0.0 this will be a required change.
-                """,
-                FutureWarning,
-                stacklevel=2,
-            )
-            values["site"] = "kko"
         return values
 
     ###########################################################################

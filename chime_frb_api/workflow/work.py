@@ -167,27 +167,6 @@ class WorkConfig(BaseModel):
         """,
         example=["frb-tsars", "frb-ops"],
     )
-    token: Optional[str] = Field(
-        default=next(
-            (
-                value
-                for value in [
-                    environ.get("GITHUB_TOKEN"),
-                    environ.get("WORKFLOW_TOKEN"),
-                    environ.get("GITHUB_PAT"),
-                    environ.get("GITHUB_ACCESS_TOKEN"),
-                    environ.get("GITHUB_PERSONAL_ACCESS_TOKEN"),
-                    environ.get("GITHUB_OAUTH_TOKEN"),
-                    environ.get("GITHUB_OAUTH_ACCESS_TOKEN"),
-                ]
-                if value is not None
-            ),
-            None,
-        ),
-        description="Github Personal Access Token.",
-        example="ghp_1234567890abcdefg",
-        exclude=True,
-    )
 
 
 class Work(BaseModel):
@@ -268,6 +247,27 @@ class Work(BaseModel):
     )
     user: StrictStr = Field(
         ..., description="User ID who created the work.", example="shinybrar"
+    )
+    token: Optional[str] = Field(
+        default=next(
+            (
+                value
+                for value in [
+                    environ.get("GITHUB_TOKEN"),
+                    environ.get("WORKFLOW_TOKEN"),
+                    environ.get("GITHUB_PAT"),
+                    environ.get("GITHUB_ACCESS_TOKEN"),
+                    environ.get("GITHUB_PERSONAL_ACCESS_TOKEN"),
+                    environ.get("GITHUB_OAUTH_TOKEN"),
+                    environ.get("GITHUB_OAUTH_ACCESS_TOKEN"),
+                ]
+                if value is not None
+            ),
+            None,
+        ),
+        description="Github Personal Access Token.",
+        example="ghp_1234567890abcdefg",
+        exclude=True,
     )
 
     ###########################################################################
@@ -384,9 +384,10 @@ class Work(BaseModel):
     def post_init(cls, values: Dict[str, Any]):
         """Initialize work attributes after validation."""
         # Change pipeline to be lowercase and replace spaces/underscores with dashes
-        values["pipeline"] = (
-            values["pipeline"].lower().replace(" ", "-").replace("_", "-")
-        )
+        if values.get("pipeline"):
+            values["pipeline"] = (
+                values["pipeline"].lower().replace(" ", "-").replace("_", "-")
+            )
         # Set creation time if not already set
         if values.get("creation") is None:
             values["creation"] = time()
@@ -405,8 +406,8 @@ class Work(BaseModel):
         if values.get("command") and values.get("function"):
             raise ValueError("command and function cannot be set together.")
 
-        if not values.get("config").token:  # type: ignore
-            msg = "token not set, this will be required in v4.0.0."
+        if not values.get("token"):  # type: ignore
+            msg = "workflow token not set, required with >= v4.0.0."
             warn(
                 FutureWarning(msg),
                 stacklevel=2,

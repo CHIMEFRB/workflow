@@ -12,6 +12,7 @@ from rich.console import Console
 
 from chime_frb_api import get_logger
 from chime_frb_api.core.logger import set_tag, unset_tag
+from chime_frb_api.utils import loki
 from chime_frb_api.workflow import Work
 from chime_frb_api.workflow.lifecycle import archive, execute, validate
 
@@ -127,6 +128,9 @@ def run(
     if function:
         validate.function(function)
         logger.info("Function : ✔️")
+
+    # Add Loki handler to logger.
+    loki.add_handler(logger, site)
 
     try:
         logger.info(

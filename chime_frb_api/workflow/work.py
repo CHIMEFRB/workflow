@@ -6,7 +6,7 @@ from time import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
 
-from pydantic import BaseModel, Field, StrictFloat, StrictStr, root_validator
+from pydantic import BaseModel, Field, SecretStr, StrictFloat, StrictStr, root_validator
 from tenacity import retry
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
@@ -248,7 +248,7 @@ class Work(BaseModel):
     user: StrictStr = Field(
         ..., description="User ID who created the work.", example="shinybrar"
     )
-    token: Optional[str] = Field(
+    token: Optional[SecretStr] = Field(
         default=next(
             (
                 value
@@ -384,10 +384,15 @@ class Work(BaseModel):
     def post_init(cls, values: Dict[str, Any]):
         """Initialize work attributes after validation."""
         # Change pipeline to be lowercase and replace spaces/underscores with dashes
-        if values.get("pipeline"):
-            values["pipeline"] = (
-                values["pipeline"].lower().replace(" ", "-").replace("_", "-")
-            )
+        # Check if the pipeline name has uppercase, spaces, or underscores
+        if values["pipeline"].isupper():
+            warn(SyntaxWarning("pipeline reformatted to lowercase"), stacklevel=2)
+            values["pipeline"] = values["pipeline"].lower()
+        if " " or "_" in values["pipeline"]:
+            warn(SyntaxWarning("pipeline reformatted to use dashes"), stacklevel=2)
+            values["pipeline"] = values["pipeline"].replace(" ", "-")
+            values["pipeline"] = values["pipeline"].replace("_", "-")
+
         # Set creation time if not already set
         if values.get("creation") is None:
             values["creation"] = time()

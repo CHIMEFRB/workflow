@@ -383,15 +383,31 @@ class Work(BaseModel):
     @root_validator
     def post_init(cls, values: Dict[str, Any]):
         """Initialize work attributes after validation."""
-        # Change pipeline to be lowercase and replace spaces/underscores with dashes
-        # Check if the pipeline name has uppercase, spaces, or underscores
-        if values["pipeline"].isupper():
-            warn(SyntaxWarning("pipeline reformatted to lowercase"), stacklevel=2)
-            values["pipeline"] = values["pipeline"].lower()
+        # Check if the pipeline name has any character that is uppercase
+        reformatted: bool = False
+        for char in values["pipeline"]:
+            if char.isupper():
+                values["pipeline"] = values["pipeline"].lower()
+                reformatted = True
+                break
+
         if " " or "_" in values["pipeline"]:
-            warn(SyntaxWarning("pipeline reformatted to use dashes"), stacklevel=2)
             values["pipeline"] = values["pipeline"].replace(" ", "-")
             values["pipeline"] = values["pipeline"].replace("_", "-")
+            reformatted = True
+
+        # Check if the pipeline has any character that is not alphanumeric or dash
+        for char in values["pipeline"]:
+            if not char.isalnum() and char not in ["-"]:
+                raise ValueError(
+                    "pipeline name can only contain letters, numbers & dashes"
+                )
+
+        if reformatted:
+            warn(
+                SyntaxWarning(f"pipeline reformatted to {values['pipeline']}"),
+                stacklevel=2,
+            )
 
         # Set creation time if not already set
         if values.get("creation") is None:

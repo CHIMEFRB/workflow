@@ -126,10 +126,14 @@ def transfer_work(
             limit=limit_per_run,
         )
         successful_work_to_delete = [
-            work for work in successful_work if work["archive"] is False
+            work
+            for work in successful_work
+            if work["config"]["archive"]["results"] is False
         ]
         successful_work_to_transfer = [
-            work for work in successful_work if work["archive"] is True
+            work
+            for work in successful_work
+            if work["config"]["archive"]["results"] is True
         ]
         if successful_work_to_transfer:
             transfer_status["successful_work_transferred"] = deposit_work_to_results(
@@ -152,10 +156,12 @@ def transfer_work(
             limit=limit_per_run,
         )
         failed_work_to_delete = [
-            work for work in failed_work if work["archive"] is False
+            work
+            for work in failed_work
+            if work["config"]["archive"]["results"] is False
         ]
         failed_work_to_transfer = [
-            work for work in failed_work if work["archive"] is True
+            work for work in failed_work if work["config"]["archive"]["results"] is True
         ]
 
         if failed_work_to_transfer:

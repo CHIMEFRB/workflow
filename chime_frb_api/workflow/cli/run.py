@@ -130,7 +130,7 @@ def run(
         logger.info("Function : ✔️")
 
     # Add Loki handler to logger.
-    loki.add_handler(logger, site)
+    loki.add_handler(logger, site, bucket)
 
     try:
         logger.info(

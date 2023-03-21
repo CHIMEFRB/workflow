@@ -11,12 +11,11 @@ import requests
 from rich.console import Console
 
 from chime_frb_api import get_logger
+from chime_frb_api.configs import LOKI_URLS, WORKFLOW_URLS
 from chime_frb_api.core.logger import set_tag, unset_tag
 from chime_frb_api.utils import loki
 from chime_frb_api.workflow import Work
 from chime_frb_api.workflow.lifecycle import archive, execute, validate
-
-BASE_URLS: List[str] = ["http://frb-vsop.chime:8004", "https://frb.chimenet.ca/buckets"]
 
 logger = get_logger("workflow")
 
@@ -28,6 +27,15 @@ logger = get_logger("workflow")
     type=str,
     required=False,
     default=None,
+)
+@click.option(
+    "--site",
+    type=click.Choice(
+        ["chime", "allenby", "kko", "gbo", "hco", "aro", "canfar", "cedar", "local"]
+    ),
+    required=True,
+    show_default=True,
+    help="filter work by site.",
 )
 @click.option(
     "-c",
@@ -44,7 +52,7 @@ logger = get_logger("workflow")
     type=int,
     default=-1,
     show_default=True,
-    help="number of works to perform. -1 for infinite.",
+    help="works to perform.",
 )
 @click.option(
     "-s",
@@ -52,24 +60,23 @@ logger = get_logger("workflow")
     type=int,
     default=30,
     show_default=True,
-    help="time to sleep between work attempts.",
+    help="sleep time between working.",
 )
 @click.option(
     "-b",
-    "--base-urls",
-    multiple=True,
-    default=BASE_URLS,
+    "--base-url",
+    type=click.STRING,
+    default=None,
     show_default=True,
-    help="url(s) of the workflow backend.",
+    help="url for workflow backend.",
 )
 @click.option(
-    "--site",
-    type=click.Choice(
-        ["chime", "allenby", "kko", "gbo", "hco", "aro", "canfar", "cedar", "local"]
-    ),
-    default="chime",
+    "--loki-url",
+    type=click.STRING,
+    default=None,
+    required=False,
     show_default=True,
-    help="filter work by site.",
+    help="url for loki logging server.",
 )
 @click.option(
     "--log-level",
@@ -84,15 +91,19 @@ def run(
     command: str,
     lifetime: int,
     sleep_time: int,
-    base_urls: List[str],
+    base_url: Optional[str],
     site: str,
+    loki_url: Optional[str],
     log_level: str,
 ):
     """Perform work retrieved from the workflow buckets."""
     # Set logging level
     logger.root.setLevel(log_level)
     logger.root.handlers[0].setLevel(log_level)
-    base_url: Optional[str] = None
+    if not base_url:
+        base_url = str(WORKFLOW_URLS[site])
+    if not loki_url:
+        loki_url = str(LOKI_URLS[site])
     # Setup and connect to the workflow backend
     logger.info("[bold]Workflow Run CLI[/bold]", extra=dict(markup=True, color="green"))
     logger.info(f"Bucket   : {bucket}")
@@ -103,34 +114,28 @@ def run(
     logger.info(f"Lifetime : {'infinite' if lifetime == -1 else lifetime}")
     logger.info(f"Sleep    : {sleep_time}s")
     logger.info(f"Work Site: {site}")
-    logger.info(f"Base URLs: {base_urls}")
     logger.info(f"Log Level: {log_level}")
+    logger.info(f"Base URL : {base_url}")
+    logger.info(f"Loki URL : {loki_url}")
     logger.info(
-        "[bold]Workflow Configuration Check[/bold]",
+        "[bold]Workflow Configuration Checks [/bold]",
         extra=dict(markup=True, color="green"),
     )
+    loki_status = loki.add_handler(logger, site, bucket, loki_url)
+    logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
 
-    for url in base_urls:
-        try:
-            requests.get(url).headers
-            logger.info("Base URLs: ✔️")
-            logger.debug(f"url: {url}")
-            base_url = url
-            break
-        except requests.exceptions.RequestException:
-            logger.debug(f"unable to connect: {url}")
-
-    if not base_url:
-        logger.error("unable to connect to workflow backend.")
-        raise RuntimeError("unable to connect to workflow backend")
+    try:
+        requests.get(base_url).headers
+        logger.info("Base URL : ✅")
+        logger.debug(f"base_url: {base_url}")
+    except Exception as error:
+        logger.error(error)
+        raise click.ClickException("unable to connect to workflow backend")
 
     # Check if the function value provided is valid
     if function:
         validate.function(function)
-        logger.info("Function : ✔️")
-
-    # Add Loki handler to logger.
-    loki.add_handler(logger, site, bucket)
+        logger.info("Function : ✅")
 
     try:
         logger.info(
@@ -166,7 +171,7 @@ def lifecycle(
     exit = Event()
 
     # Get any stop, kill, or terminate signals and set the exit event
-    def quit(signo: int, _):
+    def quit(signo: int, _: Any):
         """Handle terminal signals."""
         logger.critical(f"Received terminal signal {signo}. Exiting...")
         exit.set()
@@ -220,7 +225,7 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
         if work:
             # Set the work id for the logger
             set_tag(work.id)  # type: ignore
-            logger.info("work retrieved: ✔️")
+            logger.info("work retrieved: ✅")
             logger.debug(f"work payload  : {work.payload}")
             if mode == "dynamic":
                 # Get the user function from the work object
@@ -247,7 +252,7 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
     finally:
         if work:
             work.update(**kwargs)  # type: ignore
-            logger.info("work completed: ✔️")
+            logger.info("work completed: ✅")
         unset_tag()
         return status
 

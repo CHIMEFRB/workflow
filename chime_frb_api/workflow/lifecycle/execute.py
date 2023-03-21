@@ -26,7 +26,7 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
     logger.debug(f"executing user_func: {user_func}")
     defaults: Dict[Any, Any] = {}
     if isinstance(user_func, click.Command):
-        logger.debug("click cli: ✔️")
+        logger.debug("click cli: ✅")
         # Get default options from the click command
         known: List[Any] = list(work.parameters.keys()) if work.parameters else []
         for parameter in user_func.params:
@@ -46,7 +46,6 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
     start = time.time()
     try:
         results, products, plots = user_func(**parameters)
-        logger.info("work complete : ✔️")
         logger.debug(f"results : {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots   : {plots}")
@@ -87,7 +86,6 @@ def command(command: List[str], work: Work) -> Work:
         )
         # Check return code
         process.check_returncode()
-        logger.info("work complete : ✔️")
         # Convert stdout and stderr to strings
         stdout = process.stdout.decode("utf-8").splitlines()
         stderr = process.stderr.decode("utf-8").splitlines()
@@ -116,7 +114,6 @@ def command(command: List[str], work: Work) -> Work:
                 "returncode": process.returncode,
             }
         work.status = "success"
-        logger.info("work complete : ✔️")
     except Exception as error:
         work.status = "failure"
         logger.exception(error)

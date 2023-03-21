@@ -391,7 +391,7 @@ class Work(BaseModel):
                 reformatted = True
                 break
 
-        if " " or "_" in values["pipeline"]:
+        if (" " or "_") in values["pipeline"]:
             values["pipeline"] = values["pipeline"].replace(" ", "-")
             values["pipeline"] = values["pipeline"].replace("_", "-")
             reformatted = True
@@ -428,7 +428,7 @@ class Work(BaseModel):
             raise ValueError("command and function cannot be set together.")
 
         if not values.get("token"):  # type: ignore
-            msg = "workflow token not set, required with >= v4.0.0."
+            msg = "workflow token required after v4.0.0."
             warn(
                 FutureWarning(msg),
                 stacklevel=2,

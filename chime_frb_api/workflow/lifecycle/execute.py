@@ -49,9 +49,12 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
         logger.debug(f"results : {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots   : {plots}")
-        work.results = results
-        work.products = products
-        work.plots = plots
+        if work.results:
+            work.results = {**work.results, **results}
+        else:
+            work.results = results
+        work.products += products
+        work.plots += plots
         work.status = "success"
     except Exception as error:
         work.status = "failure"

@@ -53,8 +53,14 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
             work.results = {**work.results, **results}
         else:
             work.results = results
-        work.products += products
-        work.plots += plots
+        if work.products:
+            work.products += products
+        else:
+            work.products = products
+        if work.plots:
+            work.plots += plots
+        else:
+            work.plots = plots
         work.status = "success"
     except Exception as error:
         work.status = "failure"

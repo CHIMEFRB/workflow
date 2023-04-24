@@ -5,6 +5,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 
 import click
+from mergedeep import merge
 
 from chime_frb_api import get_logger
 from chime_frb_api.workflow import Work
@@ -49,9 +50,12 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
         logger.debug(f"results : {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots   : {plots}")
-        work.results = results
-        work.products = products
-        work.plots = plots
+        if results:
+            work.results = merge(work.results or {}, results)  # type: ignore
+        if products:
+            work.products = (work.products or []) + products
+        if plots:
+            work.plots = (work.plots or []) + plots
         work.status = "success"
     except Exception as error:
         work.status = "failure"

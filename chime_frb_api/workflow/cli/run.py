@@ -11,7 +11,7 @@ import requests
 from rich.console import Console
 
 from chime_frb_api import get_logger
-from chime_frb_api.configs import LOKI_URLS, WORKFLOW_URLS
+from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
 from chime_frb_api.core.logger import set_tag, unset_tag
 from chime_frb_api.utils import loki
 from chime_frb_api.workflow import Work
@@ -79,6 +79,14 @@ logger = get_logger("workflow")
     help="url for loki logging server.",
 )
 @click.option(
+    "--products-url",
+    type=click.STRING,
+    default=None,
+    required=False,
+    show_default=True,
+    help="url for products and plotsj.",
+)
+@click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     default="INFO",
@@ -94,6 +102,7 @@ def run(
     base_url: Optional[str],
     site: str,
     loki_url: Optional[str],
+    products_url: Optional[str],
     log_level: str,
 ):
     """Perform work retrieved from the workflow buckets."""
@@ -104,6 +113,8 @@ def run(
         base_url = str(WORKFLOW_URLS[site])
     if not loki_url:
         loki_url = str(LOKI_URLS[site])
+    if not products_url:
+        products_url = str(PRODUCTS_URLS[site])
     # Setup and connect to the workflow backend
     logger.info("[bold]Workflow Run CLI[/bold]", extra=dict(markup=True, color="green"))
     logger.info(f"Bucket   : {bucket}")
@@ -117,6 +128,7 @@ def run(
     logger.info(f"Log Level: {log_level}")
     logger.info(f"Base URL : {base_url}")
     logger.info(f"Loki URL : {loki_url}")
+    logger.info(f"Products URL : {products_url}")
     logger.info(
         "[bold]Workflow Configuration Checks [/bold]",
         extra=dict(markup=True, color="green"),
@@ -251,6 +263,15 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
         work.status = "failure"  # type: ignore
     finally:
         if work:
+            if any(work.notify.slack.dict().values()) and work.products:
+                work.products = [
+                    f"<{str(PRODUCTS_URLS[site])}{product}|{product}>"
+                    for product in work.products
+                ]
+            if any(work.notify.slack.dict().values()) and work.plots:
+                work.plots = [
+                    f"<{str(PRODUCTS_URLS[site])}{plot}|{plot}>" for plot in work.plots
+                ]
             work.update(**kwargs)  # type: ignore
             logger.info("work completed: ✅")
         unset_tag()

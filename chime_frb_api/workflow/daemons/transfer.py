@@ -31,7 +31,7 @@ def deposit_work_to_results(
     try:
         transfer_status = False
         results_deposit_status = results.deposit(works)
-        if all(results_deposit_status.values()):
+        if all([val > 0 for val in results_deposit_status.values()]):
             buckets.delete_ids([work["id"] for work in works])
             transfer_status = True
         return transfer_status
@@ -42,7 +42,10 @@ def deposit_work_to_results(
             work for work in works if is_work_already_deposited(results, work) is False
         ]
         results_deposit_status = results.deposit(work_to_deposit)
-        if all(results_deposit_status.values()) or results_deposit_status == {}:
+        if (
+            all([val > 0 for val in results_deposit_status.values()])
+            or results_deposit_status == {}
+        ):
             buckets.delete_ids([work["id"] for work in works])
             transfer_status = True
         return transfer_status

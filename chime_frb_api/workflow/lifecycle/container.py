@@ -1,7 +1,9 @@
 """Check if the process is running in a container."""
 
+from typing import Optional
 
-def virtualization() -> str:
+
+def virtualization() -> Optional[str]:
     """Check if the process is running in a container.
 
     Returns:
@@ -16,4 +18,4 @@ def virtualization() -> str:
                     return "kubernetes"
     except Exception:
         pass
-    return "none"
+    return None

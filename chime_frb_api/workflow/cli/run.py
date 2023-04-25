@@ -1,6 +1,7 @@
 """Fetch and process Work using any method compatible with Tasks API."""
 
 
+import platform
 import signal
 import time
 from threading import Event
@@ -15,7 +16,7 @@ from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
 from chime_frb_api.core.logger import set_tag, unset_tag
 from chime_frb_api.utils import loki
 from chime_frb_api.workflow import Work
-from chime_frb_api.workflow.lifecycle import archive, execute, validate
+from chime_frb_api.workflow.lifecycle import archive, container, execute, validate
 
 logger = get_logger("workflow")
 
@@ -128,9 +129,17 @@ def run(
     logger.info(f"Log Level: {log_level}")
     logger.info(f"Base URL : {base_url}")
     logger.info(f"Loki URL : {loki_url}")
-    logger.info(f"Products URL : {products_url}")
+    logger.info(f"Prod URL : {products_url}")
     logger.info(
-        "[bold]Workflow Configuration Checks [/bold]",
+        "[bold]Execution Environment [/bold]",
+        extra=dict(markup=True, color="green"),
+    )
+    logger.info(f"Operating System: {platform.system()}")
+    logger.info(f"Python Version  : {platform.python_version()}")
+    logger.info(f"Python Compiler : {platform.python_compiler()}")
+    logger.info(f"Virtualization  : {container.virtualization()}")
+    logger.info(
+        "[bold]Configuration Checks [/bold]",
         extra=dict(markup=True, color="green"),
     )
     loki_status = loki.add_handler(logger, site, bucket, loki_url)
@@ -154,11 +163,16 @@ def run(
             "[bold]Starting Workflow Lifecycle[/bold]",
             extra=dict(markup=True, color="green"),
         )
+        slowdown: float = 1.0
+        if container.virtualization():
+            slowdown = 1000.0
         console = Console(force_terminal=True, tab_size=4)
         with console.status(
-            status="Running...",
-            spinner="arc",
+            status="",
+            spinner="toggle2",
             spinner_style="bold green",
+            refresh_per_second=1,
+            speed=1 / slowdown,
         ):
             lifecycle(bucket, function, lifetime, sleep_time, site, base_url)
     except Exception as error:

@@ -391,7 +391,7 @@ class Work(BaseModel):
                 reformatted = True
                 break
 
-        if (" " or "_") in values["pipeline"]:
+        if any(char in {" ", "_"} for char in values["pipeline"]):
             values["pipeline"] = values["pipeline"].replace(" ", "-")
             values["pipeline"] = values["pipeline"].replace("_", "-")
             reformatted = True

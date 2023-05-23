@@ -152,9 +152,11 @@ def run(work: Work, test_mode: bool = False):
                 f"{TEST_MOUNTS.get(work.site)}/workflow/{date}/{work.pipeline}/{work.id}"
             )
         if work.config.archive.products != "pass":
-            actions[work.config.archive.products](path, work.products)
+            if work.products:
+                actions[work.config.archive.products](path, work.products)
         if work.config.archive.plots != "pass":
-            actions[work.config.archive.plots](path, work.plots)
+            if work.plots:
+                actions[work.config.archive.plots](path, work.plots)
         if (
             work.config.archive.products != "pass"
             or work.config.archive.plots != "pass"

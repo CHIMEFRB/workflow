@@ -486,6 +486,8 @@ class Work(BaseModel):
         site: Optional[str] = None,
         priority: Optional[int] = None,
         user: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        parent: Optional[str] = None,
         **kwargs: Dict[str, Any],
     ) -> Optional["Work"]:
         """Withdraw work from the buckets backend.
@@ -499,7 +501,13 @@ class Work(BaseModel):
         """
         buckets = Buckets(**kwargs)  # type: ignore
         payload = buckets.withdraw(
-            pipeline=pipeline, event=event, site=site, priority=priority, user=user
+            pipeline=pipeline,
+            event=event,
+            site=site,
+            priority=priority,
+            user=user,
+            tags=tags,
+            parent=parent,
         )
         if payload:
             return cls.from_dict(payload)

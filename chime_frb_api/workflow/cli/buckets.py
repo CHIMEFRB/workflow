@@ -31,18 +31,18 @@ def version():
     console.print(buckets.version())
 
 
-@buckets.command("prune", help="Prune work[s] from a workflow bucket.")
-@click.option("name", "--name", type=str, required=True, help="Name of the bucket.")
+@buckets.command("rm", help="Remove a bucket.")
+@click.argument("name", type=str, required=True)
 @click.option("event", "--event", type=int, required=False, help="CHIME/FRB Event ID.")
 @click.option(
     "status",
     "--status",
     type=str,
     required=False,
-    help="To prune work of particular status.",
+    help="Remove works with only a particular status.",
 )
 def prune_work(name: str, event: Optional[int] = None, status: Optional[str] = None):
-    """Prune work[s] from the workflow backend.
+    """Remove work[s] from the buckets backend.
 
     Args:
         name (str): Name of the workflow pipeline.

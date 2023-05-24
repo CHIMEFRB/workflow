@@ -5,7 +5,7 @@ import platform
 import signal
 import time
 from threading import Event
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
 import requests
@@ -37,6 +37,25 @@ logger = get_logger("workflow")
     required=True,
     show_default=True,
     help="filter work by site.",
+)
+@click.option(
+    "-t",
+    "--tag",
+    type=str,
+    multiple=True,
+    required=False,
+    default=None,
+    show_default=True,
+    help="filter work by tag, multiple values allowed.",
+)
+@click.option(
+    "-p",
+    "--parent",
+    type=str,
+    required=False,
+    default=None,
+    show_default=True,
+    help="filter work by parent pipeline.",
 )
 @click.option(
     "-c",
@@ -85,7 +104,7 @@ logger = get_logger("workflow")
     default=None,
     required=False,
     show_default=True,
-    help="url for products and plotsj.",
+    help="url for products server.",
 )
 @click.option(
     "--log-level",
@@ -102,6 +121,8 @@ def run(
     sleep_time: int,
     base_url: Optional[str],
     site: str,
+    tag: Tuple[str],
+    parent: Optional[str],
     loki_url: Optional[str],
     products_url: Optional[str],
     log_level: str,
@@ -116,6 +137,8 @@ def run(
         loki_url = str(LOKI_URLS[site])
     if not products_url:
         products_url = str(PRODUCTS_URLS[site])
+    # Reformate tag to be a list of strings
+    tags: List[str] = list(tag)
     # Setup and connect to the workflow backend
     logger.info("[bold]Workflow Run CLI[/bold]", extra=dict(markup=True, color="green"))
     logger.info(f"Bucket   : {bucket}")
@@ -125,11 +148,19 @@ def run(
     # Print inifinity symbol if lifetime is -1, otherwise print lifetime
     logger.info(f"Lifetime : {'infinite' if lifetime == -1 else lifetime}")
     logger.info(f"Sleep    : {sleep_time}s")
-    logger.info(f"Work Site: {site}")
     logger.info(f"Log Level: {log_level}")
     logger.info(f"Base URL : {base_url}")
     logger.info(f"Loki URL : {loki_url}")
     logger.info(f"Prod URL : {products_url}")
+    logger.info(
+        "[bold red]Work Filters [/bold red]",
+        extra=dict(markup=True, color="green"),
+    )
+    logger.info(f"Site: {site}")
+    if tags:
+        logger.info(f"Tags: {tags}")
+    if parent:
+        logger.info(f"Parent Pipeline: {parent}")
     logger.info(
         "[bold]Execution Environment [/bold]",
         extra=dict(markup=True, color="green"),
@@ -174,7 +205,9 @@ def run(
             refresh_per_second=1,
             speed=1 / slowdown,
         ):
-            lifecycle(bucket, function, lifetime, sleep_time, site, base_url)
+            lifecycle(
+                bucket, function, lifetime, sleep_time, site, tags, parent, base_url
+            )
     except Exception as error:
         logger.exception(error)
     finally:
@@ -190,6 +223,8 @@ def lifecycle(
     lifetime: int,
     sleep_time: int,
     site: str,
+    tags: List[str],
+    parent: Optional[str],
     base_url: str,
 ):
     """Run the workflow lifecycle."""
@@ -208,14 +243,21 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(bucket, function, base_url, site)
+        attempt(bucket, function, base_url, site, tags, parent)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
         logger.debug(f"awake: {sleep_time}s")
 
 
-def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> bool:
+def attempt(
+    bucket: str,
+    function: Optional[str],
+    base_url: str,
+    site: str,
+    tags: Optional[List[str]],
+    parent: Optional[str],
+) -> bool:
     """Attempt to perform work.
 
     Args:
@@ -223,6 +265,8 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
         function (Optional[str]): Static function to perform work.
         base_url (str): URL of the workflow backend.
         site (str): Site to filter work by.
+        tags (Optional[List[str]]): Tags to filter work by.
+        parent (Optional[str]): Parent pipeline to filter work by.
 
     Returns:
         bool: True if work was performed, False otherwise.
@@ -244,7 +288,9 @@ def attempt(bucket: str, function: Optional[str], base_url: str, site: str) -> b
 
         # Get work from the workflow backend
         try:
-            work = Work.withdraw(pipeline=bucket, site=site, **kwargs)
+            work = Work.withdraw(
+                pipeline=bucket, site=site, tags=tags, parent=parent, **kwargs
+            )
         except Exception as error:
             logger.exception(error)
 

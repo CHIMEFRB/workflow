@@ -265,6 +265,8 @@ def attempt(
         function (Optional[str]): Static function to perform work.
         base_url (str): URL of the workflow backend.
         site (str): Site to filter work by.
+        tags (Optional[List[str]]): Tags to filter work by.
+        parent (Optional[str]): Parent pipeline to filter work by.
 
     Returns:
         bool: True if work was performed, False otherwise.

@@ -9,14 +9,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
 import requests
-from rich.console import Console
-
 from chime_frb_api import get_logger
 from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
 from chime_frb_api.core.logger import set_tag, unset_tag
 from chime_frb_api.utils import loki
 from chime_frb_api.workflow import Work
 from chime_frb_api.workflow.lifecycle import archive, container, execute, validate
+from rich.console import Console
 
 logger = get_logger("workflow")
 

@@ -11,8 +11,6 @@ from tenacity import retry
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
 
-from chime_frb_api.modules.buckets import Buckets
-
 
 class Archive(BaseModel):
     """Work Object Archive Configuration.
@@ -499,6 +497,8 @@ class Work(BaseModel):
         Returns:
             Work: Work object.
         """
+        from chime_frb_api.modules.buckets import Buckets
+
         buckets = Buckets(**kwargs)  # type: ignore
         payload = buckets.withdraw(
             pipeline=pipeline,
@@ -525,6 +525,8 @@ class Work(BaseModel):
         Returns:
             bool: True if successful, False otherwise.
         """
+        from chime_frb_api.modules.buckets import Buckets
+
         buckets = Buckets(**kwargs)  # type: ignore
         return buckets.deposit(works=[self.payload], return_ids=return_ids)
 
@@ -538,6 +540,8 @@ class Work(BaseModel):
         Returns:
             bool: True if successful, False otherwise.
         """
+        from chime_frb_api.modules.buckets import Buckets
+
         buckets = Buckets(**kwargs)  # type: ignore
         return buckets.update([self.payload])
 
@@ -551,5 +555,7 @@ class Work(BaseModel):
         Returns:
             bool: True if successful, False otherwise.
         """
+        from chime_frb_api.modules.buckets import Buckets
+
         buckets = Buckets(**kwargs)  # type: ignore
         return buckets.delete_ids([str(self.id)])

@@ -2,11 +2,10 @@
 from typing import Any, Dict, List, Optional
 
 import click
+from chime_frb_api.modules.buckets import Buckets
 from rich import pretty, print
 from rich.console import Console
 from rich.table import Table
-
-from chime_frb_api.modules.buckets import Buckets
 
 pretty.install()
 console = Console()

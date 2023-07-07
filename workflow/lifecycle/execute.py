@@ -5,10 +5,9 @@ import time
 from typing import Any, Callable, Dict, List, Optional
 
 import click
-from mergedeep import merge
-
 from chime_frb_api import get_logger
 from chime_frb_api.workflow import Work
+from mergedeep import merge
 
 logger = get_logger("workflow")
 

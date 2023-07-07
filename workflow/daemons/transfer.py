@@ -4,7 +4,6 @@ import time
 from typing import Any, Dict, List
 
 import click
-
 from chime_frb_api.modules.buckets import Buckets
 from chime_frb_api.modules.results import Results
 

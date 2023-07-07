@@ -1,7 +1,6 @@
 """Workflow command line interface."""
 
 import click
-
 from chime_frb_api.workflow.cli.buckets import buckets
 from chime_frb_api.workflow.cli.pipelines import pipelines
 from chime_frb_api.workflow.cli.run import run

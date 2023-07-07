@@ -3,7 +3,6 @@ import time
 from typing import Any, Dict
 
 import click
-
 from chime_frb_api.modules.buckets import Buckets
 
 
@@ -24,6 +23,7 @@ def workflow(sleep: int, base_url: str, test_mode: bool) -> Dict[str, Any]:
     Args:
         sleep (int): number of seconds to sleep between audits
         base_url (str): location of the Buckets backend
+        test_mode (bool): enable test mode to avoid while True loop
     """
     buckets: Buckets = Buckets(base_url=base_url, debug=test_mode)
     if test_mode:

@@ -1,0 +1,13 @@
+work:
+  sites:
+    - "canfar"
+    - "cedar"
+    - "chime"
+    - "aro"
+    - "hco"
+    - "gbo"
+    - "kko"
+    - "local"
+
+authentication:
+  enabled: true

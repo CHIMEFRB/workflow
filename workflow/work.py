@@ -6,7 +6,15 @@ from time import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
 
-from pydantic import BaseModel, Field, SecretStr, StrictFloat, StrictStr, root_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    StrictFloat,
+    StrictStr,
+    root_validator,
+)
 from tenacity import retry
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
@@ -28,11 +36,7 @@ class Archive(BaseModel):
             Archive strategy for the logs.
     """
 
-    class Config:
-        """Pydantic Config."""
-
-        validate_all = True
-        validate_assignment = True
+    model_config = ConfigDict(validate_default=True, validate_assignment=True)
 
     results: bool = Field(
         default=True,
@@ -69,11 +73,7 @@ class Slack(BaseModel):
         reply (Dict[str, Any]): Status of the slack notification.
     """
 
-    class Config:
-        """Pydantic Config."""
-
-        validate_all = True
-        validate_assignment = True
+    model_config = ConfigDict(validate_default=True, validate_assignment=True)
 
     channel_id: Optional[StrictStr] = Field(
         default=None,
@@ -133,11 +133,7 @@ class WorkConfig(BaseModel):
         BaseModel (BaseModel): Pydantic BaseModel.
     """
 
-    class Config:
-        """Pydantic Config."""
-
-        validate_all = True
-        validate_assignment = True
+    model_config = ConfigDict(validate_default=True, validate_assignment=True)
 
     archive: Archive = Archive()
     metrics: bool = Field(
@@ -213,12 +209,9 @@ class Work(BaseModel):
         ```
     """
 
-    class Config:
-        """Pydantic Config."""
-
-        validate_all = True
-        validate_assignment = True
-        exclude_none = True
+    model_config = ConfigDict(
+        validate_default=True, validate_assignment=True, exclude_none=True
+    )
 
     ###########################################################################
     # Required Attributes. Set by user.

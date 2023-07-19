@@ -1,4 +1,11 @@
 work:
+  config:
+    archive:
+      enabled: true
+      modes: ["pass", "copy", "move", "delete", "upload"]
+    notify:
+      enabled: true
+      modes: ["slack"]
   sites:
     - "canfar"
     - "cedar"
@@ -8,6 +15,7 @@ work:
     - "gbo"
     - "kko"
     - "local"
+
 
 authentication:
   enabled: true

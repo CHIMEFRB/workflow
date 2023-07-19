@@ -12,155 +12,17 @@ from pydantic import (
     Field,
     SecretStr,
     StrictFloat,
+    StrictInt,
     StrictStr,
-    root_validator,
+    field_validator,
+    model_validator,
 )
 from tenacity import retry
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
 
-
-class Archive(BaseModel):
-    """Work Object Archive Configuration.
-
-    Args:
-        BaseModel (BaseModel): Pydantic BaseModel.
-
-    Attributes:
-        results (bool): Archive results for the work.
-        products (Literal["pass", "copy", "move", "delete", "upload"]):
-            Archive strategy for the products.
-        plots (Literal["pass", "copy", "move", "delete", "upload"]):
-            Archive strategy for the plots.
-        logs (Literal["pass", "copy", "move", "delete", "upload"]):
-            Archive strategy for the logs.
-    """
-
-    model_config = ConfigDict(validate_default=True, validate_assignment=True)
-
-    results: bool = Field(
-        default=True,
-        description="Archive results for the work.",
-    )
-    products: Literal["pass", "copy", "move", "delete", "upload"] = Field(
-        default="copy",
-        description="Archive strategy for the products.",
-    )
-    plots: Literal["pass", "copy", "move", "delete", "upload"] = Field(
-        default="copy",
-        description="Archive strategy for the plots.",
-    )
-    logs: Literal["pass", "copy", "move", "delete", "upload"] = Field(
-        default="move",
-        description="Archive strategy for the logs.",
-    )
-
-
-class Slack(BaseModel):
-    """Work Object Slack Configuration.
-
-    Args:
-        BaseModel (BaseModel): Pydantic BaseModel.
-
-    Attributes:
-        channel_id (str): Slack channel to send notifications to.
-        member_ids (List[str]): Slack members to send notifications to.
-        message (str): Slack message to send notifications with.
-        results (bool): Send slack notifications with the work results.
-        products (bool): Send slack notifications with the work product links.
-        plots (bool): Send slack notifications with the work plot links.
-        blocks (Dict[str, Any]): Slack blocks to send notifications with.
-        reply (Dict[str, Any]): Status of the slack notification.
-    """
-
-    model_config = ConfigDict(validate_default=True, validate_assignment=True)
-
-    channel_id: Optional[StrictStr] = Field(
-        default=None,
-        description="Slack channel to send notifications to.",
-        example="C01JYQZQX0Y",
-    )
-    member_ids: Optional[List[StrictStr]] = Field(
-        default=None,
-        description="Slack members to send notifications to.",
-        example=["U01JYQZQX0Y"],
-    )
-    message: Optional[StrictStr] = Field(
-        default=None,
-        description="Slack message to send notifications with.",
-        example="Hello World!",
-    )
-    results: Optional[bool] = Field(
-        default=None,
-        description="Send slack notifications with the work results.",
-    )
-    products: Optional[bool] = Field(
-        default=None,
-        description="Send slack notifications with the work product links.",
-    )
-    plots: Optional[bool] = Field(
-        default=None,
-        description="Send slack notifications with the work plot links.",
-    )
-    blocks: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Slack blocks to send notifications with.",
-    )
-    reply: Optional[Dict[str, Any]] = Field(
-        default=None,
-        description="Status of the slack notification.",
-        example={"ok": True},
-    )
-
-
-class Notify(BaseModel):
-    """Work Object Notification Configuration.
-
-    Args:
-        BaseModel (BaseModel): Pydantic BaseModel.
-
-    Attributes:
-        slack (Slack): Send slack notifications for the work.
-    """
-
-    slack: Slack = Slack()
-
-
-class WorkConfig(BaseModel):
-    """Work Object Configuration.
-
-    Args:
-        BaseModel (BaseModel): Pydantic BaseModel.
-    """
-
-    model_config = ConfigDict(validate_default=True, validate_assignment=True)
-
-    archive: Archive = Archive()
-    metrics: bool = Field(
-        default=False,
-        description="Generate grafana metrics for the work.",
-    )
-    parent: Optional[str] = Field(
-        default=None,
-        description="ID of the parent workflow pipeline.",
-        example="5f9b5c5d7b54b5a9c5e5b5c5",
-    )
-    orgs: List[str] = Field(
-        default=["chimefrb"],
-        description="""
-        List of organization[s] the work belongs to.
-        Maps to the Github organization.
-        """,
-        example=["chimefrb", "chime-sps"],
-    )
-    teams: Optional[List[str]] = Field(
-        default=None,
-        description="""
-        List of team[s] the work belongs to.
-        Maps to the Github team within the organization.
-        """,
-        example=["frb-tsars", "frb-ops"],
-    )
+from workflow.work.config import Config
+from workflow.work.notify import Notify
 
 
 class Work(BaseModel):
@@ -202,7 +64,7 @@ class Work(BaseModel):
 
     Example:
         ```python
-        from chime_frb_api.workflow import Work
+        from workflow import Work
 
         work = Work(pipeline="test-pipeline", site="chime", user="shinybrar")
         work.deposit(return_ids=True)
@@ -210,9 +72,12 @@ class Work(BaseModel):
     """
 
     model_config = ConfigDict(
-        validate_default=True, validate_assignment=True, exclude_none=True
+        title="Workflow Work Object",
+        validate_default=True,
+        validate_assignment=True,
+        validate_return=True,
+        revalidate_instances="always",
     )
-
     ###########################################################################
     # Required Attributes. Set by user.
     ###########################################################################
@@ -220,7 +85,7 @@ class Work(BaseModel):
         ...,
         min_length=1,
         description="Name of the pipeline. Automatically reformated to hyphen-case.xw",
-        example="example-pipeline",
+        examples=["sample-pipeline"],
     )
     site: Literal[
         "canfar",
@@ -232,12 +97,10 @@ class Work(BaseModel):
         "kko",
         "local",
     ] = Field(
-        ...,
-        description="Site where the work will be performed.",
-        example="chime",
+        ..., description="Site where the work will be performed.", examples=["chime"]
     )
     user: StrictStr = Field(
-        ..., description="User ID who created the work.", example="shinybrar"
+        ..., description="User ID who created the work.", examples=["shinybrar"]
     )
     token: Optional[SecretStr] = Field(
         default=next(
@@ -256,98 +119,104 @@ class Work(BaseModel):
             ),
             None,
         ),
-        description="Github Personal Access Token.",
-        example="ghp_1234567890abcdefg",
+        description="Workflow Access Token.",
+        examples=["ghp_1234567890abcdefg"],
         exclude=True,
     )
 
     ###########################################################################
     # Optional attributes, might be provided by the user.
     ###########################################################################
-    function: str = Field(
+    function: Optional[str] = Field(
         default=None,
         description="""
         Name of the function to run as `function(**parameters)`.
         Only either `function` or `command` can be provided.
         """,
-        example="requests.get",
+        examples=["workflow.example.mean"],
     )
     parameters: Optional[Dict[str, Any]] = Field(
         default=None,
         description="""
-        Parameters to pass the pipeline function.
+        Parameters to pass the pipeline function. Equivalent to
+        running `function(**parameters)`. Note, only either
+        `function` or `command` can be provided.
         """,
-        example={"event_number": 9385707},
+        examples=[{"a": 1, "b": 2}],
     )
-    command: List[str] = Field(
+    command: Optional[List[str]] = Field(
         default=None,
         description="""
         Command to run as `subprocess.run(command)`.
         Note, only either `function` or `command` can be provided.
         """,
-        example=["python", "example.py", "--example", "example"],
+        examples=[["python", "example.py", "--example", "example"]],
     )
     results: Optional[Dict[str, Any]] = Field(
         default=None,
-        description="Results of the work performed, if any.",
-        example={"dm": 100.0, "snr": 10.0},
+        description="Results of the work performed.",
+        examples=[{"dm": 100.0, "snr": 10.0}],
     )
     products: Optional[List[StrictStr]] = Field(
         default=None,
         description="""
         Name of the non-human-readable data products generated by the pipeline.
         """,
-        example=["spectra.h5", "dm_vs_time.png"],
+        examples=[["spectra.h5", "dm_vs_time.png"]],
     )
     plots: Optional[List[StrictStr]] = Field(
         default=None,
         description="""
         Name of visual data products generated by the pipeline.
         """,
-        example=["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"],
+        examples=[["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"]],
     )
     event: Optional[List[int]] = Field(
         default=None,
-        description="CHIME/FRB Event ID[s] the work was performed against.",
-        example=[9385707, 9385708],
+        description="Unique ID[s] the work was performed against.",
+        examples=[[9385707, 9385708]],
     )
     tags: Optional[List[str]] = Field(
         default=None,
         description="""
         Searchable tags for the work. Merged with values from env WORKFLOW_TAGS.
         """,
-        example=["dm-analysis"],
+        examples=[["tag", "tagged", "tagteam"]],
     )
-    timeout: int = Field(
+    timeout: StrictInt = Field(
         default=3600,
         ge=1,
         le=86400,
         description="""
         Timeout in seconds for the work to finish.
+        After the timeout, the work is marked as failed and retried
+        if the number of attempts is less than the maximum number of retries.
         Defaults 3600s (1 hr) with range of [1, 86400] (1s-24hrs).
         """,
-        example=7200,
+        examples=[7200],
     )
     retries: int = Field(
         default=2,
         lt=6,
         description="Number of retries before giving up. Defaults to 2.",
-        example=4,
+        examples=[4],
     )
     priority: int = Field(
         default=3,
         ge=1,
         le=5,
-        description="Priority of the work. Defaults to 3.",
-        example=1,
+        description="""
+        Priority of the work. Higher priority works are performed first.
+        i.e. priority 5 > priority 1. Defaults to 3.""",
+        examples=[1],
     )
-    config: WorkConfig = WorkConfig()
+    config: Config = Config()
     notify: Notify = Notify()
 
     ###########################################################################
     # Automaticaly set attributes
     ###########################################################################
-    id: Optional[StrictStr] = Field(
+    id: Optional[str] = Field(
         default=None, description="Work ID created by the database."
     )
     creation: Optional[StrictFloat] = Field(
@@ -371,60 +240,92 @@ class Work(BaseModel):
     # Attribute setters for the work attributes
     ###########################################################################
 
-    @root_validator
-    def post_init(cls, values: Dict[str, Any]):
-        """Initialize work attributes after validation."""
-        # Check if the pipeline name has any character that is uppercase
-        reformatted: bool = False
-        for char in values["pipeline"]:
-            if char.isupper():
-                values["pipeline"] = values["pipeline"].lower()
-                reformatted = True
-                break
+    @field_validator("pipeline", mode="after", check_fields=True)
+    def validate_pipeline(cls, pipeline: str) -> str:
+        """Validate the pipeline name.
 
-        if any(char in {" ", "_"} for char in values["pipeline"]):
-            values["pipeline"] = values["pipeline"].replace(" ", "-")
-            values["pipeline"] = values["pipeline"].replace("_", "-")
-            reformatted = True
+        Args:
+            pipeline (str): Name of the pipeline.
 
-        # Check if the pipeline has any character that is not alphanumeric or dash
-        for char in values["pipeline"]:
+        Raises:
+            ValueError: If the pipeline name contains any character that is not
+
+        Returns:
+            str: Validated pipeline name.
+        """
+        original: str = pipeline
+        pipeline = pipeline.lower()
+        pipeline = pipeline.replace(" ", "-")
+        pipeline = pipeline.replace("_", "-")
+        for char in pipeline:
             if not char.isalnum() and char not in ["-"]:
                 raise ValueError(
                     "pipeline name can only contain letters, numbers & dashes"
                 )
-
-        if reformatted:
+        if original != pipeline:
             warn(
-                SyntaxWarning(f"pipeline reformatted to {values['pipeline']}"),
+                SyntaxWarning(
+                    f"pipeline name '{original}' reformatted to '{pipeline}'"
+                ),
                 stacklevel=2,
             )
+        return pipeline
 
-        # Set creation time if not already set
-        if values.get("creation") is None:
-            values["creation"] = time()
-        # Update tags from environment variable WORKFLOW_TAGS
-        if environ.get("WORKFLOW_TAGS"):
-            env_tags: List[str] = str(environ.get("WORKFLOW_TAGS")).split(",")
-            # If tags are already set, append the new ones
-            if values.get("tags"):
-                values["tags"] = values["tags"] + env_tags
-            else:
-                values["tags"] = env_tags
-            # Remove duplicates
-            values["tags"] = list(set(values["tags"]))
+    @field_validator("creation", mode="after", check_fields=True)
+    def validate_creation(cls, creation: Optional[StrictFloat]) -> float:
+        """Validate and set the creation time.
 
-        # Check if both command and function are set
-        if values.get("command") and values.get("function"):
+        Args:
+            creation (Optional[StrictFloat]): Creation time in unix timestamp.
+
+        Returns:
+            StrictFloat: Creation time in unix timestamp.
+        """
+        if creation is None:
+            return time()
+        return creation
+
+    @model_validator(mode="before")
+    def validate_model(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the work model.
+
+        Args:
+            data (Dict[str, Any]): Work data to validate.
+
+        Raises:
+            ValueError: If both `function` and `command` are set.
+
+        Returns:
+            Dict[str, Any]: Validated work data.
+        """
+        if data.get("function") and data.get("command"):
             raise ValueError("command and function cannot be set together.")
+        return data
 
-        if not values.get("token"):  # type: ignore
-            msg = "workflow token required after v4.0.0."
-            warn(
-                FutureWarning(msg),
-                stacklevel=2,
-            )
-        return values
+    @field_validator("token", mode="after", check_fields=True)
+    def validate_token(cls, token: Optional[SecretStr]) -> None:
+        """Validate the workflow token.
+
+        Args:
+            token (Optional[SecretStr]): Workflow token.
+        """
+        if token is None:
+            msg = """
+            Workflow token not provided.
+            Token auth will become mandatory in the future.
+            """
+            warn(msg, FutureWarning, stacklevel=2)
+
+        # # Update tags from environment variable WORKFLOW_TAGS
+        # if environ.get("WORKFLOW_TAGS"):
+        #     env_tags: List[str] = str(environ.get("WORKFLOW_TAGS")).split(",")
+        #     # If tags are already set, append the new ones
+        #     if values.get("tags"):
+        #         values["tags"] = values["tags"] + env_tags
+        #     else:
+        #         values["tags"] = env_tags
+        #     # Remove duplicates
+        #     values["tags"] = list(set(values["tags"]))
 
     ###########################################################################
     # Work methods
@@ -438,7 +339,7 @@ class Work(BaseModel):
             Dict[str, Any]: The payload of the work.
             Non-instanced attributes are excluded from the payload.
         """
-        payload: Dict[str, Any] = self.dict(exclude={"config.token"})
+        payload: Dict[str, Any] = self.model_dump(exclude={"config.token"})
         return payload
 
     @classmethod

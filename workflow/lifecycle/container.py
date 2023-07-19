@@ -7,7 +7,7 @@ def virtualization() -> Optional[str]:
     """Check if the process is running in a container.
 
     Returns:
-        str: Container type
+        Optional[str]: Container type.
     """
     try:
         with open("/proc/1/cgroup") as f:

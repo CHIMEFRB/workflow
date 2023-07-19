@@ -1,20 +1,37 @@
 """Test the work object."""
 
 import pytest
-from chime_frb_api.workflow import Work
 from pydantic import ValidationError
+
+from workflow import Work
 
 
 def test_bad_instantiation():
     """Test that the work object can't be instantiated without a pipeline."""
-    with pytest.raises(KeyError):
+    with pytest.raises(ValidationError):
         Work()
 
 
 def test_bad_pipeline():
     """Test that the work object can't be instantiated with empty pipeline."""
-    with pytest.raises(KeyError):
+    with pytest.raises(ValidationError):
         Work(pipeline="", site="local", user="test")
+
+
+def test_pipeline_reformat():
+    """Test that the work object can't be instantiated with empty pipeline."""
+    work = Work(pipeline="sample test", site="local", user="test")
+    assert work.pipeline == "sample-test"
+    work.pipeline = "sample test"
+    assert work.pipeline == "sample-test"
+
+
+def test_bad_pipeline_char():
+    """Test that the work object can't be instantiated with a pipeline containing
+    invalid characters.
+    """
+    with pytest.raises(ValidationError):
+        Work(pipeline="sample-test!", site="local", user="test")
 
 
 @pytest.mark.parametrize("test_input", ["params", 123, [123, "123", {}], (32, "456")])
@@ -47,8 +64,8 @@ def test_work_lifecycle():
 def test_json_serialization():
     """Test that the work can be serialized to JSON."""
     work = Work(pipeline="test", site="local", user="test")
-    assert work.json() is not None
-    assert isinstance(work.json(), str)
+    assert work.model_dump_json() is not None
+    assert isinstance(work.model_dump_json(), str)
 
 
 def test_check_work_payload():
@@ -62,7 +79,7 @@ def test_make_work_from_dict():
     """Test that the work object can be instantiated from a dictionary."""
     work = Work(pipeline="test", site="local", user="test", parameters={"hi": "low"})
     work_from_dict = Work.from_dict(work.payload)
-    work_from_json = Work.from_json(work.json())
+    work_from_json = Work.from_json(work.model_dump_json())
     assert work == work_from_dict == work_from_json
 
 
@@ -122,15 +139,19 @@ def test_site_bad_value(test_input):
         Work(pipeline="test", user="test", site=test_input)
 
 
-def check_command_and_function():
+def test_command_and_function():
     """Checks if command and function fields are mutually exclusive."""
     with pytest.raises(ValidationError):
         Work(
-            pipeline="test", user="test", site="local", command="test", function="test"
+            pipeline="test",
+            user="test",
+            site="local",
+            command=["test"],
+            function="test",
         )
 
 
-def check_slack_notify():
+def test_bad_slack_notify():
     """Checks if slack_notify field is of type bool."""
     with pytest.raises(ValidationError):
         Work(
@@ -139,3 +160,14 @@ def check_slack_notify():
             site="local",
             notify={"slack": {"channel": "test"}},
         )
+
+
+def test_good_slack_notify():
+    """Checks if slack_notify field is of type bool."""
+    work = Work(
+        pipeline="test",
+        user="test",
+        site="local",
+        notify={"slack": {"channel_id": "test"}},
+    )
+    assert work.notify.slack.channel_id == "test"

@@ -1,0 +1,61 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  pre-commit:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.9']
+    runs-on: ${{ matrix.os }}
+    steps:
+    -
+      name: Checking out repository
+      uses: actions/checkout@v2
+    -
+      name: Setting up python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    -
+      uses: pre-commit/action@v3.0.0
+
+  tests:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ['3.9']
+    runs-on: ${{ matrix.os }}
+    needs: pre-commit
+    steps:
+    -
+      name: Checking out repository
+      uses: actions/checkout@v2
+    -
+      name: Installing poetry
+      run: |
+        pipx install poetry
+    -
+      name: Setting up python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'poetry'
+    -
+      name: Installing workflow dependencies
+      run: |
+        poetry install
+    -
+      name: Run workflow tests
+      run: |
+        poetry run pytest --cov . --cov-report=lcov -s -v
+    -
+      name: Upload coverage report
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: "coverage.lcov"

@@ -1,14 +1,11 @@
 """Work Object."""
 
 from json import loads
-from os import environ
 from time import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
 
 from pydantic import (
-    BaseModel,
-    ConfigDict,
     Field,
     SecretStr,
     StrictFloat,
@@ -17,19 +14,33 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from tenacity import retry
-from tenacity.stop import stop_after_delay
-from tenacity.wait import wait_random
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from workflow.work.config import Config
-from workflow.work.notify import Notify
+from workflow.definitions.config import Config
+from workflow.definitions.notify import Notify
+from workflow.http.context import HTTPContext
 
 
-class Work(BaseModel):
+class Work(BaseSettings):
     """Work Object.
 
     Args:
-        BaseModel (BaseModel): Pydantic BaseModel.
+        BaseSettings (BaseSettings): Pydantic BaseModel with settings.
+
+    Note:
+        In the case where default value for a field is specified in multiple places,
+        the selection priority in descending order is:
+            1. Arguments passed to the `Work` Object.
+            2. Environment variables defined with the `WORKFLOW_` prefix.
+            3. Variables loaded from the secrets directory.
+            4. The default values in the constructor.
+
+        Environemnt Prefixes:
+            - `WORKFLOW_` for all work attributes.
+            - `WORKFLOW_CONFIG_` for all work config attributes.
+            - `WORKFLOW_NOTIFY_` for all work notify attributes.
+            - `WORKFLOW_HTTP_` for all work http attributes.
+
 
     Attributes:
         pipeline (str): Name of the pipeline. (Required)
@@ -43,7 +54,6 @@ class Work(BaseModel):
         results (Optional[Dict[str, Any]]): Results of the work.
         products (Optional[Dict[str, Any]]): Products of the work.
         plots (Optional[Dict[str, Any]]): Plots of the work.
-        event (Optional[List[int]]): Event ID of the work.
         tags (Optional[List[str]]): Tags of the work.
         timeout (int): Timeout for the work in seconds. Default is 3600 seconds.
         retries (int): Number of retries for the work. Default is 2 retries.
@@ -71,59 +81,33 @@ class Work(BaseModel):
         ```
     """
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         title="Workflow Work Object",
         validate_default=True,
         validate_assignment=True,
         validate_return=True,
         revalidate_instances="always",
+        env_prefix="WORKFLOW_",
+        secrets_dir="/run/secrets",
+        extra="ignore",
     )
-    ###########################################################################
-    # Required Attributes. Set by user.
-    ###########################################################################
+
     pipeline: StrictStr = Field(
         ...,
         min_length=1,
-        description="Name of the pipeline. Automatically reformated to hyphen-case.xw",
+        description="Name of the pipeline (required). Reformated to hyphen-case.",
         examples=["sample-pipeline"],
     )
-    site: Literal[
-        "canfar",
-        "cedar",
-        "chime",
-        "aro",
-        "hco",
-        "gbo",
-        "kko",
-        "local",
-    ] = Field(
-        ..., description="Site where the work will be performed.", examples=["chime"]
+    site: str = Field(
+        ...,
+        description="Site where the work will be performed (required).",
+        examples=["chime"],
     )
     user: StrictStr = Field(
-        ..., description="User ID who created the work.", examples=["shinybrar"]
+        ...,
+        description="User ID who created the work (required).",
+        examples=["shinybrar"],
     )
-    token: Optional[SecretStr] = Field(
-        default=next(
-            (
-                value
-                for value in [
-                    environ.get("GITHUB_TOKEN"),
-                    environ.get("WORKFLOW_TOKEN"),
-                    environ.get("GITHUB_PAT"),
-                    environ.get("GITHUB_ACCESS_TOKEN"),
-                    environ.get("GITHUB_PERSONAL_ACCESS_TOKEN"),
-                    environ.get("GITHUB_OAUTH_TOKEN"),
-                    environ.get("GITHUB_OAUTH_ACCESS_TOKEN"),
-                ]
-                if value is not None
-            ),
-            None,
-        ),
-        description="Workflow Access Token.",
-        examples=["ghp_1234567890abcdefg"],
-        exclude=True,
-    )
-
     ###########################################################################
     # Optional attributes, might be provided by the user.
     ###########################################################################
@@ -171,17 +155,17 @@ class Work(BaseModel):
         """,
         examples=[["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"]],
     )
-    event: Optional[List[int]] = Field(
-        default=None,
-        description="Unique ID[s] the work was performed against.",
-        examples=[[9385707, 9385708]],
-    )
     tags: Optional[List[str]] = Field(
         default=None,
         description="""
         Searchable tags for the work. Merged with values from env WORKFLOW_TAGS.
         """,
         examples=[["tag", "tagged", "tagteam"]],
+    )
+    event: Optional[List[int]] = Field(
+        default=None,
+        description="Unique ID[s] the work was performed against.",
+        examples=[[9385707, 9385708]],
     )
     timeout: StrictInt = Field(
         default=3600,
@@ -210,9 +194,6 @@ class Work(BaseModel):
         i.e. priority 5 > priority 1. Defaults to 3.""",
         examples=[1],
     )
-    config: Config = Config()
-    notify: Notify = Notify()
-
     ###########################################################################
     # Automaticaly set attributes
     ###########################################################################
@@ -236,8 +217,28 @@ class Work(BaseModel):
     status: Literal["created", "queued", "running", "success", "failure"] = Field(
         default="created", description="Status of the work."
     )
+    http: HTTPContext = Field(
+        default=None,
+        validate_default=False,
+        description="HTTP Context for doing work.",
+        exclude=True,
+        repr=False,
+    )
     ###########################################################################
-    # Attribute setters for the work attributes
+    # Configuration attributes
+    ###########################################################################
+    config: Config = Field(
+        default=Config(),
+        description="Configuration of the work.",
+        examples=[Config()],
+    )
+    notify: Notify = Field(
+        default=Notify(),
+        description="Notification configuration of the work.",
+        examples=[Notify()],
+    )
+    ###########################################################################
+    # Default Validators
     ###########################################################################
 
     @field_validator("pipeline", mode="after", check_fields=True)
@@ -264,12 +265,37 @@ class Work(BaseModel):
                 )
         if original != pipeline:
             warn(
-                SyntaxWarning(
-                    f"pipeline name '{original}' reformatted to '{pipeline}'"
-                ),
+                SyntaxWarning(f"pipeline reformatted {original}->{pipeline}"),
                 stacklevel=2,
             )
         return pipeline
+
+    @field_validator("site", mode="after", check_fields=True)
+    def validate_site(cls, site: str) -> str:
+        """Validate the site name.
+
+        Args:
+            site (str): Name of the site.
+
+        Raises:
+            ValueError: If the site name is not in the list of valid sites.
+
+        Returns:
+            str: Validated site name.
+        """
+        valid: List[str] = [
+            "local",
+            "chime",
+            "kko",
+            "gbo",
+            "hco",
+            "canfar",
+            "cedar",
+            "calcul-quebec",
+        ]
+        if site not in valid:
+            raise ValueError(f"site must be one of {valid}")
+        return site
 
     @field_validator("creation", mode="after", check_fields=True)
     def validate_creation(cls, creation: Optional[StrictFloat]) -> float:
@@ -286,73 +312,47 @@ class Work(BaseModel):
         return creation
 
     @model_validator(mode="before")
-    def validate_model(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_model(cls, data: Any) -> Any:
         """Validate the work model.
 
         Args:
-            data (Dict[str, Any]): Work data to validate.
+            data (Any): Work data to validate.
 
         Raises:
             ValueError: If both `function` and `command` are set.
 
         Returns:
-            Dict[str, Any]: Validated work data.
+            Any: Validated work data.
         """
         if data.get("function") and data.get("command"):
             raise ValueError("command and function cannot be set together.")
         return data
 
-    @field_validator("token", mode="after", check_fields=True)
-    def validate_token(cls, token: Optional[SecretStr]) -> None:
-        """Validate the workflow token.
-
-        Args:
-            token (Optional[SecretStr]): Workflow token.
-        """
-        if token is None:
-            msg = """
-            Workflow token not provided.
-            Token auth will become mandatory in the future.
-            """
-            warn(msg, FutureWarning, stacklevel=2)
-
-        # # Update tags from environment variable WORKFLOW_TAGS
-        # if environ.get("WORKFLOW_TAGS"):
-        #     env_tags: List[str] = str(environ.get("WORKFLOW_TAGS")).split(",")
-        #     # If tags are already set, append the new ones
-        #     if values.get("tags"):
-        #         values["tags"] = values["tags"] + env_tags
-        #     else:
-        #         values["tags"] = env_tags
-        #     # Remove duplicates
-        #     values["tags"] = list(set(values["tags"]))
-
     ###########################################################################
-    # Work methods
+    # Default Work Class Methods
     ###########################################################################
-
     @property
     def payload(self) -> Dict[str, Any]:
-        """Return the dictioanary representation of the work.
+        """Return the dictionary representation of the work.
 
         Returns:
             Dict[str, Any]: The payload of the work.
             Non-instanced attributes are excluded from the payload.
         """
-        payload: Dict[str, Any] = self.model_dump(exclude={"config.token"})
+        payload: Dict[str, Any] = self.model_dump()
         return payload
 
     @classmethod
-    def from_json(cls, json_str: str) -> "Work":
+    def from_json(cls, json: str) -> "Work":
         """Create a work from a json string.
 
         Args:
-            json_str (str): The json string.
+            json (str): The json string.
 
         Returns:
-            Work: The work.
+            Work: Work Object.
         """
-        return cls(**loads(json_str))
+        return cls(**loads(json))
 
     @classmethod
     def from_dict(cls, payload: Dict[str, Any]) -> "Work":
@@ -362,14 +362,13 @@ class Work(BaseModel):
             payload (Dict[str, Any]): The dictionary.
 
         Returns:
-            Work: The work.
+            Work: Work Object.
         """
         return cls(**payload)
 
     ###########################################################################
-    # HTTP Methods
+    # HTTP Methods for the Work Class
     ###########################################################################
-
     @classmethod
     def withdraw(
         cls,
@@ -380,21 +379,29 @@ class Work(BaseModel):
         user: Optional[str] = None,
         tags: Optional[List[str]] = None,
         parent: Optional[str] = None,
-        **kwargs: Dict[str, Any],
-    ) -> Optional["Work"]:
+        baseurl: str = "http://localhost:8004",
+        timeout: float = 15.0,
+        token: Optional[SecretStr] = None,
+    ) -> Any:
         """Withdraw work from the buckets backend.
 
         Args:
-            pipeline (str): Name of the pipeline.
-            **kwargs (Dict[str, Any]): Keyword arguments for the Buckets API.
+            pipeline (str): Name of the pipeline to withdraw work from.
+            event (Optional[List[int]]): List of event ids to withdraw work for.
+            site (Optional[str]): Name of the site to withdraw work for.
+            priority (Optional[int]): Priority of the work to withdraw.
+            user (Optional[str]): Name of the user to withdraw work for.
+            tags (Optional[List[str]]): List of tags to withdraw work from.
+            parent (Optional[str]): Parent id of the work to withdraw.
+            httpargs (Optional[Dict[str, Any]]): Additional args for http client.
 
         Returns:
-            Work: Work object.
+            Optional[Work]: The withdrawn work if successful, None otherwise.
         """
-        from chime_frb_api.modules.buckets import Buckets
-
-        buckets = Buckets(**kwargs)  # type: ignore
-        payload = buckets.withdraw(
+        # Context is used to source environtment variables, which are overwriten
+        # by the arguments passed to the function.
+        http = HTTPContext(baseurl=baseurl, token=token, timeout=timeout)
+        payload = http.buckets.withdraw(
             pipeline=pipeline,
             event=event,
             site=site,
@@ -404,52 +411,43 @@ class Work(BaseModel):
             parent=parent,
         )
         if payload:
-            return cls.from_dict(payload)
+            work = cls.from_dict(payload)
+            work.http = http
+            return work
         return None
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     def deposit(
-        self, return_ids: bool = False, **kwargs: Dict[str, Any]
+        self,
+        return_ids: bool = False,
+        baseurl: str = "http://localhost:8004",
+        timeout: float = 15.0,
+        token: Optional[SecretStr] = None,
     ) -> Union[bool, List[str]]:
         """Deposit work to the buckets backend.
 
         Args:
-            **kwargs (Dict[str, Any]): Keyword arguments for the Buckets API.
+            return_ids (bool, optional): Whether to return database ids.
+                Defaults to False.
 
         Returns:
-            bool: True if successful, False otherwise.
+            Union[bool, List[str]]: True if successful, False otherwise.
         """
-        from chime_frb_api.modules.buckets import Buckets
+        if not self.http:
+            self.http = HTTPContext(baseurl=baseurl, token=token, timeout=timeout)
+        return self.http.buckets.deposit(works=[self.payload], return_ids=return_ids)
 
-        buckets = Buckets(**kwargs)  # type: ignore
-        return buckets.deposit(works=[self.payload], return_ids=return_ids)
-
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
-    def update(self, **kwargs: Dict[str, Any]) -> bool:
+    def update(self) -> bool:
         """Update work in the buckets backend.
 
-        Args:
-            **kwargs (Dict[str, Any]): Keyword arguments for the Buckets API.
-
         Returns:
             bool: True if successful, False otherwise.
         """
-        from chime_frb_api.modules.buckets import Buckets
+        return self.http.buckets.update([self.payload])
 
-        buckets = Buckets(**kwargs)  # type: ignore
-        return buckets.update([self.payload])
-
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
-    def delete(self, **kwargs: Dict[str, Any]) -> bool:
+    def delete(self) -> bool:
         """Delete work from the buckets backend.
 
-        Args:
-            ids (List[str]): List of ids to delete.
-
         Returns:
             bool: True if successful, False otherwise.
         """
-        from chime_frb_api.modules.buckets import Buckets
-
-        buckets = Buckets(**kwargs)  # type: ignore
-        return buckets.delete_ids([str(self.id)])
+        return self.http.buckets.delete_ids([str(self.id)])

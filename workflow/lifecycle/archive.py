@@ -6,9 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from chime_frb_api import get_logger
 from chime_frb_api.configs import MOUNTS, TEST_MOUNTS
 from chime_frb_api.workflow import Work
+
+from workflow import get_logger
 
 logger = get_logger("workflow")
 

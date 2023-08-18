@@ -2,17 +2,17 @@
 import ast
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
-from chime_frb_api import get_logger
-from chime_frb_api.workflow import Work
-from mergedeep import merge
+from mergedeep import merge  # type: ignore
+
+from workflow import Work, get_logger
 
 logger = get_logger("workflow")
 
 
-def function(user_func: Callable[..., Any], work: Work) -> Work:
+def function(func: Callable[..., Any], work: Work) -> Work:
     """Execute the user function.
 
     Args:
@@ -23,29 +23,11 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
         Work: Work object
     """
     # Execute the function
-    logger.debug(f"executing user_func: {user_func}")
-    defaults: Dict[Any, Any] = {}
-    if isinstance(user_func, click.Command):
-        logger.debug("click cli: ✅")
-        # Get default options from the click command
-        known: List[Any] = list(work.parameters.keys()) if work.parameters else []
-        for parameter in user_func.params:
-            if parameter.name not in known:  # type: ignore
-                defaults[parameter.name] = parameter.default
-        if defaults:
-            logger.debug(f"cli defaults: {defaults}")
-        user_func = user_func.callback  # type: ignore
-    # If work.parameters is empty, merge an empty dict with the defaults
-    # Otherwise, merge the work.parameters with the defaults
-    parameters: Dict[str, Any] = {}
-    if work.parameters:
-        parameters = {**work.parameters, **defaults}
-    else:
-        parameters = defaults
-    logger.info(f"executing: {user_func.__name__}(**{parameters})")
+    logger.debug(f"executing user_func: {func}")
+    func, parameters = gather(func, work)
     start = time.time()
     try:
-        results, products, plots = user_func(**parameters)
+        results, products, plots = func(**parameters)
         logger.debug(f"results : {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots   : {plots}")
@@ -64,6 +46,41 @@ def function(user_func: Callable[..., Any], work: Work) -> Work:
         work.stop = end
         logger.info(f"execution time: {end - start:.2f}s")
         return work
+
+
+def gather(
+    func: Callable[..., Any], work: Work
+) -> Tuple[Callable[..., Any], Dict[str, Any]]:
+    """Gather the parameters for the user function.
+
+    Args:
+        user_func (Callable[..., Any]): User function
+        work (Work): Work object
+
+    Returns:
+        Tuple[Callable[..., Any], Dict[str, Any]]:
+            Tuple of user function and parameters
+    """
+    defaults: Dict[Any, Any] = {}
+    if isinstance(func, click.Command):
+        logger.debug("click cli: ✅")
+        # Get default options from the click command
+        known: List[Any] = list(work.parameters.keys()) if work.parameters else []
+        for parameter in func.params:
+            if parameter.name not in known:  # type: ignore
+                defaults[parameter.name] = parameter.default
+        if defaults:
+            logger.debug(f"cli defaults: {defaults}")
+        func = func.callback  # type: ignore
+    # If work.parameters is empty, merge an empty dict with the defaults
+    # Otherwise, merge the work.parameters with the defaults
+    parameters: Dict[str, Any] = {}
+    if work.parameters:
+        parameters = {**work.parameters, **defaults}
+    else:
+        parameters = defaults
+    logger.info(f"executing: {func.__name__}(**{parameters})")
+    return func, parameters
 
 
 def command(command: List[str], work: Work) -> Work:

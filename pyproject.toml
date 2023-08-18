@@ -2,7 +2,7 @@
 name = "workflow"
 version = "0.1.0"
 description = "Workflow Core"
-authors = ["Shiny Brar  <charanjotbrar@gmail.com>"]
+authors = ["Shiny Brar <charanjotbrar@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
@@ -12,6 +12,10 @@ tenacity = "^8.2"
 pydantic = "^2.0"
 requests = "^2.31"
 pyyaml = "^6.0"
+click = "^8.1"
+toml = "^0.10"
+rich = "^13.4"
+mergedeep = "^1.3"
 pydantic-settings = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -20,6 +24,9 @@ pytest = "^7.4"
 pytest-cov = "^4.1"
 tomli = "^2.0"
 pre-commit = "^3.3"
+types-requests = "^2.31"
+types-toml = "^0.10"
+types-setuptools = "^68.0"
 
 [tool.poetry.scripts]
 workflow = "workflow.cli.main:cli"

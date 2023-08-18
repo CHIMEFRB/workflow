@@ -1,10 +1,11 @@
 """Notification Configuration."""
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
+from pydantic import BaseModel, Field, StrictStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Slack(BaseModel):
+class Slack(BaseSettings):
     """Slack Configuration.
 
     This class is used to configure the slack notification strategy for the work.
@@ -23,10 +24,14 @@ class Slack(BaseModel):
         reply (Dict[str, Any]): Status of the slack notification.
     """
 
-    model_config = ConfigDict(
-        title="Slack Configuration",
+    model_config = SettingsConfigDict(
+        title="Workflow Notify Object",
         validate_default=True,
         validate_assignment=True,
+        validate_return=True,
+        revalidate_instances="always",
+        env_prefix="WORKFLOW_NOTIFY_SLACK_",
+        secrets_dir="/run/secrets",
         extra="forbid",
     )
 
@@ -78,4 +83,8 @@ class Notify(BaseModel):
         slack (Slack): Send slack notifications for the work.
     """
 
-    slack: Slack = Slack()
+    slack: Slack = Field(
+        default_factory=Slack,
+        description="Send slack notifications for the work.",
+        examples=[Slack()],
+    )

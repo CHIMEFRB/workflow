@@ -22,17 +22,18 @@ repos:
     - --py36-plus
     id: pyupgrade
   repo: https://github.com/asottile/pyupgrade
-  rev: v3.8.0
+  rev: v3.9.0
 - hooks:
   - id: black
   repo: https://github.com/psf/black
-  rev: 23.3.0
+  rev: 23.7.0
 - hooks:
   - additional_dependencies:
     - types-attrs
     - types-requests
     - types-setuptools
     - types-PyYAML
+    - types-toml
     args:
     - --ignore-missing-imports
     - --no-implicit-optional
@@ -49,7 +50,7 @@ repos:
 - hooks:
   - id: blacken-docs
   repo: https://github.com/asottile/blacken-docs
-  rev: 1.14.0
+  rev: 1.15.0
 - hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
@@ -94,4 +95,4 @@ repos:
     stages:
     - commit-msg
   repo: https://github.com/commitizen-tools/commitizen
-  rev: 3.5.2
+  rev: 3.5.3

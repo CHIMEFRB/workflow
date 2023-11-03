@@ -1,0 +1,107 @@
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - "--configFile=/etc/traefik/traefik.yaml"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik.yaml:/etc/traefik/traefik.yaml"
+      - "./traefik_docker.yaml:/etc/traefik/traefik_docker.yaml"
+
+  authentication:
+    image: chimefrb/authentication:latest
+    platform: linux/amd64
+    command: ["/bin/bash", "-c", "python -m authentication.server"]
+    container_name: authentication
+    expose:
+      - 4000
+    environment:
+      - DEBUG=1
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=4000
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_CORS_ORIGINS=*
+      - SANIC_ACCESS_URL=https://github.com/login/oauth/access_token
+      - SANIC_ORGANIZATIONS_URL=https://api.github.com/user/orgs
+      - SANIC_TEAMS_URL=https://api.github.com/user/teams
+      - SANIC_GITHUB_ORGS_ALLOWED=CHIMEFRB,test-organization-36
+
+  buckets:
+    image: chimefrb/buckets:latest
+    container_name: buckets
+    command: ["/bin/bash", "-c", "python -m buckets.server"]
+    expose:
+      - 8004
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8004
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+
+  results:
+    image: chimefrb/results:latest
+    container_name: results
+    command: ["/bin/bash", "-c", "python -m results.server"]
+    expose:
+      - 8005
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8005
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+
+  pipelines:
+    image: chimefrb/pipelines:v2.5.1
+    container_name: pipelines
+    command: ["/bin/bash", "-c", "python -m pipelines.server"]
+    expose:
+      - 8006
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8006
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+
+  # ? Depends on https://github.com/CHIMEFRB/workflow-pipelines/pull/133
+  # ? to be merged
+  # managers:
+  #   image: chimefrb/pipelines:latest
+  #   container_name: managers
+  #   command: ["/bin/bash", "-c", "python -m managers.server"]
+  #   expose:
+  #     - 8007
+  #   environment:
+  #     - SANIC_HOSTNAME=0.0.0.0
+  #     - SANIC_PORT=8006
+  #     - SANIC_ACCESS_LOG=true
+  #     - SANIC_AUTO_RELOAD=true
+  #     - SANIC_DEBUG=true
+  #     - SANIC_MONGODB_HOSTNAME=mongo
+  #     - SANIC_MONGODB_PORT=27017
+  #     - SANIC_CORS_ORIGINS=*
+
+  mongodb:
+    image: mongo
+    container_name: mongo
+    command: mongod --bind_ip_all
+    ports:
+      - "27017:27017"

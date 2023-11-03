@@ -1,0 +1,71 @@
+http:
+  routers:
+    authentication-router:
+      rule: "Host(`workflow.auth`)"
+      service: "authentication-service"
+      middlewares:
+        - "cors-headers"
+      entryPoints:
+        - "web"
+    buckets-router:
+      rule: "Host(`workflow.buckets`)"
+      service: "buckets-service"
+      middlewares:
+        - cors-headers
+        - authentication-middleware
+      entryPoints:
+        - "web"
+    results-router:
+      rule: "Host(`workflow.results`)"
+      service: "results-service"
+      middlewares:
+        - cors-headers
+        - authentication-middleware
+      entryPoints:
+        - "web"
+    pipelines-router:
+      rule: "Host(`workflow.pipelines`)"
+      service: "pipelines-service"
+      middlewares:
+        - cors-headers
+        - authentication-middleware
+      entryPoints:
+        - "web"
+
+  middlewares:
+    authentication-middleware:
+      forwardAuth:
+        address: "http://authentication:4000/v1/check"
+        authRequestHeaders:
+          - "x-access-token"
+        trustForwardHeader: true
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "OPTIONS"
+          - "PUT"
+          - "POST"
+        accessControlAllowHeaders: "*"
+        accessControlAllowOriginList:
+          - "*"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+  services:
+    authentication-service:
+      loadBalancer:
+        servers:
+          - url: "http://authentication:4000"
+    buckets-service:
+      loadBalancer:
+        servers:
+          - url: "http://buckets:8004"
+    results-service:
+      loadBalancer:
+        servers:
+          - url: "http://results:8005"
+    pipelines-service:
+      loadBalancer:
+        servers:
+          - url: "http://pipelines:8006"

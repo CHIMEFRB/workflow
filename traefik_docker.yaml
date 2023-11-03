@@ -19,6 +19,7 @@ http:
       rule: "Host(`workflow.results`)"
       service: "results-service"
       middlewares:
+        - rate-limit
         - cors-headers
         - authentication-middleware
       entryPoints:
@@ -39,6 +40,10 @@ http:
         authRequestHeaders:
           - "x-access-token"
         trustForwardHeader: true
+    rate-limit:
+      rateLimit:
+        average: 1
+        period: 1s
     cors-headers:
       headers:
         accessControlAllowMethods:

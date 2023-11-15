@@ -11,8 +11,7 @@ http:
       rule: "Host(`workflow.buckets`)"
       service: "buckets-service"
       middlewares:
-        - cors-headers
-        - authentication-middleware
+        - cors-auth-chain
       entryPoints:
         - "web"
     results-router:
@@ -20,16 +19,14 @@ http:
       service: "results-service"
       middlewares:
         - rate-limit
-        - cors-headers
-        - authentication-middleware
+        - cors-auth-chain
       entryPoints:
         - "web"
     pipelines-router:
       rule: "Host(`workflow.pipelines`)"
       service: "pipelines-service"
       middlewares:
-        - cors-headers
-        - authentication-middleware
+        - cors-auth-chain
       entryPoints:
         - "web"
 
@@ -40,6 +37,10 @@ http:
         authRequestHeaders:
           - "x-access-token"
         trustForwardHeader: true
+    basic-auth:
+      basicAuth:
+        users:
+          - "chimefrb:$apr1$dDchLEPm$xTyMeT2JZw3PFzpywpfs81"
     rate-limit:
       rateLimit:
         average: 1
@@ -56,6 +57,12 @@ http:
           - "*"
         accessControlMaxAge: 100
         addVaryHeader: true
+    cors-auth-chain:
+      chain:
+        middlewares:
+          - "cors-headers"
+          - "basic-auth"
+          # - "authentication-middleware"
 
   services:
     authentication-service:

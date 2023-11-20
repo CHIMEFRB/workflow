@@ -15,9 +15,7 @@ services:
 
   authentication:
     image: chimefrb/authentication:latest
-    platform: linux/amd64
     command: ["/bin/bash", "-c", "python -m authentication.server"]
-    container_name: authentication
     expose:
       - 4000
     environment:
@@ -35,7 +33,6 @@ services:
 
   buckets:
     image: chimefrb/buckets:latest
-    container_name: buckets
     command: ["/bin/bash", "-c", "python -m buckets.server"]
     expose:
       - 8004
@@ -51,7 +48,6 @@ services:
 
   results:
     image: chimefrb/results:latest
-    container_name: results
     command: ["/bin/bash", "-c", "python -m results.server"]
     expose:
       - 8005
@@ -66,8 +62,7 @@ services:
       - SANIC_CORS_ORIGINS=*
 
   pipelines:
-    image: chimefrb/pipelines:v2.5.1
-    container_name: pipelines
+    image: chimefrb/pipelines:latest
     command: ["/bin/bash", "-c", "python -m pipelines.server"]
     expose:
       - 8006
@@ -80,28 +75,37 @@ services:
       - SANIC_MONGODB_HOSTNAME=mongo
       - SANIC_MONGODB_PORT=27017
       - SANIC_CORS_ORIGINS=*
+      - SANIC_START_MANAGER_URL=http://managers:8007/v1/start
+      - SANIC_PAUSE_MANAGER_URL=http://managers:8007/v1/pause
+      - SANIC_STOP_MANAGER_URL=http://managers:8007/v1/stop
+      - SANIC_HEALTH_MANAGERS_URL=http://managers:8007/__health__
+      - SANIC_HEALTH_MANAGERS_CHECK_TIMES=10
+      - SANIC_HEALTH_MANAGERS_CHECK_INTERVAL_SECONDS=30
+      - SANIC_LISTENERS_THRESHOLD_SECONDS=120
 
-  # ? Depends on https://github.com/CHIMEFRB/workflow-pipelines/pull/133
-  # ? to be merged
-  # managers:
-  #   image: chimefrb/pipelines:latest
-  #   container_name: managers
-  #   command: ["/bin/bash", "-c", "python -m managers.server"]
-  #   expose:
-  #     - 8007
-  #   environment:
-  #     - SANIC_HOSTNAME=0.0.0.0
-  #     - SANIC_PORT=8006
-  #     - SANIC_ACCESS_LOG=true
-  #     - SANIC_AUTO_RELOAD=true
-  #     - SANIC_DEBUG=true
-  #     - SANIC_MONGODB_HOSTNAME=mongo
-  #     - SANIC_MONGODB_PORT=27017
-  #     - SANIC_CORS_ORIGINS=*
+  managers:
+    image: chimefrb/pipelines:latest
+    command: ["/bin/bash", "-c", "python -m managers.server"]
+    deploy:
+      replicas: 3
+    expose:
+      - 8007
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8007
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+      - SANIC_BUCKETS_URL=http://workflow.buckets/
+      - SANIC_RESULTS_URL=https://workflow.results/
+      - SANIC_UPDATE_INTERVAL_SECONDS=60
+      - SANIC_PURGE_TIME_SECONDS=3600
 
-  mongodb:
+  mongo:
     image: mongo
-    container_name: mongo
     command: mongod --bind_ip_all
     ports:
       - "27017:27017"

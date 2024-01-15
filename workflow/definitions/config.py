@@ -33,7 +33,7 @@ class Archive(BaseSettings):
 
     results: bool = Field(
         default=True,
-        description="Archive results for the work.",
+        description="Whether to archive the results of the work.",
         examples=[True],
     )
     products: str = Field(
@@ -99,7 +99,7 @@ class Config(BaseSettings):
     archive: Archive = Archive()
     metrics: bool = Field(
         default=False,
-        description="Generate metrics from work lifecycle.",
+        description="Metrics for the workflow lifecycle.",
     )
     parent: Optional[str] = Field(
         default=None,
@@ -108,13 +108,16 @@ class Config(BaseSettings):
     )
     orgs: List[str] = Field(
         default=["chimefrb"],
-        description="GitHub organization[s] the work belongs to.",
+        description="""
+        GitHub organization[s] the work belongs to. If authentication is enabled,
+        this must be a subset of the authenticated user's organizations.""",
         examples=[["octocat", "chimefrb"]],
     )
     teams: Optional[List[str]] = Field(
         default=None,
         description="""
-        GitHub Team[s] with access to the work. None implies all org members.
+        GitHub Team[s] with access to the work. If authentication is enabled,
+        this must be a subset of the authenticated user's teams.
         """,
         examples=[["developers", "admins"]],
     )

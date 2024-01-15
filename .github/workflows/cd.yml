@@ -16,3 +16,5 @@ jobs:
         with:
           release-type: python
           package-name: workflow
+          extra-files: |
+            workflow/__init__.py

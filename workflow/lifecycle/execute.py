@@ -2,36 +2,60 @@
 import ast
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from sys import getsizeof
+from typing import Any, Callable, Dict, List, Tuple
 
 import click
 from mergedeep import merge  # type: ignore
 
-from workflow import Work, get_logger
+from workflow.definitions.work import Work
+from workflow.utils.logger import get_logger
 
-logger = get_logger("workflow")
+logger = get_logger("workflow.lifecycle.execute")
 
 
 def function(func: Callable[..., Any], work: Work) -> Work:
-    """Execute the user function.
+    """Execute a Python function.
 
     Args:
-        user_func (FUNC_TYPE): Callable function
-        work (Work): Work object
+        func (Callable[..., Any]): Python function
+        work (Work): The work object
 
     Returns:
-        Work: Work object
+        Work: The work object
     """
     # Execute the function
-    logger.debug(f"executing user_func: {func}")
+    logger.debug(f"executing func: {func}")
     func, parameters = gather(func, work)
+    logger.info(f"executing: {func.__name__}(**{parameters})")
     start = time.time()
+    outcome: None | Dict[str, Any] | Tuple[Dict[str, Any], List[str], List[str]] = None
+    results: None | Dict[str, Any] = None
+    products: None | List[str] = None
+    plots: None | List[str] = None
     try:
-        results, products, plots = func(**parameters)
-        logger.debug(f"results : {results}")
+        outcome = func(**parameters)
+        # * If the outcome is a dict, assume it is results
+        if isinstance(outcome, dict):
+            results = outcome
+        # * If the outcome is tuple of len 3, assume it is results, products, plots
+        elif isinstance(outcome, tuple) and len(outcome) == 3:
+            results, products, plots = outcome
+        else:
+            logger.warning(f"could not parse work outcome: {outcome}")
+            logger.error(f"outcome ignored for work: {work.id}")
+        logger.debug(f"results: {results}")
         logger.debug(f"products: {products}")
-        logger.debug(f"plots   : {plots}")
+        logger.debug(f"plots: {plots}")
+        # * Merge function output with work object
         if results:
+            # * Check if results are less than 4MB
+            if getsizeof(results) > 4_000_000:
+                logger.error(
+                    f"results size {getsizeof(results)/1000000:.2f}MB exceeds 4MB"
+                )
+                logger.error("results not mapped to work object")
+                results = None
             work.results = merge(work.results or {}, results)  # type: ignore
         if products:
             work.products = (work.products or []) + products
@@ -54,7 +78,7 @@ def gather(
     """Gather the parameters for the user function.
 
     Args:
-        user_func (Callable[..., Any]): User function
+        func (Callable[..., Any]): User function
         work (Work): Work object
 
     Returns:
@@ -63,14 +87,13 @@ def gather(
     """
     defaults: Dict[Any, Any] = {}
     if isinstance(func, click.Command):
-        logger.debug("click cli: ✅")
         # Get default options from the click command
         known: List[Any] = list(work.parameters.keys()) if work.parameters else []
         for parameter in func.params:
             if parameter.name not in known:  # type: ignore
                 defaults[parameter.name] = parameter.default
         if defaults:
-            logger.debug(f"cli defaults: {defaults}")
+            logger.debug(f"click cli defaults: {defaults}")
         func = func.callback  # type: ignore
     # If work.parameters is empty, merge an empty dict with the defaults
     # Otherwise, merge the work.parameters with the defaults
@@ -79,12 +102,11 @@ def gather(
         parameters = {**work.parameters, **defaults}
     else:
         parameters = defaults
-    logger.info(f"executing: {func.__name__}(**{parameters})")
     return func, parameters
 
 
 def command(command: List[str], work: Work) -> Work:
-    """Execute the command.
+    """Execute a command.
 
     Args:
         command (List[str]): Command to execute
@@ -110,7 +132,7 @@ def command(command: List[str], work: Work) -> Work:
         stdout = process.stdout.decode("utf-8").splitlines()
         stderr = process.stderr.decode("utf-8").splitlines()
         # Convert last line of stdout to a Tuple
-        response: Optional[Any] = None
+        response: None | Any = None
         try:
             response = ast.literal_eval(stdout[-1])
         except SyntaxError as error:
@@ -133,6 +155,12 @@ def command(command: List[str], work: Work) -> Work:
                 "stderr": stderr,
                 "returncode": process.returncode,
             }
+        # * Check if results are less than 4MB
+        size: int = getsizeof(work.results)  # type: ignore
+        if size > 4_000_000:
+            logger.error(f"results size {size:.2f}MB exceeds 4MB")
+            logger.error("results not mapped to work object")
+            work.results = None
         work.status = "success"
     except Exception as error:
         work.status = "failure"

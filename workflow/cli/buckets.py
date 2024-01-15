@@ -2,13 +2,16 @@
 from typing import Any, Dict, List, Optional
 
 import click
-from chime_frb_api.modules.buckets import Buckets
 from rich import pretty, print
 from rich.console import Console
 from rich.table import Table
 
+from workflow.http.context import HTTPContext
+
 pretty.install()
 console = Console()
+
+
 table = Table(
     title="\nWorkflow Buckets",
     show_header=True,
@@ -26,8 +29,8 @@ def buckets():
 @buckets.command("version", help="Show the version.")
 def version():
     """Show the version."""
-    buckets = Buckets()
-    console.print(buckets.version())
+    http = HTTPContext()
+    console.print(http.buckets.info())
 
 
 @buckets.command("rm", help="Remove a bucket.")
@@ -48,18 +51,18 @@ def prune_work(name: str, event: Optional[int] = None, status: Optional[str] = N
         event (Optional[int], optional): CHIME/FRB Event ID. Defaults to None.
         status (Optional[str], optional): Status of work[s] to prune. Defaults to None.
     """
+    http = HTTPContext()
     events: Optional[List[int]] = None
     if event is not None:
         events = [event]
-    buckets = Buckets()
-    buckets.delete_many(pipeline=name, status=status, events=events)
+    http.buckets.delete_many(pipeline=name, status=status, events=events)
 
 
 @buckets.command("ls", help="List all active buckets.")
 def ls():
     """List all active buckets."""
-    buckets = Buckets()
-    pipelines = buckets.pipelines()
+    http = HTTPContext()
+    pipelines = http.buckets.pipelines()
     table.add_column("Active Buckets", max_width=50, justify="left")
     for pipeline in pipelines:
         table.add_row(pipeline)
@@ -76,20 +79,20 @@ def ps(name: Optional[str] = None, all: bool = False):
         name (Optional[str], optional): Name of the bucket. Defaults to None.
         all (bool, optional): Whether to show all buckets. Defaults to False.
     """
-    buckets = Buckets()
-    details = buckets.status(pipeline=None)
+    http = HTTPContext()
+    details = http.buckets.status(pipeline=None)
     table.add_column("name", justify="left")
     for key in details.keys():
         table.add_column(key, justify="right")
     table.add_row("total", *create_row(details))
     if all:
-        pipelines = buckets.pipelines()
+        pipelines = http.buckets.pipelines()
         for pipeline in pipelines:
-            details = buckets.status(pipeline=pipeline)
+            details = http.buckets.status(pipeline=pipeline)
             row = create_row(details)
             table.add_row(pipeline, *row)
     elif name:
-        details = buckets.status(pipeline=name)
+        details = http.buckets.status(pipeline=name)
         row = create_row(details)
         table.add_row(name, *row)
     console.print(table)
@@ -113,8 +116,8 @@ def view(name: str, count: int = 3):
         name (str): Name of the bucket.
         count (int, optional): Number of work to show. Defaults to 3.
     """
-    buckets = Buckets()
-    work = buckets.view(query={"pipeline": name}, projection={}, limit=count)
+    http = HTTPContext()
+    work = http.buckets.view(query={"pipeline": name}, projection={}, limit=count)
     print(work)
 
 

@@ -17,8 +17,8 @@ from requests import Session, head
 from requests.exceptions import RequestException
 from requests.models import Response
 
-from workflow import __version__ as version
-from workflow import get_logger
+from workflow import __version__
+from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.http.client")
 
@@ -60,7 +60,7 @@ class Client(BaseSettings):
         description="Authentication token",
     )
     session: Session = Field(
-        default=Session(), description="Requests session", exclude=True
+        default=Session(), description="Requests Session", exclude=True
     )
 
     @model_validator(mode="after")
@@ -75,7 +75,7 @@ class Client(BaseSettings):
         self.session.headers.update({"Accept": "*/*"})
         self.session.headers.update({"User-Agent": "workflow-client"})
         self.session.headers.update({"Date": asctime(gmtime())})
-        self.session.headers.update({"X-Workflow-Core-Version": version})
+        self.session.headers.update({"X-Workflow-Core-Version": __version__})
         self.session.headers.update(
             {"X-Workflow-Client-Python-Version": python_version()}
         )
@@ -108,12 +108,10 @@ class Client(BaseSettings):
             AnyHttpUrl(baseurl)
             response: Response = head(f"{baseurl}/version", timeout=5)
             response.raise_for_status()
-        except AttributeError as error:
-            logger.exception(error)
-            logger.error(f"Invalid baseurl: {baseurl}")
-            raise error
         except RequestException as error:
-            logger.exception(error)
+            logger.warning(f"Unable to connect to the {baseurl}.")
+        except Exception as error:
+            logger.warning("Unknown error.")
             raise error
         return baseurl
 

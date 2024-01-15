@@ -1,0 +1,32 @@
+workspace: chimefrb
+
+sites:
+  - local
+  - chime
+  - kko
+  - gbo
+  - hco
+  - aro
+  - canfar
+  - cedar
+  - calcul-quebec
+
+http:
+  baseurls:
+    buckets: "https://frb.chimenet.ca/buckets"
+    results: "https://frb.chimenet.ca/results"
+    pipelines: "https://frb.chimenet.ca/pipelines"
+    loki: "https://frb.chimenet.ca/loki/loki/api/v1/push"
+    products: "https://frb.chimenet.ca/frb-master/v1/events/query-file?filename="
+
+archive:
+  posix:
+    base: "/data/frb-archiver"
+    buckets: "/data/frb-archiver/buckets"
+    results: "/data/frb-archiver/results"
+    pipelines: "/data/frb-archiver/pipelines"
+    loki: "/data/frb-archiver/loki"
+    products: "/data/frb-archiver/products"
+  s3:
+    minion:
+      url: "https://s3.us-west-2.amazonaws.com/frb-archiver"

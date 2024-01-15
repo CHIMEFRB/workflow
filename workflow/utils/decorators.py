@@ -1,7 +1,7 @@
 """Workflow decorators."""
 from typing import Any, Callable
 
-from workflow import get_logger
+from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.decorators")
 

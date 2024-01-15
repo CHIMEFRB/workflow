@@ -4,9 +4,9 @@ from typing import Any, Dict, List
 
 import click
 
-from workflow import get_logger
 from workflow.http.buckets import Buckets
 from workflow.http.results import Results
+from workflow.utils.logger import get_logger
 
 log = get_logger("workflow.daemons.transfer")
 

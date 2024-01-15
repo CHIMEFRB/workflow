@@ -9,30 +9,43 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
 import requests
-from chime_frb_api import get_logger
-from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
-from chime_frb_api.core.logger import set_tag, unset_tag
-from chime_frb_api.utils import loki
-from chime_frb_api.workflow import Work
-from chime_frb_api.workflow.lifecycle import archive, container, execute, validate
+
+# from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
+# from chime_frb_api.utils import loki
 from rich.console import Console
 
-logger = get_logger("workflow")
+from workflow import DEFAULT_WORKSPACE_PATH
+from workflow.definitions.work import Work
+from workflow.lifecycle import archive, container, execute, validate
+from workflow.utils import read as reader
+from workflow.utils.logger import get_logger, set_tag, unset_tag
+
+logger = get_logger("workflow.cli")
 
 
 @click.command("run", short_help="Perform work.")
 @click.argument("bucket", type=str, required=True)
-@click.argument(
-    "function",
+@click.option(
+    "-f" "--function",
     type=str,
     required=False,
     default=None,
+    show_default=True,
+    help="Override work function to execute. e.g `workflow.tasks.example`.",
 )
 @click.option(
+    "-c",
+    "--command",
+    type=str,
+    required=False,
+    default=None,
+    show_default=True,
+    help="Override work command to execute. e.g `echo hello world`.",
+)
+@click.option(
+    "-s",
     "--site",
-    type=click.Choice(
-        ["chime", "allenby", "kko", "gbo", "hco", "aro", "canfar", "cedar", "local"]
-    ),
+    type=str,
     required=True,
     show_default=True,
     help="filter work by site.",
@@ -54,56 +67,29 @@ logger = get_logger("workflow")
     required=False,
     default=None,
     show_default=True,
-    help="filter work by parent pipeline.",
+    help="filter work by parent.",
 )
 @click.option(
-    "-c",
-    "--command",
-    type=str,
-    required=False,
-    default=None,
-    show_default=True,
-    help="command to perform, e.g. `ls -l`",
-)
-@click.option(
-    "-l",
-    "--lifetime",
+    "--attempts",
     type=int,
     default=-1,
     show_default=True,
-    help="works to perform.",
+    help="number of times to attempt work.",
 )
 @click.option(
-    "-s",
-    "--sleep-time",
+    "--sleep",
     type=int,
     default=30,
     show_default=True,
-    help="sleep time between working.",
+    help="sleep time between attempts.",
 )
 @click.option(
-    "-b",
-    "--base-url",
-    type=click.STRING,
-    default=None,
+    "-w",
+    "--workspace",
+    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
+    default=DEFAULT_WORKSPACE_PATH,
     show_default=True,
-    help="url for workflow backend.",
-)
-@click.option(
-    "--loki-url",
-    type=click.STRING,
-    default=None,
-    required=False,
-    show_default=True,
-    help="url for loki logging server.",
-)
-@click.option(
-    "--products-url",
-    type=click.STRING,
-    default=None,
-    required=False,
-    show_default=True,
-    help="url for products server.",
+    help="workspace config path.",
 )
 @click.option(
     "--log-level",
@@ -116,26 +102,25 @@ def run(
     bucket: str,
     function: str,
     command: str,
-    lifetime: int,
-    sleep_time: int,
-    base_url: Optional[str],
     site: str,
     tag: Tuple[str],
     parent: Optional[str],
-    loki_url: Optional[str],
-    products_url: Optional[str],
+    lives: int,
+    sleep: int,
+    workspace: str,
     log_level: str,
 ):
     """Perform work retrieved from the workflow buckets."""
     # Set logging level
     logger.root.setLevel(log_level)
     logger.root.handlers[0].setLevel(log_level)
-    if not base_url:
-        base_url = str(WORKFLOW_URLS[site])
-    if not loki_url:
-        loki_url = str(LOKI_URLS[site])
-    if not products_url:
-        products_url = str(PRODUCTS_URLS[site])
+    config = reader.workspace(workspace)
+    baseurls = config.get("http", {}).get("baseurls", {})
+
+    buckets_url = baseurls.get("buckets", None)
+    loki_url = baseurls.get("loki", None)
+    products_url = baseurls.get("products", None)
+
     # Reformate tag to be a list of strings
     tags: List[str] = list(tag)
     # Setup and connect to the workflow backend
@@ -145,10 +130,10 @@ def run(
     logger.info(f"Command  : {command}")
     logger.info(f"Mode     : {'Static' if (function or command) else 'Dynamic'}")
     # Print inifinity symbol if lifetime is -1, otherwise print lifetime
-    logger.info(f"Lifetime : {'infinite' if lifetime == -1 else lifetime}")
-    logger.info(f"Sleep    : {sleep_time}s")
+    logger.info(f"Lives    : {'infinite' if lives == -1 else lives}")
+    logger.info(f"Sleep    : {sleep}s")
     logger.info(f"Log Level: {log_level}")
-    logger.info(f"Base URL : {base_url}")
+    logger.info(f"Base URL : {buckets_url}")
     logger.info(f"Loki URL : {loki_url}")
     logger.info(f"Prod URL : {products_url}")
     logger.info(
@@ -176,9 +161,9 @@ def run(
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
 
     try:
-        requests.get(base_url).headers
+        requests.get(buckets_url).headers
         logger.info("Base URL : ✅")
-        logger.debug(f"base_url: {base_url}")
+        logger.debug(f"base_url: {buckets_url}")
     except Exception as error:
         logger.error(error)
         raise click.ClickException("unable to connect to workflow backend")
@@ -204,9 +189,7 @@ def run(
             refresh_per_second=1,
             speed=1 / slowdown,
         ):
-            lifecycle(
-                bucket, function, lifetime, sleep_time, site, tags, parent, base_url
-            )
+            lifecycle(bucket, function, lives, sleep, site, tags, parent, buckets_url)
     except Exception as error:
         logger.exception(error)
     finally:

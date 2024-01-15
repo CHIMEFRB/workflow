@@ -9,9 +9,9 @@ from tenacity import retry
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
 
-from workflow import get_logger
 from workflow.http.client import Client
 from workflow.utils.decorators import try_request
+from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.http.buckets")
 

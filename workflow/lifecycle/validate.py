@@ -3,7 +3,7 @@ import subprocess
 from importlib import import_module
 from typing import Any, Callable
 
-from chime_frb_api import get_logger
+from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow")
 

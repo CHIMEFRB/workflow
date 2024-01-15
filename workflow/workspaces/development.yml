@@ -1,0 +1,32 @@
+workspace: development
+
+# List the valid sites for this workspace
+sites:
+  - local
+
+# Show archiving locations
+archive:
+  mounts:
+    allenby: "/"
+    aro: "/"
+    chime: "/data/chime/baseband/processed"
+    canfar: "/arc/projects/chime_frb/data/canfar/processed"
+    gbo: "/"
+    kko: "/"
+    hco: "/"
+
+http:
+  baseurls:
+    buckets: http://localhost:8001
+    results: http://localhost:8002
+    pipelines: http://localhost:8003
+    products: http://localhost:8004
+    minio: http://localhost:8005
+    loki: http://localhost:8005/loki/api/v1/push
+
+config:
+  archive:
+    results: "move" # Can also be copy or delete
+    plots: "move" # Can also be copy or delete
+    products: "move" # Can also be copy or delete
+  slack:

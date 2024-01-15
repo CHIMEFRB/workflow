@@ -3,7 +3,13 @@
 import pytest
 from pydantic import ValidationError
 
-from workflow import Work
+from workflow.definitions.work import Work
+
+
+def test_good_instantiation():
+    """Test that the work object can be instantiated with the correct parameters."""
+    work = Work(pipeline="test", site="local", user="test")
+    assert work.pipeline == "test"
 
 
 def test_bad_instantiation():

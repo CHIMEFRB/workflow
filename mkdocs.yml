@@ -1,0 +1,96 @@
+site_name: Workflow
+site_author: Shiny Brar
+site_description: A pipeline orchestration tool for the scientific community
+repo_name: chimefrb/workflow
+repo_url: https://github.com/chimefrb/workflow
+copyright: Copyright &copy; 2016 - 2021 CHIME/FRB Collaboration
+
+
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: indigo
+    accent: indigo
+  font:
+    text: Roboto
+    code: Roboto Mono
+  language: en
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - search.suggest
+    - search.highlight
+    - header.autohide
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+- search:
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [.] # The path to the Python package
+
+# Extensions
+markdown_extensions:
+  - markdown.extensions.admonition
+  - markdown.extensions.attr_list
+  - markdown.extensions.def_list
+  - markdown.extensions.footnotes
+  - markdown.extensions.meta
+  - markdown.extensions.toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: "!!python/name:material.extensions.emoji.twemoji"
+      emoji_generator: "!!python/name:material.extensions.emoji.to_svg"
+  - pymdownx.highlight:
+      use_pygments: true
+      linenums_style: pymdownx.inline
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: squidfunk
+      repo: mkdocs-material
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      check_paths: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: "!!python/name:pymdownx.superfences.fence_code_format"
+  - tables
+
+nav:
+  - Welcome: index.md
+  - Pipelines:
+    - Intro: workflow-pipelines-intro.md
+    - Flow: workflow-pipelines-flow.md
+    - YAML Reference: workflow-pipelines-yaml-reference.md
+  - Features:
+    - Notifications: notifications.md
+    - Logging: loki.md
+  - Low Level API:
+    - Work: work.md
+    - Buckets: buckets.md
+    - Results: results.md

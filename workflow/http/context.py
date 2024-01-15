@@ -1,11 +1,15 @@
 """HTTP client for interacting with the Workflow Servers."""
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from pydantic import AliasChoices, Field, SecretStr, model_validator
+from pydantic import AliasChoices, Field, FilePath, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from workflow import get_logger
+from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.http.buckets import Buckets
+from workflow.http.pipelines import Pipelines
+from workflow.http.results import Results
+from workflow.utils import read
+from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.http.context")
 
@@ -20,7 +24,6 @@ class HTTPContext(BaseSettings):
         baseurl (str): HTTP baseurl of the buckets backend.
         timeout (float): HTTP Request timeout in seconds.
         token (Optional[SecretStr]): Workflow Access Token.
-        buckets (Buckets): Buckets Backend API Client.
 
     Returns:
         HTTPContext: The current HTTPContext object.
@@ -34,14 +37,15 @@ class HTTPContext(BaseSettings):
         validate_assignment=True,
         extra="ignore",
     )
-    baseurl: str = Field(
-        default="http://localhost:8004",
-        description="HTTP baseurl of the buckets backend.",
-        examples=["http://localhost:8004"],
+    workspace: FilePath = Field(
+        default=DEFAULT_WORKSPACE_PATH,
+        frozen=True,
+        description="Path to the active workspace configuration.",
+        examples=["/home/user/.workflow/workspaces/active.yml"],
     )
     timeout: float = Field(
         default=15.0,
-        ge=1.0,
+        ge=0.5,
         le=60.0,
         description="HTTP Request timeout in seconds",
         examples=[15.0],
@@ -64,19 +68,47 @@ class HTTPContext(BaseSettings):
         exclude=True,
     )
 
+    results: Results = Field(
+        default=None,
+        validate_default=False,
+        description="Results Backend API Client.",
+        exclude=True,
+    )
+
+    pipelines: Pipelines = Field(
+        default=None,
+        validate_default=False,
+        description="Pipelines Backend API Client.",
+        exclude=True,
+    )
+
     @model_validator(mode="after")
-    def create_buckets_client(self) -> "HTTPContext":
-        """Create the buckets client.
+    def create_clients(self) -> "HTTPContext":
+        """Create the HTTP Clients for the Workflow Servers.
 
         Returns:
             HTTPContext: The current HTTPContext object.
         """
-        if not self.buckets:
-            try:
-                self.buckets = Buckets(
-                    baseurl=self.baseurl, token=self.token, timeout=self.timeout
-                )
-            except Exception as error:
-                logger.error("unable to create buckets client")
-                raise error
+        clients: Dict[str, Any] = {
+            "buckets": Buckets,
+            "results": Results,
+            "pipelines": Pipelines,
+        }
+        logger.debug(f"creating http clients for {list(clients.keys())}")
+        config: Dict[str, Any] = read.workspace(self.workspace.as_posix())
+        baseurls = config.get("http", {}).get("baseurls", {})
+        logger.debug(f"baseurls: {baseurls}")
+        for _name, _class in clients.items():
+            baseurl = baseurls.get(_name, None)
+            client = getattr(self, _name)
+            if baseurl and not client:
+                try:
+                    setattr(
+                        self,
+                        _name,
+                        _class(baseurl=baseurl, token=self.token, timeout=self.timeout),
+                    )
+                except Exception as error:
+                    logger.exception(f"failed to create {_name} client.")
+                    raise error
         return self

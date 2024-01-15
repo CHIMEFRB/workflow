@@ -1,4 +1,4 @@
-"""Work Object."""
+"""Workflow Work Object."""
 
 from json import loads
 from time import time
@@ -6,84 +6,118 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from warnings import warn
 
 from pydantic import (
+    AliasChoices,
     Field,
+    FilePath,
     SecretStr,
-    StrictFloat,
-    StrictInt,
-    StrictStr,
     field_validator,
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.config import Config
 from workflow.definitions.notify import Notify
 from workflow.http.context import HTTPContext
+from workflow.utils import read
 
 
 class Work(BaseSettings):
-    """Work Object.
+    """Workflow Work Object.
+
+    The work object defines the lifecycle of any action to be performed.
 
     Args:
         BaseSettings (BaseSettings): Pydantic BaseModel with settings.
 
     Note:
-        In the case where default value for a field is specified in multiple places,
-        the selection priority in descending order is:
-            1. Arguments passed to the `Work` Object.
-            2. Environment variables defined with the `WORKFLOW_` prefix.
-            3. Variables loaded from the secrets directory.
-            4. The default values in the constructor.
+        The selection priority for attributes in descending order is:
+
+          - Arguments passed to the `Work` Object.
+          - Environment variables with `WORKFLOW_` prefix.
+          - Variables from /run/secrets secrets directory.
+          - The default values in the class constructor.
 
         Environemnt Prefixes:
-            - `WORKFLOW_` for all work attributes.
-            - `WORKFLOW_CONFIG_` for all work config attributes.
-            - `WORKFLOW_NOTIFY_` for all work notify attributes.
-            - `WORKFLOW_HTTP_` for all work http attributes.
+
+          - `WORKFLOW_` for all work attributes.
+          - `WORKFLOW_HTTP_` for all work http attributes.
+          - `WORKFLOW_CONFIG_` for all work config attributes.
+          - `WORKFLOW_NOTIFY_` for all work notify attributes.
+
+        The size of the results dictionary is limited to 4MB. If the results
+        dictionary is larger than 4MB, it is ignored and not mapped to the
+        work object. Use the `products` attribute to store large data products.
 
 
     Attributes:
         pipeline (str): Name of the pipeline. (Required)
-            Automatically reformated to hyphen-case.
         site (str): Site where the work will be performed. (Required)
         user (str): User who created the work. (Required)
-        function (Optional[str]): Name of the function ran as `function(**parameters)`.
-        command (Optional[List[str]]): Command to run as `subprocess.run(command)`.
-        parameters (Optional[Dict[str, Any]]): Parameters to pass to the function.
-        command (Optional[List[str]]): Command to run as `subprocess.run(command)`.
-        results (Optional[Dict[str, Any]]): Results of the work.
-        products (Optional[Dict[str, Any]]): Products of the work.
-        plots (Optional[Dict[str, Any]]): Plots of the work.
-        tags (Optional[List[str]]): Tags of the work.
-        timeout (int): Timeout for the work in seconds. Default is 3600 seconds.
-        retries (int): Number of retries for the work. Default is 2 retries.
-        priority (int): Priority of the work. Default is 3.
-        config (WorkConfig): Configuration of the work.
-        notify (Notify): Notification configuration of the work.
-        id (str): ID of the work.
+
+        function (str): Python function to run `function(**parameters)`.
+        parameters (Dict[str, Any]): Parameters to pass to the function.
+        command (List[str]): Command to run as `subprocess.run(command)`.
+        results (Dict[str, Any]): Results from the work.
+        products (List[str]): Data products from work.
+        plots (List[str]):  Visual plots of the work.
+        tags (List[str]): Searchable tags of the work.
+        event (List[int]): Unique ID[s] the work was performed against.
+
+        id (str): BSON ID of the work, set by the database.
         creation (float): Creation time of the work.
-        start (float): Start time of the work.
-        stop (float): Stop time of the work.
-        status (str): Status of the work.
+        start (float): Start time of the work, set by the backend.
+        stop (float): Stop time of the work, set by the client.
+        attempt (int): Attempt number of the work. Defaults to 0.
+        status (str): Status of the work. Defaults to "created".
+        timeout (int): Timeout for the work in seconds. Defaults to 3600 seconds.
+        retries (int): Number of retries for the work. Defaults to 2 retries.
+        priority (int): Priority of the work. Defaults to 3.
+        config (Config): Configuration for the lifecycle of the work.
+        notify (Notify): Notification configuration for the work.
+
+        workspace (FilePath): Path to the active workspace configuration.
+            Defaults to `~/.workflow/workspaces/active.yml`. (Excluded from payload)
+        token (SecretStr): Workflow Access Token. (Excluded from payload)
+        http (HTTPContext): HTTP Context for backend connections. (Excluded from payload)
+
 
     Raises:
-        ValueError: If the work is not valid.
+        ValueError: When work is invalid.
 
     Returns:
-        Work: Work object.
+        Object (Work): Work object.
 
     Example:
-        ```python
-        from workflow import Work
+        ```bash
+        # Set the environment variables to override the defaults.
+        export WORKFLOW_PRIORITY=4
+        ```
 
-        work = Work(pipeline="test-pipeline", site="chime", user="shinybrar")
+        ```python
+        from workflow.definitions.work import Work
+
+        work = Work(pipeline="test", site="local", user="shinybrar")
+        work.dump_model()
+        {
+            "config": {...},
+            "notify": {"slack": {}},
+            "pipeline": "test-pipeline",
+            "site": "local",
+            "user": "shinybrar",
+            "timeout": 3600,
+            "retries": 2,
+            "priority": 4,  # Overridden by the environment variable.
+            "attempt": 0,
+            "status": "created",
+        }
         work.deposit(return_ids=True)
         ```
     """
 
+    # * Configuration for the Pydantic Model.
     model_config = SettingsConfigDict(
         title="Workflow Work Object",
-        validate_default=True,
         validate_assignment=True,
         validate_return=True,
         revalidate_instances="always",
@@ -91,44 +125,73 @@ class Work(BaseSettings):
         secrets_dir="/run/secrets",
         extra="ignore",
     )
-
-    pipeline: StrictStr = Field(
+    # * Runtime configurations for the Work Object, these are not part of the payload.
+    # * and describe the behavior of the work object in the current instantiation.
+    workspace: FilePath = Field(
+        default=DEFAULT_WORKSPACE_PATH,
+        validate_default=True,
+        description="Default workspace configuration filepath.",
+        examples=["/home/user/.workflow/active.yml"],
+        exclude=True,
+    )
+    token: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "WORKFLOW_HTTP_TOKEN",
+            "WORKFLOW_TOKEN",
+            "GITHUB_TOKEN",
+            "GITHUB_PAT",
+        ),
+        exclude=True,
+        description="Workflow Access Token.",
+        examples=["ghp_1234567890abcdefg"],
+    )
+    http: HTTPContext = Field(
+        default=None,
+        validate_default=False,
+        description="HTTP Context for backend connections.",
+        exclude=True,
+        repr=False,
+    )
+    # * Required attributes, must be provided by the user.
+    pipeline: str = Field(
         ...,
         min_length=1,
+        max_length=128,
         description="Name of the pipeline (required). Reformated to hyphen-case.",
         examples=["sample-pipeline"],
     )
     site: str = Field(
         ...,
-        description="Site where the work will be performed (required).",
+        description="""
+        Site where the work will be performed (required).
+        Valid sites are defined in the workspace configuration.
+        """,
         examples=["chime"],
     )
-    user: StrictStr = Field(
+    user: str = Field(
         ...,
         description="User ID who created the work (required).",
         examples=["shinybrar"],
     )
-    ###########################################################################
-    # Optional attributes, might be provided by the user.
-    ###########################################################################
-    function: Optional[str] = Field(
+    # * Optional attributes, can be provided by the user.
+    function: str | None = Field(
         default=None,
         description="""
-        Name of the function to run as `function(**parameters)`.
+        Name of the Python function to run as `function(**parameters)`,
         Only either `function` or `command` can be provided.
         """,
         examples=["workflow.example.mean"],
     )
-    parameters: Optional[Dict[str, Any]] = Field(
+    parameters: Dict[str, Any] | None = Field(
         default=None,
         description="""
         Parameters to pass the pipeline function. Equivalent to
-        running `function(**parameters)`. Note, only either
-        `function` or `command` can be provided.
+        running `function(**parameters)`. Ignored if `command` is set.
         """,
         examples=[{"a": 1, "b": 2}],
     )
-    command: Optional[List[str]] = Field(
+    command: List[str] | None = Field(
         default=None,
         description="""
         Command to run as `subprocess.run(command)`.
@@ -136,38 +199,60 @@ class Work(BaseSettings):
         """,
         examples=[["python", "example.py", "--example", "example"]],
     )
-    results: Optional[Dict[str, Any]] = Field(
+    results: Dict[str, Any] | None = Field(
         default=None,
         description="Results of the work performed.",
         examples=[{"dm": 100.0, "snr": 10.0}],
     )
-    products: Optional[List[StrictStr]] = Field(
+    products: List[str] | None = Field(
         default=None,
         description="""
         Name of the non-human-readable data products generated by the pipeline.
         """,
         examples=[["spectra.h5", "dm_vs_time.png"]],
     )
-    plots: Optional[List[StrictStr]] = Field(
+    plots: List[str] | None = Field(
         default=None,
+        validate_default=False,
         description="""
         Name of visual data products generated by the pipeline.
         """,
         examples=[["waterfall.png", "/arc/projects/chimefrb/9385707/9385707.png"]],
     )
-    tags: Optional[List[str]] = Field(
+    tags: List[str] | None = Field(
         default=None,
         description="""
         Searchable tags for the work. Merged with values from env WORKFLOW_TAGS.
         """,
         examples=[["tag", "tagged", "tagteam"]],
     )
-    event: Optional[List[int]] = Field(
+    event: List[int] | None = Field(
         default=None,
         description="Unique ID[s] the work was performed against.",
         examples=[[9385707, 9385708]],
     )
-    timeout: StrictInt = Field(
+    # * State Machine Attributes, set by the backend or optionally by the user.
+    # * These attributed describe the lifecycle of the work object, irrespective
+    # * of the current instantiation.
+    id: str | None = Field(default=None, description="Work ID created by the database.")
+    creation: float | None = Field(
+        default=None, description="Unix timestamp of when the work was created."
+    )
+    start: float | None = Field(
+        default=None,
+        description="Unix timestamp when the work was started, reset at each attempt.",
+    )
+    stop: float | None = Field(
+        default=None,
+        description="Unix timestamp when the work was stopped, reset at each attempt.",
+    )
+    attempt: int = Field(
+        default=0, ge=0, description="Attempt number at performing the work."
+    )
+    status: Literal["created", "queued", "running", "success", "failure"] = Field(
+        default="created", description="Status of the work."
+    )
+    timeout: int = Field(
         default=3600,
         ge=1,
         le=86400,
@@ -191,56 +276,25 @@ class Work(BaseSettings):
         le=5,
         description="""
         Priority of the work. Higher priority works are performed first.
-        i.e. priority 5 > priority 1. Defaults to 3.""",
+        i.e. 5 > 1 in priority. Defaults to 3.""",
         examples=[1],
     )
-    ###########################################################################
-    # Automaticaly set attributes
-    ###########################################################################
-    id: Optional[str] = Field(
-        default=None, description="Work ID created by the database."
-    )
-    creation: Optional[StrictFloat] = Field(
-        default=None, description="Unix timestamp of when the work was created."
-    )
-    start: Optional[StrictFloat] = Field(
-        default=None,
-        description="Unix timestamp when the work was started, reset at each attempt.",
-    )
-    stop: Optional[StrictFloat] = Field(
-        default=None,
-        description="Unix timestamp when the work was stopped, reset at each attempt.",
-    )
-    attempt: int = Field(
-        default=0, ge=0, description="Attempt number at performing the work."
-    )
-    status: Literal["created", "queued", "running", "success", "failure"] = Field(
-        default="created", description="Status of the work."
-    )
-    http: HTTPContext = Field(
-        default=None,
-        validate_default=False,
-        description="HTTP Context for doing work.",
-        exclude=True,
-        repr=False,
-    )
-    ###########################################################################
-    # Configuration attributes
-    ###########################################################################
+    # Config defines the flow of state before and after the work.
     config: Config = Field(
         default=Config(),
-        description="Configuration of the work.",
+        description="Configuration of the work lifecycle.",
         examples=[Config()],
     )
+    # Notify defines the notification settings for the work.
     notify: Notify = Field(
         default=Notify(),
-        description="Notification configuration of the work.",
+        description="Notifications for work.",
         examples=[Notify()],
     )
-    ###########################################################################
-    # Default Validators
-    ###########################################################################
 
+    ###########################################################################
+    # Validation Methods for Work Attributes
+    ###########################################################################
     @field_validator("pipeline", mode="after", check_fields=True)
     def validate_pipeline(cls, pipeline: str) -> str:
         """Validate the pipeline name.
@@ -261,59 +315,34 @@ class Work(BaseSettings):
         for char in pipeline:
             if not char.isalnum() and char not in ["-"]:
                 raise ValueError(
-                    "pipeline name can only contain letters, numbers & dashes"
+                    "pipeline name can only contain letters, numbers & hyphens."
                 )
         if original != pipeline:
             warn(
-                SyntaxWarning(f"pipeline reformatted {original}->{pipeline}"),
+                SyntaxWarning(
+                    f"pipeline reformatted {original}->{pipeline} to hyphen-case."
+                ),
                 stacklevel=2,
             )
         return pipeline
 
-    @field_validator("site", mode="after", check_fields=True)
-    def validate_site(cls, site: str) -> str:
-        """Validate the site name.
-
-        Args:
-            site (str): Name of the site.
-
-        Raises:
-            ValueError: If the site name is not in the list of valid sites.
-
-        Returns:
-            str: Validated site name.
-        """
-        valid: List[str] = [
-            "local",
-            "chime",
-            "kko",
-            "gbo",
-            "hco",
-            "canfar",
-            "cedar",
-            "calcul-quebec",
-        ]
-        if site not in valid:
-            raise ValueError(f"site must be one of {valid}")
-        return site
-
-    @field_validator("creation", mode="after", check_fields=True)
-    def validate_creation(cls, creation: Optional[StrictFloat]) -> float:
+    @field_validator("creation")
+    def validate_creation(cls, creation: float | None) -> float:
         """Validate and set the creation time.
 
         Args:
-            creation (Optional[StrictFloat]): Creation time in unix timestamp.
+            creation (Optional[float]): Creation time in unix timestamp.
 
         Returns:
-            StrictFloat: Creation time in unix timestamp.
+            float: Creation time in unix timestamp.
         """
         if creation is None:
             return time()
         return creation
 
     @model_validator(mode="before")
-    def validate_model(cls, data: Any) -> Any:
-        """Validate the work model.
+    def pre_validation(cls, data: Any) -> Any:
+        """Validate the work model before creating the object.
 
         Args:
             data (Any): Work data to validate.
@@ -325,11 +354,32 @@ class Work(BaseSettings):
             Any: Validated work data.
         """
         if data.get("function") and data.get("command"):
-            raise ValueError("command and function cannot be set together.")
+            raise ValueError("Only either function or command can be provided.")
         return data
 
+    @model_validator(mode="after")
+    def post_model_validation(self) -> "Work":
+        """Validate the work model after creating the object.
+
+        Raises:
+            ValueError: Raised if,
+                the site provided is not allowed in the workspace.
+
+        Returns:
+            Work: The current work object.
+        """
+        # Validate if the site provided is allowed in the workspace.
+        config: Dict[str, Any] = read.workspace(self.workspace.as_posix())
+        sites: List[str] = config.get("sites", [])
+        if self.site not in sites:
+            error = (
+                f"site: {self.site} not in workspace: {self.workspace} sites: {sites}."
+            )
+            raise ValueError(error)
+        return self
+
     ###########################################################################
-    # Default Work Class Methods
+    # Work Class Methods
     ###########################################################################
     @property
     def payload(self) -> Dict[str, Any]:
@@ -379,28 +429,45 @@ class Work(BaseSettings):
         user: Optional[str] = None,
         tags: Optional[List[str]] = None,
         parent: Optional[str] = None,
-        baseurl: str = "http://localhost:8004",
         timeout: float = 15.0,
         token: Optional[SecretStr] = None,
+        http: Optional[HTTPContext] = None,
     ) -> Any:
         """Withdraw work from the buckets backend.
 
         Args:
-            pipeline (str): Name of the pipeline to withdraw work from.
-            event (Optional[List[int]]): List of event ids to withdraw work for.
+            pipeline (str):Pipeline to withdraw work from. (Required)
+            event (Optional[List[int]]): Unique event ids to withdraw work for.
             site (Optional[str]): Name of the site to withdraw work for.
             priority (Optional[int]): Priority of the work to withdraw.
             user (Optional[str]): Name of the user to withdraw work for.
             tags (Optional[List[str]]): List of tags to withdraw work from.
-            parent (Optional[str]): Parent id of the work to withdraw.
-            httpargs (Optional[Dict[str, Any]]): Additional args for http client.
+            parent (Optional[str]): Parent Pipeline ID of the work to withdraw.
+            timeout (float, optional): HTTP timeout in seconds. Defaults to 15.0.
+            token (Optional[SecretStr], optional): Workflow Access Token.
+            http (Optional[HTTPContext], optional): HTTP Context for connecting to
+                workflow servers.
+
+        Note:
+            `token` and `timeout` arguments can also be provided via the environment,
+
+                - "WORKFLOW_HTTP_TOKEN"
+                - "WORKFLOW_TOKEN"
+                - "GITHUB_TOKEN"
+                - "GITHUB_PAT"
+                - "WORKFLOW_HTTP_TIMEOUT"
+
+            The `http` argument can be provided, to avoid creating a new HTTPContext
+            object each time the work object interacts with a backend. This is useful
+            when doing bulk withdraws from the same backend.
 
         Returns:
             Optional[Work]: The withdrawn work if successful, None otherwise.
         """
         # Context is used to source environtment variables, which are overwriten
         # by the arguments passed to the function.
-        http = HTTPContext(baseurl=baseurl, token=token, timeout=timeout)
+        if not http:
+            http = HTTPContext(timeout=timeout, token=token)
         payload = http.buckets.withdraw(
             pipeline=pipeline,
             event=event,
@@ -419,21 +486,29 @@ class Work(BaseSettings):
     def deposit(
         self,
         return_ids: bool = False,
-        baseurl: str = "http://localhost:8004",
         timeout: float = 15.0,
         token: Optional[SecretStr] = None,
+        http: Optional[HTTPContext] = None,
     ) -> Union[bool, List[str]]:
         """Deposit work to the buckets backend.
 
         Args:
-            return_ids (bool, optional): Whether to return database ids.
-                Defaults to False.
+            return_ids (bool, optional): Return Database ID. Defaults to False.
+            timeout (float, optional): HTTP request timeout in seconds.
+            token (Optional[SecretStr], optional): Workflow Access Token.
+            http (Optional[HTTPContext], optional): HTTP Context for backend.
+
+        Note:
+            Both token and http can be either provided as arguments to the function
+            or also inherited from the work object itself.
 
         Returns:
             Union[bool, List[str]]: True if successful, False otherwise.
         """
+        if not token and self.token:
+            token = self.token
         if not self.http:
-            self.http = HTTPContext(baseurl=baseurl, token=token, timeout=timeout)
+            self.http = HTTPContext(timeout=timeout, token=token)
         return self.http.buckets.deposit(works=[self.payload], return_ids=return_ids)
 
     def update(self) -> bool:

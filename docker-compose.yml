@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  mongo:
+    image: mongo:latest
+    command: ["mongod", "--bind_ip_all"]
+    container_name: mongo
+    restart: always
+    ports:
+      - 27017:27017
+      - 27018:27018
+      - 27019:27019
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  buckets:
+    image: chimefrb/buckets:latest
+    command: ["/bin/bash", "-c", "python -m buckets.server"]
+    container_name: buckets
+    restart: always
+    ports:
+      - 8001:8001
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8001
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - mongo
+
+  results:
+    image: chimefrb/results:latest
+    command: ["/bin/bash", "-c", "python -m results.server"]
+    container_name: results
+    restart: always
+    ports:
+      - 8002:8002
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8002
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - mongo

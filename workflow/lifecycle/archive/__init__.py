@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from minio import Minio
 
 from workflow.definitions.work import Work
-from workflow.lifecycle.archive import posix, s3
+from workflow.lifecycle.archive import http, posix, s3
 from workflow.utils import logger
 
 log = logger.get_logger("workflow.lifecycle.archive")
@@ -38,6 +38,12 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
                 "copy": posix.copy,
                 "delete": posix.delete,
                 "move": posix.move,
+            },
+            "http": {
+                "bypass": http.bypass,
+                "copy": http.copy,
+                "delete": http.delete,
+                "move": http.move,
             },
         }
         date = datetime.fromtimestamp(work.creation).strftime("%Y%m%d")  # type: ignore

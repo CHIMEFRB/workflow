@@ -4,11 +4,12 @@ from typing import Any, Dict, List
 
 import click
 
+from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.http.buckets import Buckets
 from workflow.http.results import Results
-from workflow.utils.logger import get_logger
+from workflow.utils import logger, read
 
-log = get_logger("workflow.daemons.transfer")
+log = logger.get_logger("workflow.daemons.transfer")
 
 
 def deposit_work_to_results(
@@ -115,6 +116,12 @@ def transfer_work(
         Returns:
             Dict[str, Any]: Transfer status.
         """
+        results_workspace_config = (
+            read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
+            .get("config", {})
+            .get("archive", {})
+            .get("results", None)
+        )
         transfer_status: Dict[str, Any] = {}
         # 1. Transfer successful Work
         # TODO: decide projection fields
@@ -128,11 +135,12 @@ def transfer_work(
             work
             for work in successful_work
             if work["config"]["archive"]["results"] is False
+            and not results_workspace_config
         ]
         successful_work_to_transfer = [
             work
             for work in successful_work
-            if work["config"]["archive"]["results"] is True
+            if work["config"]["archive"]["results"] is True and results_workspace_config
         ]
         if successful_work_to_transfer:
             transfer_status["successful_work_transferred"] = deposit_work_to_results(
@@ -158,9 +166,12 @@ def transfer_work(
             work
             for work in failed_work
             if work["config"]["archive"]["results"] is False
+            and not results_workspace_config
         ]
         failed_work_to_transfer = [
-            work for work in failed_work if work["config"]["archive"]["results"] is True
+            work
+            for work in failed_work
+            if work["config"]["archive"]["results"] is True and results_workspace_config
         ]
 
         if failed_work_to_transfer:

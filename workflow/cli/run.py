@@ -26,7 +26,8 @@ logger = get_logger("workflow.cli")
 @click.command("run", short_help="Perform work.")
 @click.argument("bucket", type=str, required=True)
 @click.option(
-    "-f" "--function",
+    "-f",
+    "--function",
     type=str,
     required=False,
     default=None,
@@ -189,7 +190,9 @@ def run(
             refresh_per_second=1,
             speed=1 / slowdown,
         ):
-            lifecycle(bucket, function, lives, sleep, site, tags, parent, buckets_url)
+            lifecycle(
+                bucket, function, lives, sleep, site, tags, parent, buckets_url, config
+            )
     except Exception as error:
         logger.exception(error)
     finally:
@@ -208,6 +211,7 @@ def lifecycle(
     tags: List[str],
     parent: Optional[str],
     base_url: str,
+    config: Dict[str, Any],
 ):
     """Run the workflow lifecycle."""
     # Start the exit event
@@ -225,7 +229,7 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(bucket, function, base_url, site, tags, parent)
+        attempt(bucket, function, base_url, site, tags, parent, config)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
@@ -239,6 +243,7 @@ def attempt(
     site: str,
     tags: Optional[List[str]],
     parent: Optional[str],
+    config: Dict[str, Any],
 ) -> bool:
     """Attempt to perform work.
 
@@ -298,7 +303,7 @@ def attempt(
                 work = execute.command(command, work)
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")
-            archive.run(work)
+            archive.run(work, config)
             status = True
     except Exception as error:
         logger.exception(error)

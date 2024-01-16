@@ -65,7 +65,7 @@ class Archive(BaseSettings):
         Returns:
             str: The archive strategy.
         """
-        strategy = ["pass", "copy", "move", "delete", "upload"]
+        strategy = ["bypass", "copy", "delete", "move"]
         if value not in strategy:
             raise ValueError(f"archive strategy must be one of {strategy}")
         return value

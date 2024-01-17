@@ -30,7 +30,7 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
         path (Path): Destination path.
         payload (List[str]): List of files to copy.
     """
-    logger.warning("upload currently not implemented")
+    log.warning("upload currently not implemented")
     raise NotImplementedError
 
 
@@ -41,7 +41,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
         path (Path): Destination path.
         payload (List[str]): List of products to move.
     """
-    logger.warning("upload currently not implemented")
+    log.warning("upload currently not implemented")
     raise NotImplementedError
 
 
@@ -52,11 +52,11 @@ def delete(path: Path, payload: None | List[str]) -> bool:
         path (Path): Destination path.
         payload (List[str]): List of products to delete.
     """
-    logger.warning("delete currently not implemented")
+    log.warning("delete currently not implemented")
     raise NotImplementedError
 
 
 def permissions(path: Path, site: str) -> bool:
     """Set the permissions for the work products in the archive."""
-    logger.warning("permissions currently not implemented")
+    log.warning("permissions currently not implemented")
     raise NotImplementedError

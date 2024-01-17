@@ -147,7 +147,7 @@ def delete(path: Path, payload: None | List[str]) -> bool:
     # TODO: Implement delete for S3
     # NOTE: Do we need a specific delete function for S3?
     # Since Workflow always runs on a POSIX system, we can just use the POSIX delete function
-    logger.warning("delete currently not implemented")
+    log.warning("delete currently not implemented")
     raise NotImplementedError
 
 
@@ -156,5 +156,5 @@ def permissions(path: Path, site: str) -> bool:
     # TODO: Implement permissions for S3
     # NOTE: Permissions seems to be set on the bucket level, not the object level
     # So, perhaps add this to a bucket creation function?
-    logger.warning("permissions currently not implemented")
+    log.warning("permissions currently not implemented")
     raise NotImplementedError

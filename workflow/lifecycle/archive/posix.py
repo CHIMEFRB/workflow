@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from workflow.definitions.work import Work
-from workflow.lifecycle.archive import log
+from workflow.utils import logger
+
+log = logger.get_logger("workflow.lifecycle.archive.posix")
 
 
 def bypass(path: Path, payload: Optional[List[str]]) -> bool:

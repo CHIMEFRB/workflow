@@ -97,7 +97,7 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
                 f"Archive method {work.config.archive.plots} not allowed by workspace."
             )
         if changes:
-            # TODO: Tarik: Perform permissions for plots and products separately
+            # TODO: Perform permissions for plots and products separately
             permissions(path, work.site)
     except Exception as error:
         log.warning(error)

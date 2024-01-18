@@ -1,12 +1,7 @@
 """Archive lifecycle module."""
-import os
-import shutil
-import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from minio import Minio
+from typing import Any, Dict
 
 from workflow.definitions.work import Work
 from workflow.lifecycle.archive import http, posix, s3
@@ -46,7 +41,8 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
                 "move": http.move,
             },
         }
-        date = datetime.fromtimestamp(work.creation).strftime("%Y%m%d")  # type: ignore
+        if work.creation:
+            date: str = datetime.fromtimestamp(work.creation).strftime("%Y%m%d")
         path: Path = Path(
             f"{mounts.get(work.site)}/workflow/{date}/{work.pipeline}/{work.id}"
         )
@@ -65,13 +61,13 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
                 changes = True
             else:
                 log.warning(
-                    f"Archive storage {storage} not configured for products in workspace."
+                    f"Archive storage {storage} not configured for products in workspace."  # noqa: E501
                 )
         elif work.config.archive.products not in archive_config.get("products", {}).get(
             "methods", []
         ):
             log.warning(
-                f"Archive method {work.config.archive.products} not allowed by workspace."
+                f"Archive method {work.config.archive.products} not allowed by workspace."  # noqa: E501
             )
 
         if (
@@ -79,7 +75,7 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
             in archive_config.get("plots", {}).get("methods", [])
             and work.plots
         ):
-            storage: str = archive_config.get("plots", {}).get("storage", "")
+            storage = archive_config.get("plots", {}).get("storage", "")
             if storage:
                 actions[storage][work.config.archive.plots](
                     path,
@@ -98,6 +94,6 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
             )
         if changes:
             # TODO: Perform permissions for plots and products separately
-            permissions(path, work.site)
+            posix.permissions(path, work.site)
     except Exception as error:
         log.warning(error)

@@ -1,15 +1,10 @@
 """S3 archive functions."""
 import os
-import shutil
-import subprocess
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from minio import Minio
-from minio.error import S3Error
 
-from workflow.definitions.work import Work
 from workflow.utils import logger
 
 log = logger.get_logger("workflow.lifecycle.archive.s3")
@@ -74,7 +69,7 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
             # Update payload with new path
             payload[
                 index
-            ] = f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"
+            ] = f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
         log.info("Move complete ✅")
         return True
     except Exception as error:
@@ -126,7 +121,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
             # Update payload with new path
             payload[
                 index
-            ] = f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"
+            ] = f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
             # Delete file
             os.remove(item)
         log.info("Move complete ✅")
@@ -146,7 +141,8 @@ def delete(path: Path, payload: None | List[str]) -> bool:
     """
     # TODO: Implement delete for S3
     # NOTE: Do we need a specific delete function for S3?
-    # Since Workflow always runs on a POSIX system, we can just use the POSIX delete function
+    # Since Workflow always runs on a POSIX system, we can
+    # just use the POSIX delete function.
     log.warning("delete currently not implemented")
     raise NotImplementedError
 

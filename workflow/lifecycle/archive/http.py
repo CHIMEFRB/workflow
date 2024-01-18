@@ -1,12 +1,7 @@
 """HTTP archive functions."""
-import os
-import shutil
-import subprocess
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-from workflow.definitions.work import Work
 from workflow.utils import logger
 
 log = logger.get_logger("workflow.lifecycle.archive.http")

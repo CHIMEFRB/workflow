@@ -1,6 +1,7 @@
 """Test the archive module."""
 
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,19 @@ WORKSPACE = {
 }
 
 
+@pytest.fixture(scope="module")
+def directory():
+    """Create a temporary directory.
+
+    Yields:
+        directory (Path): Path to temporary directory.
+    """
+    directory = Path("tmp_test")
+    directory.mkdir(exist_ok=True)
+    yield directory
+    shutil.rmtree(directory)
+
+
 @pytest.fixture
 def work():
     """Return a Work instance."""
@@ -94,18 +108,24 @@ class TestS3:
         """Test the bypass method."""
         assert s3.bypass(Path("none"), []) is True
 
-    def test_s3_copy(self):
+    def test_s3_copy(self, work):
         """Test the copy method."""
-        pass
+        file = work.plots[0]
+        path = Path("workflow/testing/s3/method/copy")
+        result = s3.copy(path, [file])
+        assert result is True
 
     def test_s3_delete(self):
         """Test the delete method."""
         with pytest.raises(NotImplementedError):
             s3.delete(Path("none"), [])
 
-    def test_s3_move(self):
+    def test_s3_move(self, work):
         """Test the move method."""
-        pass
+        file = work.plots[0]
+        path = Path("workflow/testing/s3/method/move")
+        result = s3.move(path, [file])
+        assert result is True
 
     def test_s3_permissions(self):
         """Test the permissions method."""
@@ -120,17 +140,31 @@ class TestPosix:
         """Test the bypass method."""
         assert posix.bypass(Path("none"), []) is True
 
-    def test_posix_copy(self):
+    def test_posix_copy(self, work, directory):
         """Test the copy method."""
-        pass
+        file = work.plots[0]
+        path = directory / "posix" / "method" / "copy"
+        result = posix.copy(path, [file])
+        assert result is True
+        assert (path / file).exists()
 
-    def test_posix_delete(self):
+    def test_posix_delete(self, work, directory):
         """Test the delete method."""
-        pass
+        file = work.plots[0]
+        path = directory / "posix" / "method" / "delete"
+        result = posix.delete(path, work.plots)
+        assert result is True
+        assert not Path(file).exists()
+        assert len(work.plots) == 0
 
-    def test_posix_move(self):
+    def test_posix_move(self, work, directory):
         """Test the move method."""
-        pass
+        file = work.plots[0]
+        path = directory / "posix" / "method" / "move"
+        result = posix.move(path, [file])
+        assert result is True
+        assert (path / file).exists()
+        assert not Path(file).exists()
 
     def test_posix_permissions(self):
         """Test the permissions method."""

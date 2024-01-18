@@ -110,6 +110,7 @@ class Client(BaseSettings):
             response.raise_for_status()
         except RequestException as error:
             logger.warning(f"Unable to connect to the {baseurl}.")
+            logger.error(error)
         except Exception as error:
             logger.warning("Unknown error.")
             raise error

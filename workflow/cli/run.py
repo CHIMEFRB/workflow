@@ -9,16 +9,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
 import requests
-
-# from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
-# from chime_frb_api.utils import loki
 from rich.console import Console
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.work import Work
 from workflow.lifecycle import archive, container, execute, validate
 from workflow.utils import read as reader
-from workflow.utils.logger import get_logger, set_tag, unset_tag
+from workflow.utils.logger import add_loki_handler, get_logger, set_tag, unset_tag
 
 logger = get_logger("workflow.cli")
 
@@ -158,7 +155,7 @@ def run(
         "[bold]Configuration Checks [/bold]",
         extra=dict(markup=True, color="green"),
     )
-    loki_status = loki.add_handler(logger, site, bucket, loki_url)
+    loki_status = add_loki_handler(logger, loki_url, config)
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
 
     try:
@@ -310,15 +307,13 @@ def attempt(
         work.status = "failure"  # type: ignore
     finally:
         if work:
+            product_url = config.get("http", {}).get("baseurls", {}).get("products", "")
             if any(work.notify.slack.dict().values()) and work.products:
                 work.products = [
-                    f"<{str(PRODUCTS_URLS[site])}{product}|{product}>"
-                    for product in work.products
+                    f"<{product_url}{product}|{product}>" for product in work.products
                 ]
             if any(work.notify.slack.dict().values()) and work.plots:
-                work.plots = [
-                    f"<{str(PRODUCTS_URLS[site])}{plot}|{plot}>" for plot in work.plots
-                ]
+                work.plots = [f"<{product_url}{plot}|{plot}>" for plot in work.plots]
             work.update(**kwargs)  # type: ignore
             logger.info("work completed: ✅")
         unset_tag()

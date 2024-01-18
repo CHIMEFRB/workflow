@@ -2,9 +2,11 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import click
+import requests
+from logging_loki import LokiHandler
 from rich.logging import RichHandler
 
 
@@ -47,6 +49,47 @@ def get_logger(name: Optional[str] = None, level: int = logging.INFO) -> logging
     for handler in logging.root.handlers:
         handler.addFilter(TagFilter(tag=""))
     return log
+
+
+def add_loki_handler(
+    logger: logging.Logger, loki_url: str, workspace: Dict[str, Any]
+) -> bool:
+    """Add a Loki handler to the logger.
+
+    Args:
+        logger (Logger): Python logger
+        loki_url (str): Loki URL
+
+    Raises:
+        AttributeError: Loki not ready.
+
+    Returns:
+        bool: Loki handler status
+    """
+    status: bool = False
+    try:
+        loki_sc = requests.get(
+            loki_url.replace("loki/api/v1/push", "ready")
+        ).status_code
+        if loki_sc == 200:
+            loki_handler = LokiHandler(
+                url=loki_url,
+                tags=workspace.get("config", {}).get("logging", {}).get("loki", {}),
+                version="1",
+            )
+            loki_handler.setFormatter(
+                logging.Formatter("%(levelname)s %(tag)s %(name)s %(message)s")
+            )
+            loki_handler.setLevel("ERROR")
+            logger.root.addHandler(loki_handler)
+            logger.debug(f"Loki URL: {loki_url}")
+            status = True
+        else:
+            raise AttributeError("Loki not ready.")
+    except Exception as error:
+        logger.debug(error)
+    finally:
+        return status
 
 
 class TagFilter(logging.Filter):

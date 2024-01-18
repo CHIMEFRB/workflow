@@ -41,3 +41,7 @@ config:
     products:
       methods: ["move", "delete"] # Can also be copy or delete
       storage: "posix"
+  logging:
+    loki:
+      site: "local"
+      pipeline: "temp"

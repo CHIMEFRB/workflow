@@ -1,57 +1,18 @@
 """Test the archive module."""
 
+import logging
 import os
 import shutil
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from workflow.definitions.work import Work
 from workflow.lifecycle.archive import http, posix, run, s3
+from workflow.utils import read
 
-WORKSPACE = {
-    "archive": {
-        "mounts": {
-            "local": "/",
-        }
-    },
-    "config": {
-        "archive": {
-            "plots": {
-                "methods": [
-                    "bypass",
-                    "copy",
-                    "delete",
-                    "move",
-                ],
-                "storage": "s3",
-            },
-            "products": {
-                "methods": [
-                    "bypass",
-                    "copy",
-                    "delete",
-                    "move",
-                ],
-                "storage": "posix",
-            },
-            "results": True,
-        },
-        "slack": None,
-    },
-    "http": {
-        "baseurls": {
-            "buckets": "http://localhost:8001",
-            "loki": "http://localhost:8005/loki/api/v1/push",
-            "minio": "http://localhost:8005",
-            "pipelines": "http://localhost:8003",
-            "products": "http://localhost:8004",
-            "results": "http://localhost:8002",
-        }
-    },
-    "sites": ["local"],
-    "workspace": "testing",
-}
+WORKSPACE = read.workspace("sample-test")
 
 
 @pytest.fixture(scope="module")
@@ -96,9 +57,45 @@ def test_s3_env_vars_set():
     )
 
 
-def test_run_archive(work):
+def test_successful_run_archive(work):
     """Test the run function."""
     run(work, WORKSPACE)
+
+
+def test_bad_method_run_archive(caplog, work, workspace=WORKSPACE):
+    """Test the run function."""
+    with pytest.raises(ValidationError):
+        work.config.archive.products = "bad_method"
+        work.config.archive.plots = "bad_method"
+        run(work, workspace)
+
+
+def test_excluded_method_run_archive(caplog, work, workspace=WORKSPACE):
+    """Test the run function."""
+    work.config.archive.products = "bypass"
+    work.config.archive.plots = "bypass"
+    workspace["config"]["archive"]["products"]["methods"] = ["copy"]
+    workspace["config"]["archive"]["plots"]["methods"] = ["copy"]
+    with caplog.at_level(logging.WARNING):
+        run(work, workspace)
+    assert (
+        f"Archive method {work.config.archive.products} not allowed for products by workspace."  # noqa: E501
+        in caplog.text
+    )
+    assert (
+        f"Archive method {work.config.archive.plots} not allowed for plots by workspace."  # noqa: E501
+        in caplog.text
+    )
+
+
+def test_storage_unset_run_archive(caplog, work, workspace=WORKSPACE):
+    """Test the run function."""
+    workspace["config"]["archive"]["products"]["storage"] = None
+    workspace["config"]["archive"]["plots"]["storage"] = None
+    with caplog.at_level(logging.WARNING):
+        run(work, workspace)
+    assert "storage has not been set for products in workspace." in caplog.text
+    assert "storage has not been set for plots in workspace." in caplog.text
 
 
 class TestS3:

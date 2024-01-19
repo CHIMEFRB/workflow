@@ -53,7 +53,7 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
             and work.products
         ):
             storage: str = archive_config.get("products", {}).get("storage", "")
-            if storage:
+            if storage in actions.keys():
                 actions[storage][work.config.archive.products](
                     path,
                     work.products,
@@ -61,13 +61,13 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
                 changes = True
             else:
                 log.warning(
-                    f"Archive storage {storage} not configured for products in workspace."  # noqa: E501
+                    f"Archive storage {storage} not supported, or storage has not been set for products in workspace."  # noqa: E501
                 )
         elif work.config.archive.products not in archive_config.get("products", {}).get(
             "methods", []
         ):
             log.warning(
-                f"Archive method {work.config.archive.products} not allowed by workspace."  # noqa: E501
+                f"Archive method {work.config.archive.products} not allowed for products by workspace."  # noqa: E501
             )
 
         if (
@@ -76,7 +76,7 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
             and work.plots
         ):
             storage = archive_config.get("plots", {}).get("storage", "")
-            if storage:
+            if storage in actions.keys():
                 actions[storage][work.config.archive.plots](
                     path,
                     work.plots,
@@ -84,13 +84,13 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
                 changes = True
             else:
                 log.warning(
-                    f"Archive storage {storage} not configured for plots in workspace."
+                    f"Archive storage {storage} not supported, or storage has not been set for plots in workspace."  # noqa: E501
                 )
         elif work.config.archive.plots not in archive_config.get("plots", {}).get(
             "methods", []
         ):
             log.warning(
-                f"Archive method {work.config.archive.plots} not allowed by workspace."
+                f"Archive method {work.config.archive.plots} not allowed for plots by workspace."  # noqa: E501
             )
         if changes:
             # TODO: Perform permissions for plots and products separately

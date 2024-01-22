@@ -18,7 +18,7 @@ from requests.exceptions import RequestException
 from requests.models import Response
 
 from workflow import __version__, DEFAULT_WORKSPACE_PATH
-from workflow.cli.auth.providers import select_provider_method
+from workflow.http.auth.providers import select_provider_method
 from workflow.utils import read
 from workflow.utils.logger import get_logger
 

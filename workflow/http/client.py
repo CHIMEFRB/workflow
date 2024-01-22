@@ -1,7 +1,7 @@
 """HTTP client for interacting with the Workflow Servers."""
 from platform import machine, platform, python_version, release, system
 from time import asctime, gmtime
-from typing import Optional
+from typing import Any, Dict, Optional
 from warnings import warn
 
 from pydantic import (
@@ -17,7 +17,9 @@ from requests import Session, head
 from requests.exceptions import RequestException
 from requests.models import Response
 
-from workflow import __version__
+from workflow import __version__, DEFAULT_WORKSPACE_PATH
+from workflow.cli.auth.providers import select_provider_method
+from workflow.utils import read
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.http.client")
@@ -62,6 +64,42 @@ class Client(BaseSettings):
     session: Session = Field(
         default=Session(), description="Requests Session", exclude=True
     )
+    auth_provider: Optional[str] = Field(
+        default=None,
+        validate_default=False,
+        description="Authentication Provider.",
+        exclude=True,
+    )
+    auth_method: Optional[str] = Field(
+        default=None,
+        validate_default=False,
+        description="Authentication Method.",
+        exclude=True,
+    )
+
+    @model_validator(mode="before")
+    def set_authentication(cls, data: Any) -> Any:
+        """Gets the authentication provider and method.
+
+        Parameters
+        ----------
+        data : Any
+            Data for object.
+
+        Raises
+        ------
+        ValueError
+            If there are missing values.
+        """
+        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
+        if config["auth"]:
+            try:
+                data["auth_method"] = config["auth"]["type"]
+                data["auth_provider"] = config["auth"]["provider"]
+            except KeyError as e:
+                raise ValueError("There are missing values for auth.")
+
+        return data
 
     @model_validator(mode="after")
     def configure_session(self) -> "Client":
@@ -83,10 +121,8 @@ class Client(BaseSettings):
         self.session.headers.update({"X-Workflow-Client-OS": system()})
         self.session.headers.update({"X-Workflow-Client-OS-Version": release()})
         self.session.headers.update({"X-Workflow-Client-Platform": platform()})
-        if self.token:
-            self.session.headers.update(
-                {"Authorization": f"Bearer {self.token.get_secret_value()}"}
-            )
+        if self.auth_provider and self.auth_method:
+            select_provider_method(self.auth_provider, self.auth_method, self.session)
         logger.debug(f"Configured Session: {self.session.headers}")
         return self
 

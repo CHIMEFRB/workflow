@@ -122,7 +122,13 @@ class Client(BaseSettings):
         self.session.headers.update({"X-Workflow-Client-OS-Version": release()})
         self.session.headers.update({"X-Workflow-Client-Platform": platform()})
         if self.auth_provider and self.auth_method:
-            select_provider_method(self.auth_provider, self.auth_method, self.session)
+            select_provider_method(
+                self.auth_provider, self.auth_method, self.session, self.token
+            )
+        if self.token:
+            self.session.headers.update(
+                {"x-access-token": self.token.get_secret_value()}
+            )
         logger.debug(f"Configured Session: {self.session.headers}")
         return self
 

@@ -17,8 +17,7 @@ from requests import Session, head
 from requests.exceptions import RequestException
 from requests.models import Response
 
-from workflow import __version__, DEFAULT_WORKSPACE_PATH
-from workflow.http.auth.providers import select_provider_method
+from workflow import DEFAULT_WORKSPACE_PATH, __version__
 from workflow.utils import read
 from workflow.utils.logger import get_logger
 
@@ -64,42 +63,6 @@ class Client(BaseSettings):
     session: Session = Field(
         default=Session(), description="Requests Session", exclude=True
     )
-    auth_provider: Optional[str] = Field(
-        default=None,
-        validate_default=False,
-        description="Authentication Provider.",
-        exclude=True,
-    )
-    auth_method: Optional[str] = Field(
-        default=None,
-        validate_default=False,
-        description="Authentication Method.",
-        exclude=True,
-    )
-
-    @model_validator(mode="before")
-    def set_authentication(cls, data: Any) -> Any:
-        """Gets the authentication provider and method.
-
-        Parameters
-        ----------
-        data : Any
-            Data for object.
-
-        Raises
-        ------
-        ValueError
-            If there are missing values.
-        """
-        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
-        if config["auth"]:
-            try:
-                data["auth_method"] = config["auth"]["type"]
-                data["auth_provider"] = config["auth"]["provider"]
-            except KeyError as e:
-                raise ValueError("There are missing values for auth.")
-
-        return data
 
     @model_validator(mode="after")
     def configure_session(self) -> "Client":
@@ -109,6 +72,15 @@ class Client(BaseSettings):
             Client: The validated client instance.
 
         """
+        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
+        if config.get("auth", {}).get("type", None) == "token":
+            if config.get("auth", {}).get("provider", None) == "github":
+                if self.token:
+                    self.session.headers.update(
+                        {"x-access-token": self.token.get_secret_value()}
+                    )
+                else:
+                    logger.warning("HTTP Token not found, workspace requires it.")
         self.session.headers.update({"Content-Type": "application/json; charset=utf-8"})
         self.session.headers.update({"Accept": "*/*"})
         self.session.headers.update({"User-Agent": "workflow-client"})
@@ -121,14 +93,6 @@ class Client(BaseSettings):
         self.session.headers.update({"X-Workflow-Client-OS": system()})
         self.session.headers.update({"X-Workflow-Client-OS-Version": release()})
         self.session.headers.update({"X-Workflow-Client-Platform": platform()})
-        if self.auth_provider and self.auth_method:
-            select_provider_method(
-                self.auth_provider, self.auth_method, self.session, self.token
-            )
-        if self.token:
-            self.session.headers.update(
-                {"x-access-token": self.token.get_secret_value()}
-            )
         logger.debug(f"Configured Session: {self.session.headers}")
         return self
 
@@ -152,6 +116,7 @@ class Client(BaseSettings):
             response.raise_for_status()
         except RequestException as error:
             logger.warning(f"Unable to connect to the {baseurl}.")
+            logger.warning(error)
         except Exception as error:
             logger.warning("Unknown error.")
             raise error

@@ -92,8 +92,9 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
             log.warning(
                 f"Archive method {work.config.archive.plots} not allowed for plots by workspace."  # noqa: E501
             )
-        if changes:
-            # TODO: Perform permissions for plots and products separately
-            posix.permissions(path, work.site)
+        if changes and "posix" in archive_config.get("permissions", {}):
+            posix.permissions(
+                path, archive_config.get("permissions", {}).get("posix", {})
+            )
     except Exception as error:
         log.warning(error)

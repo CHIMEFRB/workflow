@@ -24,6 +24,11 @@ config:
         - "move"
       storage: "posix"
     results: true
+    permissions:
+      posix:
+        user: "user"
+        group: "chime-frb-ro"
+        command: "setfacl -R -m g:{group}:r {path}"
 
   http:
     baseurls:

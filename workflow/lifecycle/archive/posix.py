@@ -3,7 +3,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from workflow.utils import logger
 
@@ -94,19 +94,36 @@ def delete(path: Path, payload: None | List[str]) -> bool:
         return status
 
 
-def permissions(path: Path, site: str) -> bool:
+def permissions(path: Path, config: Dict[str, Any]) -> bool:
     """Set the permissions for the work products in the archive."""
     status: bool = False
     try:
-        if site == "canfar":
-            subprocess.run(f"setfacl -R -m g:chime-frb-ro:r {path.as_posix()}")
-            subprocess.run(f"setfacl -R -m g:chime-frb-rw:rw {path.as_posix()}")
-            status = True
+        if not path.exists():
+            raise NotADirectoryError
+
+        user: str | None = config.get("user")
+        group: str | None = config.get("group")
+        if not user and not group:
+            raise ValueError("Either user or group must be specified.")
+
+        command: str = config.get(
+            "command",
+            "chgrop -R {group} {path}; chmod -R g+w {path}",
+        )
+        command = eval(f"f'{command}'")
+        subprocess.run(command)
+        status = True
+
+    except NotADirectoryError:
+        log.error(f"Path {path.as_posix()} does not exist.")
+        status = False
+
+    except ValueError as error:
+        log.error(error)
+        status = False
+
     except FileNotFoundError as error:
         log.warning(error)
-        log.debug(
-            "Linux tool 'acl' not installed, trying chgrp and chmod instead."  # noqa: E501
-        )
         try:
             subprocess.run(f"chgrp -R chime-frb-rw {path.as_posix()}")
             subprocess.run(f"chmod g+w {path.as_posix()}")
@@ -114,5 +131,6 @@ def permissions(path: Path, site: str) -> bool:
         except Exception as error:
             log.warning(error)
             status = False
+
     finally:
         return status

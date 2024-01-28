@@ -17,6 +17,8 @@ toml = "^0.10"
 rich = "^13.4"
 mergedeep = "^1.3"
 pydantic-settings = "^2.0"
+minio = "^7.2.3"
+python-logging-loki = "^0.3.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"
@@ -28,6 +30,7 @@ types-requests = "*"
 types-toml = "*"
 types-setuptools = "*"
 types-pyyaml = "*"
+pytest-env = "^1.1.3"
 
 
 [tool.poetry.group.docs.dependencies]

@@ -1,0 +1,40 @@
+workspace: testing
+
+sites:
+  - local
+
+archive:
+  mounts:
+    local: "/"
+
+config:
+  archive:
+    plots:
+      methods:
+        - "bypass"
+        - "copy"
+        - "delete"
+        - "move"
+      storage: "s3"
+    products:
+      methods:
+        - "bypass"
+        - "copy"
+        - "delete"
+        - "move"
+      storage: "posix"
+    results: true
+    permissions:
+      posix:
+        user: "user"
+        group: "chime-frb-ro"
+        command: "setfacl -R -m g:{group}:r {path}"
+
+  http:
+    baseurls:
+      buckets: "http://localhost:8001"
+      loki: "http://localhost:8005/loki/api/v1/push"
+      minio: "http://localhost:8005"
+      pipelines: "http://localhost:8003"
+      products: "http://localhost:8004"
+      results: "http://localhost:8002"

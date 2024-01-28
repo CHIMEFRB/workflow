@@ -9,16 +9,13 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import click
 import requests
-
-# from chime_frb_api.configs import LOKI_URLS, PRODUCTS_URLS, WORKFLOW_URLS
-# from chime_frb_api.utils import loki
 from rich.console import Console
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.work import Work
 from workflow.lifecycle import archive, container, execute, validate
 from workflow.utils import read as reader
-from workflow.utils.logger import get_logger, set_tag, unset_tag
+from workflow.utils.logger import add_loki_handler, get_logger, set_tag, unset_tag
 
 logger = get_logger("workflow.cli")
 
@@ -26,7 +23,8 @@ logger = get_logger("workflow.cli")
 @click.command("run", short_help="Perform work.")
 @click.argument("bucket", type=str, required=True)
 @click.option(
-    "-f" "--function",
+    "-f",
+    "--function",
     type=str,
     required=False,
     default=None,
@@ -157,7 +155,7 @@ def run(
         "[bold]Configuration Checks [/bold]",
         extra=dict(markup=True, color="green"),
     )
-    loki_status = loki.add_handler(logger, site, bucket, loki_url)
+    loki_status = add_loki_handler(logger, loki_url, config)
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
 
     try:
@@ -189,7 +187,9 @@ def run(
             refresh_per_second=1,
             speed=1 / slowdown,
         ):
-            lifecycle(bucket, function, lives, sleep, site, tags, parent, buckets_url)
+            lifecycle(
+                bucket, function, lives, sleep, site, tags, parent, buckets_url, config
+            )
     except Exception as error:
         logger.exception(error)
     finally:
@@ -208,6 +208,7 @@ def lifecycle(
     tags: List[str],
     parent: Optional[str],
     base_url: str,
+    config: Dict[str, Any],
 ):
     """Run the workflow lifecycle."""
     # Start the exit event
@@ -225,7 +226,7 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(bucket, function, base_url, site, tags, parent)
+        attempt(bucket, function, base_url, site, tags, parent, config)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
@@ -239,6 +240,7 @@ def attempt(
     site: str,
     tags: Optional[List[str]],
     parent: Optional[str],
+    config: Dict[str, Any],
 ) -> bool:
     """Attempt to perform work.
 
@@ -298,22 +300,20 @@ def attempt(
                 work = execute.command(command, work)
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")
-            archive.run(work)
+            archive.run(work, config)
             status = True
     except Exception as error:
         logger.exception(error)
         work.status = "failure"  # type: ignore
     finally:
         if work:
+            product_url = config.get("http", {}).get("baseurls", {}).get("products", "")
             if any(work.notify.slack.dict().values()) and work.products:
                 work.products = [
-                    f"<{str(PRODUCTS_URLS[site])}{product}|{product}>"
-                    for product in work.products
+                    f"<{product_url}{product}|{product}>" for product in work.products
                 ]
             if any(work.notify.slack.dict().values()) and work.plots:
-                work.plots = [
-                    f"<{str(PRODUCTS_URLS[site])}{plot}|{plot}>" for plot in work.plots
-                ]
+                work.plots = [f"<{product_url}{plot}|{plot}>" for plot in work.plots]
             work.update(**kwargs)  # type: ignore
             logger.info("work completed: ✅")
         unset_tag()

@@ -26,7 +26,12 @@ http:
 
 config:
   archive:
-    results: "move" # Can also be copy or delete
-    plots: "move" # Can also be copy or delete
-    products: "move" # Can also be copy or delete
+    results: true
+    plots:
+      methods: ["move", "delete"] # Defines the methods enabled by the workspace admin
+      storage: "s3"
+      permissions: List[Linux Groups]?
+    products:
+      methods: ["move", "delete"] # Can also be copy or delete
+      storage: "posix"
   slack:

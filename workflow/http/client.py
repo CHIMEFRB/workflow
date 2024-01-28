@@ -1,7 +1,7 @@
 """HTTP client for interacting with the Workflow Servers."""
 from platform import machine, platform, python_version, release, system
 from time import asctime, gmtime
-from typing import Optional
+from typing import Any, Dict, Optional
 from warnings import warn
 
 from pydantic import (
@@ -17,7 +17,8 @@ from requests import Session, head
 from requests.exceptions import RequestException
 from requests.models import Response
 
-from workflow import __version__
+from workflow import DEFAULT_WORKSPACE_PATH, __version__
+from workflow.utils import read
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.http.client")
@@ -71,6 +72,15 @@ class Client(BaseSettings):
             Client: The validated client instance.
 
         """
+        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
+        if config.get("auth", {}).get("type", None) == "token":
+            if config.get("auth", {}).get("provider", None) == "github":
+                if self.token:
+                    self.session.headers.update(
+                        {"x-access-token": self.token.get_secret_value()}
+                    )
+                else:
+                    logger.warning("HTTP Token not found, workspace requires it.")
         self.session.headers.update({"Content-Type": "application/json; charset=utf-8"})
         self.session.headers.update({"Accept": "*/*"})
         self.session.headers.update({"User-Agent": "workflow-client"})
@@ -83,10 +93,6 @@ class Client(BaseSettings):
         self.session.headers.update({"X-Workflow-Client-OS": system()})
         self.session.headers.update({"X-Workflow-Client-OS-Version": release()})
         self.session.headers.update({"X-Workflow-Client-Platform": platform()})
-        if self.token:
-            self.session.headers.update(
-                {"Authorization": f"Bearer {self.token.get_secret_value()}"}
-            )
         logger.debug(f"Configured Session: {self.session.headers}")
         return self
 
@@ -110,7 +116,7 @@ class Client(BaseSettings):
             response.raise_for_status()
         except RequestException as error:
             logger.warning(f"Unable to connect to the {baseurl}.")
-            logger.error(error)
+            logger.warning(error)
         except Exception as error:
             logger.warning("Unknown error.")
             raise error

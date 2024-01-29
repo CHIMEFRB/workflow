@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.0](https://github.com/CHIMEFRB/workflow/compare/v0.1.0...v0.2.0) (2024-01-28)
+
+
+### Features
+
+* **workflow:** major refactor of core work to support multiple projects ([1fdd115](https://github.com/CHIMEFRB/workflow/commit/1fdd115df83355e42070b11baf90bf391a08b79c))
+
+
+### Bug Fixes
+
+* **ci:** fixed ci to run on pre ([bd67d17](https://github.com/CHIMEFRB/workflow/commit/bd67d173c36508df033beb08e42f11fa7ae1ad90))
+
 ## 0.1.0 (2023-07-19)
 
 

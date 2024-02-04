@@ -1,4 +1,5 @@
 """S3 archive functions."""
+
 import os
 from pathlib import Path
 from typing import List, Optional
@@ -67,9 +68,9 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
                 file_path=item,
             )
             # Update payload with new path
-            payload[
-                index
-            ] = f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
+            payload[index] = (
+                f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
+            )
         log.info("Move complete ✅")
         return True
     except Exception as error:
@@ -119,9 +120,9 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
                 file_path=item,
             )
             # Update payload with new path
-            payload[
-                index
-            ] = f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
+            payload[index] = (
+                f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
+            )
             # Delete file
             os.remove(item)
         log.info("Move complete ✅")

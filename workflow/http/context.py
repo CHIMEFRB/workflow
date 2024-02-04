@@ -1,4 +1,5 @@
 """HTTP client for interacting with the Workflow Servers."""
+
 from typing import Any, Dict, Optional
 
 from pydantic import AliasChoices, Field, FilePath, SecretStr, model_validator
@@ -41,7 +42,7 @@ class HTTPContext(BaseSettings):
         default=DEFAULT_WORKSPACE_PATH,
         frozen=True,
         description="Path to the active workspace configuration.",
-        examples=["/home/user/.workflow/workspaces/active.yml"],
+        examples=["/path/to/workspace/config.yaml"],
     )
     timeout: float = Field(
         default=15.0,
@@ -64,21 +65,21 @@ class HTTPContext(BaseSettings):
     buckets: Buckets = Field(
         default=None,
         validate_default=False,
-        description="Buckets Backend API Client.",
+        description="Buckets API Client.",
         exclude=True,
     )
 
     results: Results = Field(
         default=None,
         validate_default=False,
-        description="Results Backend API Client.",
+        description="Results API Client.",
         exclude=True,
     )
 
     pipelines: Pipelines = Field(
         default=None,
         validate_default=False,
-        description="Pipelines Backend API Client.",
+        description="Pipelines API Client.",
         exclude=True,
     )
 
@@ -108,7 +109,9 @@ class HTTPContext(BaseSettings):
                         _name,
                         _class(baseurl=baseurl, token=self.token, timeout=self.timeout),
                     )
+                    logger.debug(f"created {_name} client @ {baseurl}.")
                 except Exception as error:
-                    logger.exception(f"failed to create {_name} client.")
+                    logger.error(f"failed to create {_name} client @ {baseurl}.")
+                    logger.exception(error)
                     raise error
         return self

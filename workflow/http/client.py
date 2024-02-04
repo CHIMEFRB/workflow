@@ -1,4 +1,5 @@
 """HTTP client for interacting with the Workflow Servers."""
+
 from platform import machine, platform, python_version, release, system
 from time import asctime, gmtime
 from typing import Any, Dict, Optional

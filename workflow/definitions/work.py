@@ -369,7 +369,7 @@ class Work(BaseSettings):
             Work: The current work object.
         """
         # Validate if the site provided is allowed in the workspace.
-        config: Dict[str, Any] = read.workspace(self.workspace.as_posix())
+        config: Dict[str, Any] = read.workspace(self.workspace)
         sites: List[str] = config.get("sites", [])
         if self.site not in sites:
             error = (

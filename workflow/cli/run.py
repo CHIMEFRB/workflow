@@ -1,6 +1,5 @@
 """Fetch and process Work using any method compatible with Tasks API."""
 
-
 import platform
 import signal
 import time
@@ -272,9 +271,7 @@ def attempt(
 
         # Get work from the workflow backend
         try:
-            work = Work.withdraw(
-                pipeline=bucket, site=site, tags=tags, parent=parent
-            )
+            work = Work.withdraw(pipeline=bucket, site=site, tags=tags, parent=parent)
         except Exception as error:
             logger.exception(error)
 
@@ -314,7 +311,7 @@ def attempt(
                 ]
             if any(work.notify.slack.dict().values()) and work.plots:
                 work.plots = [f"<{product_url}{plot}|{plot}>" for plot in work.plots]
-            work.update(**kwargs)  # type: ignore
+            work.update()  # type: ignore
             logger.info("work completed: ✅")
         unset_tag()
         return status

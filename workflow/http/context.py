@@ -1,8 +1,17 @@
 """HTTP client for interacting with the Workflow Servers."""
 
+import os
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-from pydantic import AliasChoices, Field, FilePath, SecretStr, model_validator
+from pydantic import (
+    AliasChoices,
+    Field,
+    FilePath,
+    SecretStr,
+    model_validator,
+    field_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from workflow import DEFAULT_WORKSPACE_PATH
@@ -96,7 +105,7 @@ class HTTPContext(BaseSettings):
             "pipelines": Pipelines,
         }
         logger.debug(f"creating http clients for {list(clients.keys())}")
-        config: Dict[str, Any] = read.workspace(self.workspace.as_posix())
+        config: Dict[str, Any] = read.workspace(self.workspace)
         baseurls = config.get("http", {}).get("baseurls", {})
         logger.debug(f"baseurls: {baseurls}")
         for _name, _class in clients.items():

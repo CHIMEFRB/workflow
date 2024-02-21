@@ -68,9 +68,9 @@ logger = get_logger("workflow.cli")
     help="filter work by parent.",
 )
 @click.option(
-    "--attempts",
+    "--lives",
     type=int,
-    default=-1,
+    default=1,
     show_default=True,
     help="number of times to attempt work.",
 )
@@ -273,7 +273,7 @@ def attempt(
         # Get work from the workflow backend
         try:
             work = Work.withdraw(
-                pipeline=bucket, site=site, tags=tags, parent=parent, **kwargs
+                pipeline=bucket, site=site, tags=tags, parent=parent
             )
         except Exception as error:
             logger.exception(error)

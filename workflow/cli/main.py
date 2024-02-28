@@ -3,7 +3,7 @@
 import click
 
 # from workflow.cli.buckets import buckets
-# from workflow.cli.pipelines import pipelines
+from workflow.cli.pipelines import pipelines
 from workflow.cli.run import run
 from workflow.cli.workspace import workspace
 
@@ -16,7 +16,7 @@ def cli():
 
 cli.add_command(run)
 # cli.add_command(buckets)
-# cli.add_command(pipelines)
+cli.add_command(pipelines)
 cli.add_command(workspace)
 
 if __name__ == "__main__":

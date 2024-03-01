@@ -12,7 +12,10 @@ from workflow.definitions.work import Work
 from workflow.lifecycle.archive import http, posix, run, s3
 from workflow.utils import read
 
-WORKSPACE = read.workspace("sample-test")
+workspace_path = (
+    Path(__file__).parent.parent / "workflow" / "workspaces" / "sample-test.yaml"
+)
+WORKSPACE = read.workspace(workspace_path)
 
 
 @pytest.fixture(scope="module")

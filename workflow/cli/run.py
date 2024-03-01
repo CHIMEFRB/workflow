@@ -1,6 +1,5 @@
 """Fetch and process Work using any method compatible with Tasks API."""
 
-
 import platform
 import signal
 import time
@@ -68,9 +67,9 @@ logger = get_logger("workflow.cli")
     help="filter work by parent.",
 )
 @click.option(
-    "--attempts",
+    "--lives",
     type=int,
-    default=-1,
+    default=1,
     show_default=True,
     help="number of times to attempt work.",
 )
@@ -255,7 +254,6 @@ def attempt(
     Returns:
         bool: True if work was performed, False otherwise.
     """
-    kwargs: Dict[str, Any] = {"base_url": base_url}
     mode: str = "dynamic"
     work: Optional[Work] = None
     command: Optional[List[str]] = None
@@ -272,9 +270,7 @@ def attempt(
 
         # Get work from the workflow backend
         try:
-            work = Work.withdraw(
-                pipeline=bucket, site=site, tags=tags, parent=parent, **kwargs
-            )
+            work = Work.withdraw(pipeline=bucket, site=site, tags=tags, parent=parent)
         except Exception as error:
             logger.exception(error)
 
@@ -314,7 +310,7 @@ def attempt(
                 ]
             if any(work.notify.slack.dict().values()) and work.plots:
                 work.plots = [f"<{product_url}{plot}|{plot}>" for plot in work.plots]
-            work.update(**kwargs)  # type: ignore
+            work.update()  # type: ignore
             logger.info("work completed: ✅")
         unset_tag()
         return status

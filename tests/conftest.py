@@ -1,4 +1,5 @@
 """pytest configuration file."""
+
 from click.testing import CliRunner
 
 from workflow.cli.main import cli as workflow

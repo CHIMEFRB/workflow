@@ -73,7 +73,7 @@ class Client(BaseSettings):
             Client: The validated client instance.
 
         """
-        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
+        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH)
         if config.get("auth", {}).get("type", None) == "token":
             if config.get("auth", {}).get("provider", None) == "github":
                 if self.token:

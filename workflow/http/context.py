@@ -96,7 +96,7 @@ class HTTPContext(BaseSettings):
             "pipelines": Pipelines,
         }
         logger.debug(f"creating http clients for {list(clients.keys())}")
-        config: Dict[str, Any] = read.workspace(self.workspace.as_posix())
+        config: Dict[str, Any] = read.workspace(self.workspace)
         baseurls = config.get("http", {}).get("baseurls", {})
         logger.debug(f"baseurls: {baseurls}")
         for _name, _class in clients.items():

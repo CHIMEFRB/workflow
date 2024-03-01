@@ -254,7 +254,6 @@ def attempt(
     Returns:
         bool: True if work was performed, False otherwise.
     """
-    # kwargs: Dict[str, Any] = {"base_url": base_url}
     mode: str = "dynamic"
     work: Optional[Work] = None
     command: Optional[List[str]] = None

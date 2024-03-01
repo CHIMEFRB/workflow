@@ -1,4 +1,5 @@
 """Module for validating user input."""
+
 import platform
 import subprocess
 from importlib import import_module

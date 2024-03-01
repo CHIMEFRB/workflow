@@ -1,4 +1,5 @@
 """Execute the work function or command."""
+
 import ast
 import subprocess
 import time

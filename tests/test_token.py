@@ -1,4 +1,5 @@
 """Test the token passing."""
+
 from workflow.definitions.work import Work
 from workflow.http.context import HTTPContext
 

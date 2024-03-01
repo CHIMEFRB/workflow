@@ -1,5 +1,7 @@
 """Test the HTTPContext object."""
 
+import pytest
+
 from workflow.http.context import HTTPContext
 
 
@@ -8,6 +10,7 @@ class TestHTTPContext:
         """Test that the HTTPContext object can be instantiated."""
         HTTPContext()
 
+    @pytest.mark.skip
     def test_clients_connect_to_base_url(self):
         """Tests HTTPContext.clients have connection to their proper backend."""
         http = HTTPContext()

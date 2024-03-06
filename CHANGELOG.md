@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.0](https://github.com/CHIMEFRB/workflow/compare/v0.2.0...v0.3.0) (2024-03-06)
+
+
+### Features
+
+* **examples:** added a dedicated examples folder ([908de1a](https://github.com/CHIMEFRB/workflow/commit/908de1a04a8fee12dfd40a3bfe5f1877dade1177))
+
+
+### Bug Fixes
+
+* **context.py:** fixing class validator ([#17](https://github.com/CHIMEFRB/workflow/issues/17)) ([7bc52bb](https://github.com/CHIMEFRB/workflow/commit/7bc52bb7a21fb55e0662fa5a819ace8d440bf4a6))
+* **validate:** updated the function/command validation logic to support Windows ([3458f0b](https://github.com/CHIMEFRB/workflow/commit/3458f0b9046208344ba6ec6433f09f094ebe2a05))
+* **work.py:** changes in validation ([#21](https://github.com/CHIMEFRB/workflow/issues/21)) ([af96307](https://github.com/CHIMEFRB/workflow/commit/af9630703394d725465ac330f06740586ffa76a3))
+* **workspace:** improved the workspace set/unset logic ([d8f6802](https://github.com/CHIMEFRB/workflow/commit/d8f6802066a4a194cfea17bbad8964b0f392f065))
+
 ## [0.2.0](https://github.com/CHIMEFRB/workflow/compare/v0.1.0...v0.2.0) (2024-01-28)
 
 

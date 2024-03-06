@@ -3,7 +3,6 @@
 from json import loads
 from time import time
 from typing import Any, Dict, List, Literal, Optional, Union
-from warnings import warn
 
 from pydantic import (
     AliasChoices,
@@ -308,22 +307,11 @@ class Work(BaseSettings):
         Returns:
             str: Validated pipeline name.
         """
-        original: str = pipeline
-        pipeline = pipeline.lower()
-        pipeline = pipeline.replace(" ", "-")
-        pipeline = pipeline.replace("_", "-")
         for char in pipeline:
             if not char.isalnum() and char not in ["-"]:
                 raise ValueError(
                     "pipeline name can only contain letters, numbers & hyphens."
                 )
-        if original != pipeline:
-            warn(
-                SyntaxWarning(
-                    f"pipeline reformatted {original}->{pipeline} to hyphen-case."
-                ),
-                stacklevel=2,
-            )
         return pipeline
 
     @field_validator("creation")

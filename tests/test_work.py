@@ -26,10 +26,8 @@ def test_bad_pipeline():
 
 def test_pipeline_reformat():
     """Test that the work object can't be instantiated with empty pipeline."""
-    work = Work(pipeline="sample test", site="local", user="test")
-    assert work.pipeline == "sample-test"
-    work.pipeline = "sample test"
-    assert work.pipeline == "sample-test"
+    with pytest.raises(ValidationError):
+        Work(pipeline="sample test", site="local", user="test")
 
 
 def test_bad_pipeline_char():

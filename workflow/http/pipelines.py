@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 from requests.models import Response
 from tenacity import retry
-from tenacity.stop import stop_after_delay
+from tenacity.stop import stop_after_delay, stop_after_attempt
 from tenacity.wait import wait_random
 
 from workflow.http.client import Client
@@ -23,7 +23,11 @@ class Pipelines(Client):
         Pipelines: A client for interacting with the Pipelines backend.
     """
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
+    @retry(
+        reraise=True,
+        wait=wait_random(min=1.5, max=3.5),
+        stop=(stop_after_delay(5) | stop_after_attempt(1)),
+    )
     @try_request
     def deploy(self, data: Dict[str, Any]):
         """Deploys a PipelineConfig from payload data.

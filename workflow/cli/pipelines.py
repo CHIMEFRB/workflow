@@ -33,7 +33,7 @@ status_colors = {
     "queued": "yellow",
     "success": "green",
     "failure": "red",
-    "cancelled": "orange",
+    "cancelled": "dark_goldenrod",
 }
 
 
@@ -97,7 +97,11 @@ def deploy(filename: click.Path):
     data: Dict[str, Any] = {}
     with open(filepath) as reader:
         data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
-    deploy_result = http.pipelines.deploy(data)
+    try:
+        deploy_result = http.pipelines.deploy(data)
+    except requests.HTTPError as deploy_error:
+        console.print(deploy_error.response.json()["message"])
+        return
     table.add_column("IDs")
     for _id in deploy_result:
         table.add_row(_id)
@@ -130,7 +134,7 @@ def stop(pipeline: str, id: Tuple[str]):
         text = Text("No pipeline configurations were stopped.", style="red")
         console.print(text)
         return
-    table.add_column("Deleted IDs", max_width=50, justify="left")
+    table.add_column("Stopped IDs", max_width=50, justify="left")
     for config in stop_result:
         table.add_row(config["id"])
     console.print(table)

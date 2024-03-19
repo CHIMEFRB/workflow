@@ -180,3 +180,64 @@ class Pipelines(Client):
             response.raise_for_status()
         server_info = response.json()
         return {"client": client_info, "server": server_info}
+
+    @try_request
+    def list_schedules(self, schedule_name: str) -> List[Dict[str, Any]]:
+        """Gets the list of all schedules.
+
+        Parameters
+        ----------
+        schedule_name : str
+            Schedule name.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of schedule payloads.
+        """
+        with self.session as session:
+            query = dumps({"pipeline_config.name": schedule_name})
+            projection = dumps(
+                {
+                    "id": True,
+                    "status": True,
+                    "lives": True,
+                    "has_spawned": True,
+                    "next_time": True,
+                    "crontab": True,
+                    "pipeline_config.name": True,
+                }
+            )
+            url = (
+                f"{self.baseurl}/v1/schedule?projection={projection}"
+                if schedule_name is None
+                else f"{self.baseurl}/v1/schedule?query={query}&projection={projection}"
+            )
+            response: Response = session.get(url=url)
+            response.raise_for_status()
+        return response.json()
+
+    @try_request
+    def count_schedules(self, schedule_name: Optional[str] = None) -> Dict[str, Any]:
+        """Count schedules per pipeline name.
+
+        Parameters
+        ----------
+        schedule_name : Optional[str], optional
+            Schedule name, by default None
+
+        Returns
+        -------
+        Dict[str, Any]
+            Count payload.
+        """
+        with self.session as session:
+            query = dumps({"name": schedule_name})
+            url = (
+                f"{self.baseurl}/v1/schedule/count"
+                if not schedule_name
+                else f"{self.baseurl}/v1/schedule/count?query={query}"
+            )
+            response: Response = session.get(url=url)
+            response.raise_for_status()
+        return response.json()

@@ -28,12 +28,14 @@ table = Table(
 BASE_URL = "https://frb.chimenet.ca/pipelines"
 STATUS = ["created", "queued", "running", "success", "failure", "cancelled"]
 status_colors = {
+    "active": "bright_blue",
     "running": "blue",
     "created": "lightblue",
     "queued": "yellow",
     "success": "green",
     "failure": "red",
     "cancelled": "dark_goldenrod",
+    "expired": "dark_goldenrod",
 }
 
 
@@ -154,6 +156,50 @@ def rm(pipeline: str, id: Tuple[str]):
     table.add_column("Deleted IDs", max_width=50, justify="left")
     for config in delete_result:
         table.add_row(config["id"])
+    console.print(table)
+
+
+@pipelines.group("schedule", help="Manage schedules for pipelines.")
+def schedule():
+    """Manage schedules for pipelines."""
+    pass
+
+
+@schedule.command("ls", help="Lists all available schedules.")
+@click.option("name", "--name", "-n", type=str, required=False)
+def schedule_ls(name: str):
+    """List all schedules."""
+    http = HTTPContext()
+    schedules = http.pipelines.list_schedules(name)
+    table.add_column("ID", max_width=50, justify="left", style="blue")
+    table.add_column("Name", max_width=50, justify="left", style="bright_green")
+    table.add_column("Status", max_width=50, justify="left")
+    table.add_column("Lives", max_width=50, justify="left")
+    table.add_column("Has Spawned", max_width=50, justify="left")
+    table.add_column("Next Time", max_width=50, justify="left")
+    for schedule in schedules:
+        status = Text(schedule["status"], style=status_colors[schedule["status"]])
+        table.add_row(
+            schedule["id"],
+            schedule["pipeline_config"]["name"],
+            status,
+            str(schedule["lives"]),
+            str(schedule["has_spawned"]),
+            str(schedule["next_time"]),
+        )
+    console.print(table)
+
+
+@schedule.command("count", help="Counts all the schedules per pipeline.")
+def schedule_count():
+    """Count all schedules."""
+    http = HTTPContext()
+    counts = http.pipelines.count_schedules()
+    table.title = "Workflow Scheduled Pipelines"
+    table.add_column("Name", max_width=50, justify="left", style="bright_green")
+    table.add_column("Count", max_width=50, justify="left")
+    for k, v in counts.items():
+        table.add_row(k, str(v))
     console.print(table)
 
 

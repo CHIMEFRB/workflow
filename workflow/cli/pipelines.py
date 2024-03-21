@@ -222,18 +222,28 @@ def stop(pipeline: str, id: Tuple[str]):
 @pipelines.command("rm", help="Remove a pipeline.")
 @click.argument("pipeline", type=str, required=True)
 @click.argument("id", type=str, required=True)
-def rm(pipeline: str, id: Tuple[str]):
+@click.option(
+    "--schedule", "-sch", is_flag=True, help="For interacting with the Schedule API."
+)
+def rm(pipeline: str, id: Tuple[str], schedule: bool):
     """Remove a pipeline."""
     http = HTTPContext()
-    delete_result = http.pipelines.remove(pipeline, id)
-    if not any(delete_result):
-        text = Text("No pipeline configurations were deleted.", style="red")
-        console.print(text)
-        return
-    table.add_column("Deleted IDs", max_width=50, justify="left")
-    for config in delete_result:
-        table.add_row(config["id"])
-    console.print(table)
+    content = None
+    try:
+        delete_result = http.pipelines.remove(pipeline, id, schedule)
+        if delete_result.status_code == 204:
+            text = Text("No pipeline configurations were deleted.", style="red")
+            content = text
+    except Exception as e:
+        text = Text(
+            f"No pipeline configurations were deleted.\nError: {e}", style="red"
+        )
+        content = text
+    else:
+        table.add_column("Deleted IDs", max_width=50, justify="left", style="red")
+        table.add_row(id)
+        content = table
+    console.print(content)
 
 
 def status(

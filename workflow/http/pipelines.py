@@ -125,9 +125,13 @@ class Pipelines(Client):
             response.raise_for_status()
         return response.json()[0]
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
+    @retry(
+        reraise=True,
+        wait=wait_random(min=1.5, max=3.5),
+        stop=(stop_after_delay(5) | stop_after_attempt(1)),
+    )
     @try_request
-    def remove(self, pipeline: str, id: str) -> List[Dict[str, Any]]:
+    def remove(self, pipeline: str, id: str, schedule: bool) -> Response:
         """Removes a cancelled pipeline configuration.
 
         Parameters
@@ -136,6 +140,8 @@ class Pipelines(Client):
             PipelineConfig name.
         id : str
             PipelineConfig ID.
+        schedule : bool
+            If this function should interact with the Schedule endpoint.
 
         Returns
         -------
@@ -145,10 +151,14 @@ class Pipelines(Client):
         with self.session as session:
             query = {"id": id}
             params = {"query": dumps(query), "name": pipeline}
-            url = f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+            url = (
+                f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+                if not schedule
+                else f"{self.baseurl}/v1/schedule?{urlencode(params)}"
+            )
             response: Response = session.delete(url=url)
             response.raise_for_status()
-        return response.json()
+        return response
 
     @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     @try_request

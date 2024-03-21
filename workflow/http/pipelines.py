@@ -29,7 +29,7 @@ class Pipelines(Client):
         stop=(stop_after_delay(5) | stop_after_attempt(1)),
     )
     @try_request
-    def deploy(self, data: Dict[str, Any]):
+    def deploy(self, data: Dict[str, Any], schedule: bool = False):
         """Deploys a PipelineConfig from payload data.
 
         Parameters
@@ -43,7 +43,11 @@ class Pipelines(Client):
             IDs of PipelineConfig objects generated.
         """
         with self.session as session:
-            url = f"{self.baseurl}/v1/pipelines"
+            url = (
+                f"{self.baseurl}/v1/pipelines"
+                if not schedule
+                else f"{self.baseurl}/v1/schedule"
+            )
             response: Response = session.post(url, json=data)
             response.raise_for_status()
         return response.json()
@@ -90,7 +94,7 @@ class Pipelines(Client):
 
     @try_request
     def get_pipeline_config(
-        self, collection: str, query: Dict[str, Any]
+        self, collection: str, query: Dict[str, Any], schedule: bool = False
     ) -> Dict[str, Any]:
         """Gets details for one pipeline configuration.
 
@@ -108,7 +112,11 @@ class Pipelines(Client):
         """
         with self.session as session:
             params = {"query": dumps(query), "name": collection}
-            url = f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+            url = (
+                f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+                if not schedule
+                else f"{self.baseurl}/v1/schedule?{urlencode(params)}"
+            )
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()[0]

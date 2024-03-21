@@ -23,6 +23,7 @@ table = Table(
     show_header=True,
     header_style="magenta",
     title_style="bold magenta",
+    min_width=50
 )
 
 BASE_URL = "https://frb.chimenet.ca/pipelines"
@@ -53,28 +54,70 @@ def version():
 
 
 @pipelines.command("ls", help="List pipelines.")
-@click.option("name", "--name", "-n", type=str, required=False)
-def ls(name: Optional[str] = None):
+@click.option(
+    "name",
+    "--name",
+    "-n",
+    type=str,
+    required=False,
+    help="List only Pipelines with provided name.",
+)
+@click.option(
+    "--schedule", "-sch", is_flag=True, help="For interacting with the Schedule API."
+)
+def ls(name: Optional[str] = None, schedule: bool = False):
     """List all pipelines."""
     http = HTTPContext()
-    pipeline_configs = http.pipelines.list_pipeline_configs(name)
-    table.add_column("ID", max_width=50, justify="left", style="blue")
-    table.add_column("Name", max_width=50, justify="left", style="bright_green")
-    table.add_column("Status", max_width=50, justify="left")
-    table.add_column("Stage", max_width=50, justify="left")
-    for config in pipeline_configs:
-        status = Text(config["status"], style=status_colors[config["status"]])
-        table.add_row(
-            config["id"], config["name"], status, str(config["current_stage"])
-        )
+    objects = (
+        http.pipelines.list_pipeline_configs(name)
+        if not schedule
+        else http.pipelines.list_schedules(name)
+    )
+    if schedule:
+        table.title = "Workflow Scheduled Pipelines"
+        table.add_column("ID", max_width=50, justify="left", style="blue")
+        table.add_column("Name", max_width=50, justify="left", style="bright_green")
+        table.add_column("Status", max_width=50, justify="left")
+        table.add_column("Lives", max_width=50, justify="left")
+        table.add_column("Has Spawned", max_width=50, justify="left")
+        table.add_column("Next Time", max_width=50, justify="left")
+        for schedule in objects:
+            status = Text(schedule["status"], style=status_colors[schedule["status"]])
+            lives = schedule["lives"]
+            lives_text = Text(str(lives) if lives > -1 else "\u221e")
+            table.add_row(
+                schedule["id"],
+                schedule["pipeline_config"]["name"],
+                status,
+                lives_text,
+                str(schedule["has_spawned"]),
+                str(schedule["next_time"]),
+            )
+    else:
+        table.add_column("ID", max_width=50, justify="left", style="blue")
+        table.add_column("Name", max_width=50, justify="left", style="bright_green")
+        table.add_column("Status", max_width=50, justify="left")
+        table.add_column("Stage", max_width=50, justify="left")
+        for config in objects:
+            status = Text(config["status"], style=status_colors[config["status"]])
+            table.add_row(
+                config["id"], config["name"], status, str(config["current_stage"])
+            )
     console.print(table)
 
 
 @pipelines.command("count", help="Count pipeline configurations per collection.")
-def count():
+@click.option(
+    "--schedule", "-sch", is_flag=True, help="For interacting with the Schedule API."
+)
+def count(schedule: bool):
     """Count pipeline configurations."""
     http = HTTPContext()
-    counts = http.pipelines.count()
+    counts = (
+        http.pipelines.count() if not schedule else http.pipelines.count_schedules()
+    )
+    if schedule:
+        table.title = "Workflow Schedule Pipelines"
     table.add_column("Name", max_width=50, justify="left", style="blue")
     table.add_column("Count", max_width=50, justify="left")
     total = int()
@@ -87,42 +130,74 @@ def count():
 
 
 @pipelines.command("deploy", help="Deploy a workflow pipeline.")
+@click.option(
+    "--schedule", "-sch", is_flag=True, help="For interacting with the Schedule API."
+)
 @click.argument(
     "filename",
     type=click.Path(exists=True, dir_okay=False, readable=True),
     required=True,
 )
-def deploy(filename: click.Path):
+def deploy(filename: click.Path, schedule: bool):
     """Deploy a workflow pipeline."""
     http = HTTPContext()
     filepath: str = str(filename)
     data: Dict[str, Any] = {}
     with open(filepath) as reader:
         data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
+    if schedule and "schedule" not in data.keys():
+        error_text = Text(
+            "Your configuration file needs a schedule when using the --schedule option",
+            style="red",
+        )
+        console.print(error_text)
+        return
     try:
-        deploy_result = http.pipelines.deploy(data)
+        deploy_result = http.pipelines.deploy(data, schedule)
+        print(deploy_result)
     except requests.HTTPError as deploy_error:
         console.print(deploy_error.response.json()["message"])
         return
-    table.add_column("IDs")
-    for _id in deploy_result:
-        table.add_row(_id)
+    table.add_column("IDs", max_width=50, justify="left", style="bright_green")
+    if isinstance(deploy_result, list):
+        for _id in deploy_result:
+            table.add_row(_id)
+    if isinstance(deploy_result, dict):
+        for v in deploy_result.values():
+            table.add_row(v)
     console.print(table)
 
 
 @pipelines.command("ps", help="Get pipeline details.")
 @click.argument("pipeline", type=str, required=True)
 @click.argument("id", type=str, required=True)
-@click.option("--quiet", "-q", is_flag=True, default=False, help="Only display  IDs.")
-def ps(pipeline: str, id: str):
+@click.option(
+    "--schedule", "-sch", is_flag=True, help="For interacting with the Schedule API."
+)
+def ps(pipeline: str, id: str, schedule: bool):
     """List a pipeline configuration in detail."""
     http = HTTPContext()
     query: Dict[str, Any] = {"id": id}
-    payload = http.pipelines.get_pipeline_config(collection=pipeline, query=query)
-    table.add_column(f"Pipeline: {pipeline}", max_width=120, justify="left")
-    text = JSON(json.dumps(payload), indent=2)
-    table.add_row(text)
-    console.print(table)
+    console_content = None
+    try:
+        payload = http.pipelines.get_pipeline_config(pipeline, query, schedule)
+    except IndexError:
+        error_text = Text(
+            f"No {'Schedule' if schedule else 'PipelineConfig'} were found", style="red"
+        )
+        console_content = error_text
+    else:
+        if not schedule:
+            table.add_column(f"Pipeline: {pipeline}", max_width=120, justify="left")
+        else:
+            table.add_column(
+                f"Scheduled Pipeline: {pipeline}", max_width=120, justify="left"
+            )
+        text = JSON(json.dumps(payload), indent=2)
+        table.add_row(text)
+        console_content = table
+    finally:
+        console.print(console_content)
 
 
 @pipelines.command("stop", help="Kill a running pipeline.")
@@ -156,50 +231,6 @@ def rm(pipeline: str, id: Tuple[str]):
     table.add_column("Deleted IDs", max_width=50, justify="left")
     for config in delete_result:
         table.add_row(config["id"])
-    console.print(table)
-
-
-@pipelines.group("schedule", help="Manage schedules for pipelines.")
-def schedule():
-    """Manage schedules for pipelines."""
-    pass
-
-
-@schedule.command("ls", help="Lists all available schedules.")
-@click.option("name", "--name", "-n", type=str, required=False)
-def schedule_ls(name: str):
-    """List all schedules."""
-    http = HTTPContext()
-    schedules = http.pipelines.list_schedules(name)
-    table.add_column("ID", max_width=50, justify="left", style="blue")
-    table.add_column("Name", max_width=50, justify="left", style="bright_green")
-    table.add_column("Status", max_width=50, justify="left")
-    table.add_column("Lives", max_width=50, justify="left")
-    table.add_column("Has Spawned", max_width=50, justify="left")
-    table.add_column("Next Time", max_width=50, justify="left")
-    for schedule in schedules:
-        status = Text(schedule["status"], style=status_colors[schedule["status"]])
-        table.add_row(
-            schedule["id"],
-            schedule["pipeline_config"]["name"],
-            status,
-            str(schedule["lives"]),
-            str(schedule["has_spawned"]),
-            str(schedule["next_time"]),
-        )
-    console.print(table)
-
-
-@schedule.command("count", help="Counts all the schedules per pipeline.")
-def schedule_count():
-    """Count all schedules."""
-    http = HTTPContext()
-    counts = http.pipelines.count_schedules()
-    table.title = "Workflow Scheduled Pipelines"
-    table.add_column("Name", max_width=50, justify="left", style="bright_green")
-    table.add_column("Count", max_width=50, justify="left")
-    for k, v in counts.items():
-        table.add_row(k, str(v))
     console.print(table)
 
 

@@ -23,7 +23,7 @@ table = Table(
     show_header=True,
     header_style="magenta",
     title_style="bold magenta",
-    min_width=50
+    min_width=50,
 )
 
 BASE_URL = "https://frb.chimenet.ca/pipelines"
@@ -81,17 +81,19 @@ def ls(name: Optional[str] = None, schedule: bool = False):
         table.add_column("Lives", max_width=50, justify="left")
         table.add_column("Has Spawned", max_width=50, justify="left")
         table.add_column("Next Time", max_width=50, justify="left")
-        for schedule in objects:
-            status = Text(schedule["status"], style=status_colors[schedule["status"]])
-            lives = schedule["lives"]
+        for schedule_obj in objects:
+            status = Text(
+                schedule_obj["status"], style=status_colors[schedule_obj["status"]]
+            )
+            lives = schedule_obj["lives"]
             lives_text = Text(str(lives) if lives > -1 else "\u221e")
             table.add_row(
-                schedule["id"],
-                schedule["pipeline_config"]["name"],
+                schedule_obj["id"],
+                schedule_obj["pipeline_config"]["name"],
                 status,
                 lives_text,
-                str(schedule["has_spawned"]),
-                str(schedule["next_time"]),
+                str(schedule_obj["has_spawned"]),
+                str(schedule_obj["next_time"]),
             )
     else:
         table.add_column("ID", max_width=50, justify="left", style="blue")

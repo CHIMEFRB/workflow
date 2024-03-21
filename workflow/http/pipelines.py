@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 from requests.models import Response
 from tenacity import retry
-from tenacity.stop import stop_after_delay, stop_after_attempt
+from tenacity.stop import stop_after_attempt, stop_after_delay
 from tenacity.wait import wait_random
 
 from workflow.http.client import Client
@@ -36,6 +36,8 @@ class Pipelines(Client):
         ----------
         data : Dict[str, Any]
             YAML data.
+        schedule : bool
+            If this function should interact with the Schedule endpoint.
 
         Returns
         -------
@@ -104,6 +106,8 @@ class Pipelines(Client):
             PipelineConfig name.
         query : Dict[str, Any]
             Dictionary with search parameters.
+        schedule : bool
+            If this function should interact with the Schedule endpoint.
 
         Returns
         -------

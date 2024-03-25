@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 from requests.models import Response
 from tenacity import retry
-from tenacity.stop import stop_after_delay
+from tenacity.stop import stop_after_attempt, stop_after_delay
 from tenacity.wait import wait_random
 
 from workflow.http.client import Client
@@ -23,15 +23,21 @@ class Pipelines(Client):
         Pipelines: A client for interacting with the Pipelines backend.
     """
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
+    @retry(
+        reraise=True,
+        wait=wait_random(min=1.5, max=3.5),
+        stop=(stop_after_delay(5) | stop_after_attempt(1)),
+    )
     @try_request
-    def deploy(self, data: Dict[str, Any]):
+    def deploy(self, data: Dict[str, Any], schedule: bool = False):
         """Deploys a PipelineConfig from payload data.
 
         Parameters
         ----------
         data : Dict[str, Any]
             YAML data.
+        schedule : bool
+            If this function should interact with the Schedule endpoint.
 
         Returns
         -------
@@ -39,7 +45,11 @@ class Pipelines(Client):
             IDs of PipelineConfig objects generated.
         """
         with self.session as session:
-            url = f"{self.baseurl}/v1/pipelines"
+            url = (
+                f"{self.baseurl}/v1/pipelines"
+                if not schedule
+                else f"{self.baseurl}/v1/schedule"
+            )
             response: Response = session.post(url, json=data)
             response.raise_for_status()
         return response.json()
@@ -86,7 +96,7 @@ class Pipelines(Client):
 
     @try_request
     def get_pipeline_config(
-        self, collection: str, query: Dict[str, Any]
+        self, collection: str, query: Dict[str, Any], schedule: bool = False
     ) -> Dict[str, Any]:
         """Gets details for one pipeline configuration.
 
@@ -96,6 +106,8 @@ class Pipelines(Client):
             PipelineConfig name.
         query : Dict[str, Any]
             Dictionary with search parameters.
+        schedule : bool
+            If this function should interact with the Schedule endpoint.
 
         Returns
         -------
@@ -104,14 +116,22 @@ class Pipelines(Client):
         """
         with self.session as session:
             params = {"query": dumps(query), "name": collection}
-            url = f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+            url = (
+                f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+                if not schedule
+                else f"{self.baseurl}/v1/schedule?{urlencode(params)}"
+            )
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()[0]
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
+    @retry(
+        reraise=True,
+        wait=wait_random(min=1.5, max=3.5),
+        stop=(stop_after_delay(5) | stop_after_attempt(1)),
+    )
     @try_request
-    def remove(self, pipeline: str, id: str) -> List[Dict[str, Any]]:
+    def remove(self, pipeline: str, id: str, schedule: bool) -> Response:
         """Removes a cancelled pipeline configuration.
 
         Parameters
@@ -120,6 +140,8 @@ class Pipelines(Client):
             PipelineConfig name.
         id : str
             PipelineConfig ID.
+        schedule : bool
+            If this function should interact with the Schedule endpoint.
 
         Returns
         -------
@@ -129,10 +151,14 @@ class Pipelines(Client):
         with self.session as session:
             query = {"id": id}
             params = {"query": dumps(query), "name": pipeline}
-            url = f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+            url = (
+                f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+                if not schedule
+                else f"{self.baseurl}/v1/schedule?{urlencode(params)}"
+            )
             response: Response = session.delete(url=url)
             response.raise_for_status()
-        return response.json()
+        return response
 
     @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     @try_request
@@ -176,3 +202,64 @@ class Pipelines(Client):
             response.raise_for_status()
         server_info = response.json()
         return {"client": client_info, "server": server_info}
+
+    @try_request
+    def list_schedules(self, schedule_name: str) -> List[Dict[str, Any]]:
+        """Gets the list of all schedules.
+
+        Parameters
+        ----------
+        schedule_name : str
+            Schedule name.
+
+        Returns
+        -------
+        List[Dict[str, Any]]
+            List of schedule payloads.
+        """
+        with self.session as session:
+            query = dumps({"pipeline_config.name": schedule_name})
+            projection = dumps(
+                {
+                    "id": True,
+                    "status": True,
+                    "lives": True,
+                    "has_spawned": True,
+                    "next_time": True,
+                    "crontab": True,
+                    "pipeline_config.name": True,
+                }
+            )
+            url = (
+                f"{self.baseurl}/v1/schedule?projection={projection}"
+                if schedule_name is None
+                else f"{self.baseurl}/v1/schedule?query={query}&projection={projection}"
+            )
+            response: Response = session.get(url=url)
+            response.raise_for_status()
+        return response.json()
+
+    @try_request
+    def count_schedules(self, schedule_name: Optional[str] = None) -> Dict[str, Any]:
+        """Count schedules per pipeline name.
+
+        Parameters
+        ----------
+        schedule_name : Optional[str], optional
+            Schedule name, by default None
+
+        Returns
+        -------
+        Dict[str, Any]
+            Count payload.
+        """
+        with self.session as session:
+            query = dumps({"name": schedule_name})
+            url = (
+                f"{self.baseurl}/v1/schedule/count"
+                if not schedule_name
+                else f"{self.baseurl}/v1/schedule/count?query={query}"
+            )
+            response: Response = session.get(url=url)
+            response.raise_for_status()
+        return response.json()

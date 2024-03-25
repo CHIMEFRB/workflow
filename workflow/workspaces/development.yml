@@ -17,12 +17,12 @@ archive:
 
 http:
   baseurls:
-    buckets: http://localhost:8001
-    results: http://localhost:8002
-    pipelines: http://localhost:8003
-    products: http://localhost:8004
-    minio: http://localhost:8005
-    loki: http://localhost:8005/loki/api/v1/push
+    pipelines: http://localhost:8001
+    buckets: http://localhost:8004
+    results: http://localhost:8005
+    # products: http://localhost:8004
+    # minio: http://localhost:8005
+    # loki: http://localhost:8005/loki/api/v1/push
 
 config:
   archive:

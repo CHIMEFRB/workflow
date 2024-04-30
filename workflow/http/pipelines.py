@@ -90,7 +90,7 @@ class Pipelines(Client):
 
     @try_request
     def get_pipeline_config(
-        self, collection: str, query: Dict[str, Any]
+        self, collection: str, query: Dict[str, Any], projection: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Gets details for one pipeline configuration.
 
@@ -100,6 +100,8 @@ class Pipelines(Client):
             PipelineConfig name.
         query : Dict[str, Any]
             Dictionary with search parameters.
+        projection : Dict[str, Any]
+            Dictionary with projection parameters.
 
         Returns
         -------
@@ -107,7 +109,11 @@ class Pipelines(Client):
             Pipeline configuration payload.
         """
         with self.session as session:
-            params = {"query": dumps(query), "name": collection}
+            params = {
+                "query": dumps(query),
+                "name": collection,
+                "projection": dumps(projection),
+            }
             url = f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()

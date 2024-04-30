@@ -1,5 +1,6 @@
 """Manage workflow pipelines."""
 
+import datetime as dt
 import json
 from typing import Any, Dict, Optional, Tuple
 
@@ -8,12 +9,12 @@ import requests
 import yaml
 from rich import pretty
 from rich.console import Console
-from rich.json import JSON
 from rich.table import Table
 from rich.text import Text
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
+from workflow.utils.variables import status_colors, status_symbols
 
 pretty.install()
 console = Console()
@@ -28,16 +29,6 @@ table = Table(
 
 BASE_URL = "https://frb.chimenet.ca/pipelines"
 STATUS = ["created", "queued", "running", "success", "failure", "cancelled"]
-status_colors = {
-    "active": "bright_blue",
-    "running": "blue",
-    "created": "lightblue",
-    "queued": "yellow",
-    "success": "green",
-    "failure": "red",
-    "cancelled": "dark_goldenrod",
-    "expired": "dark_goldenrod",
-}
 
 
 @click.group(name="pipelines", help="Manage Workflow Pipelines.")
@@ -62,19 +53,31 @@ def version():
     required=False,
     help="List only Pipelines with provided name.",
 )
-def ls(name: Optional[str] = None):
+@click.option(
+    "quiet",
+    "--quiet",
+    "-q",
+    is_flag=True,
+    required=False,
+    help="Only show IDs.",
+)
+def ls(name: Optional[str] = None, quiet: Optional[bool] = False):
     """List all pipelines."""
     http = HTTPContext()
     objects = http.pipelines.list_pipeline_configs(name)
     table.add_column("ID", max_width=50, justify="left", style="blue")
-    table.add_column("Name", max_width=50, justify="left", style="bright_green")
-    table.add_column("Status", max_width=50, justify="left")
-    table.add_column("Stage", max_width=50, justify="left")
+    if not quiet:
+        table.add_column("Name", max_width=50, justify="left", style="bright_green")
+        table.add_column("Status", max_width=50, justify="left")
+        table.add_column("Stage", max_width=50, justify="left")
     for config in objects:
         status = Text(config["status"], style=status_colors[config["status"]])
-        table.add_row(
-            config["id"], config["name"], status, str(config["current_stage"])
-        )
+        if not quiet:
+            table.add_row(
+                config["id"], config["name"], status, str(config["current_stage"])
+            )
+            continue
+        table.add_row(config["id"])
     console.print(table)
 
 
@@ -100,7 +103,7 @@ def count():
     type=click.Path(exists=True, dir_okay=False, readable=True),
     required=True,
 )
-def deploy(filename: click.Path, schedule: bool):
+def deploy(filename: click.Path):
     """Deploy a workflow pipeline."""
     http = HTTPContext()
     filepath: str = str(filename)
@@ -130,14 +133,30 @@ def ps(pipeline: str, id: str):
     http = HTTPContext()
     query: Dict[str, Any] = {"id": id}
     console_content = None
+    projection = {"name": False}
+    time_fields = ["creation", "start", "stop"]
     try:
-        payload = http.pipelines.get_pipeline_config(pipeline, query)
+        payload = http.pipelines.get_pipeline_config(pipeline, query, projection)
     except IndexError:
         error_text = Text("No PipelineConfig were found", style="red")
         console_content = error_text
     else:
         table.add_column(f"Pipeline: {pipeline}", max_width=120, justify="left")
-        text = JSON(json.dumps(payload), indent=2)
+        text = Text("")
+        for k, v in payload.items():
+            key_value_text = Text()
+            if k in time_fields and v:
+                v = dt.datetime.fromtimestamp(v)
+            if k == "pipeline":
+                key_value_text = Text(f"{k}: \n", style="bright_green")
+                for step in v:
+                    key_value_text.append(f"  {step['name']}:")
+                    key_value_text.append(f"{status_symbols[step['status']]}\n")
+            else:
+                key_value_text = Text(f"{k}: ", style="bright_green")
+                key_value_text.append(f"{v}\n", style="white")
+            text.append_text(key_value_text)
+
         table.add_row(text)
         console_content = table
     finally:

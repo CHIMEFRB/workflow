@@ -1,6 +1,5 @@
 """Manage workflow pipelines schedules."""
 
-import json
 from typing import Any, Dict, Optional, Tuple
 
 import click
@@ -14,6 +13,7 @@ from rich.text import Text
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
+from workflow.utils.variables import status_colors
 
 pretty.install()
 console = Console()
@@ -27,11 +27,6 @@ table = Table(
 )
 BASE_URL = "https://frb.chimenet.ca/schedule"
 STATUS = ["active", "running", "expired"]
-status_colors = {
-    "active": "bright_blue",
-    "running": "blue",
-    "expired": "dark_goldenrod",
-}
 
 
 @click.group(name="schedules", help="Manage Workflow Schedules.")
@@ -56,37 +51,51 @@ def version():
     required=False,
     help="List only Schedules with provided name.",
 )
-def ls(name: Optional[str] = None):
+@click.option(
+    "quiet",
+    "--quiet",
+    "-q",
+    is_flag=True,
+    required=False,
+    help="Only show IDs.",
+)
+def ls(name: Optional[str] = None, quiet: Optional[bool] = False):
     """List schedules.
 
     Parameters
     ----------
     name : Optional[str], optional
         Name of specific schedule, by default None
+    quiet : Optional[bool], optional
+        Whether to show only IDs.
     """
     http = HTTPContext()
-    objects = http.pipelines.list_schedules(name)
+    objects = http.schedules.list_schedules(name)
     table.title = "Workflow Scheduled Pipelines"
     table.add_column("ID", max_width=50, justify="left", style="blue")
-    table.add_column("Name", max_width=50, justify="left", style="bright_green")
-    table.add_column("Status", max_width=50, justify="left")
-    table.add_column("Lives", max_width=50, justify="left")
-    table.add_column("Has Spawned", max_width=50, justify="left")
-    table.add_column("Next Time", max_width=50, justify="left")
+    if not quiet:
+        table.add_column("Name", max_width=50, justify="left", style="bright_green")
+        table.add_column("Status", max_width=50, justify="left")
+        table.add_column("Lives", max_width=50, justify="left")
+        table.add_column("Has Spawned", max_width=50, justify="left")
+        table.add_column("Next Time", max_width=50, justify="left")
     for schedule_obj in objects:
-        status = Text(
-            schedule_obj["status"], style=status_colors[schedule_obj["status"]]
-        )
-        lives = schedule_obj["lives"]
-        lives_text = Text(str(lives) if lives > -1 else "\u221e")
-        table.add_row(
-            schedule_obj["id"],
-            schedule_obj["pipeline_config"]["name"],
-            status,
-            lives_text,
-            str(schedule_obj["has_spawned"]),
-            str(schedule_obj["next_time"]),
-        )
+        if not quiet:
+            status = Text(
+                schedule_obj["status"], style=status_colors[schedule_obj["status"]]
+            )
+            lives = schedule_obj["lives"]
+            lives_text = Text(str(lives) if lives > -1 else "\u221e")
+            table.add_row(
+                schedule_obj["id"],
+                schedule_obj["pipeline_config"]["name"],
+                status,
+                lives_text,
+                str(schedule_obj["has_spawned"]),
+                str(schedule_obj["next_time"]),
+            )
+            continue
+        table.add_row(schedule_obj["id"])
     console.print(table)
 
 
@@ -137,11 +146,26 @@ def deploy(filename: click.Path):
 
 @schedules.command("ps", help="Get schedule details.")
 @click.argument("id", type=str, required=True)
-def ps(id: str):
+@click.option(
+    "--detail",
+    "-d",
+    is_flag=True,
+    show_default=True,
+    help="Returns the Schedule Payload.",
+)
+def ps(id: str, detail: Optional[bool] = False):
     """Gets schedules details."""
     http = HTTPContext()
     query: Dict[str, Any] = {"id": id}
     console_content = None
+    key_nicknames = {
+        "id": "ID",
+        "crontab": "Crontab",
+        "lives": "To Spawn",
+        "has_spawned": "Has Spawned",
+        "status": "Status",
+        "next_time": "Next Execution",
+    }
     try:
         payload = http.schedules.get_schedule(query)
     except IndexError:
@@ -153,8 +177,19 @@ def ps(id: str):
             max_width=120,
             justify="left",
         )
-        text = JSON(json.dumps(payload), indent=2)
+        text = Text("")
+        for k, v in payload.items():
+            if k == "pipeline_config":
+                continue
+            key_value_text = Text(f"{key_nicknames.get(k, k)}: ", style="bright_green")
+            key_value_text.append(
+                f"{v}\n", style="white" if k != "status" else status_colors[v]
+            )
+            text.append_text(key_value_text)
         table.add_row(text)
+        if detail:
+            this_payload = JSON.from_data(payload["pipeline_config"], indent=2)
+            table.add_row(this_payload)
         console_content = table
     finally:
         console.print(console_content)

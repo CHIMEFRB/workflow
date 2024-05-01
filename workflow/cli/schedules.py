@@ -188,6 +188,9 @@ def ps(id: str, detail: Optional[bool] = False):
             text.append_text(key_value_text)
         table.add_row(text)
         if detail:
+            table.add_section()
+            table.add_row(Text("Payload Details", style="magenta"))
+            table.add_section()
             this_payload = JSON.from_data(payload["pipeline_config"], indent=2)
             table.add_row(this_payload)
         console_content = table

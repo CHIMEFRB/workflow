@@ -148,13 +148,15 @@ def ps(pipeline: str, id: str):
             if k in time_fields and v:
                 v = dt.datetime.fromtimestamp(v)
             if k == "pipeline":
-                key_value_text = Text(f"{k}: \n", style="bright_green")
+                key_value_text = Text(f"{k}: \n", style="bright_blue")
                 for step in v:
                     key_value_text.append(f"  {step['name']}:")
                     key_value_text.append(f"{status_symbols[step['status']]}\n")
             else:
-                key_value_text = Text(f"{k}: ", style="bright_green")
-                key_value_text.append(f"{v}\n", style="white")
+                key_value_text = Text(f"{k}: ", style="bright_blue")
+                key_value_text.append(
+                    f"{v}\n", style="white" if k != "status" else status_colors[v]
+                )
             text.append_text(key_value_text)
 
         table.add_row(text)

@@ -104,7 +104,6 @@ class Configs(Client):
             if database:
                 params.update({"database": database})
             url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
-            print(url)
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()

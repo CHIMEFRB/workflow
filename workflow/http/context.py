@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.http.buckets import Buckets
+from workflow.http.configs import Configs
 from workflow.http.pipelines import Pipelines
 from workflow.http.results import Results
 from workflow.http.schedules import Schedules
@@ -77,6 +78,13 @@ class HTTPContext(BaseSettings):
         exclude=True,
     )
 
+    configs: Configs = Field(
+        default=None,
+        validate_default=False,
+        description="Configs API Client.",
+        exclude=True,
+    )
+
     pipelines: Pipelines = Field(
         default=None,
         validate_default=False,
@@ -103,6 +111,7 @@ class HTTPContext(BaseSettings):
             "results": Results,
             "pipelines": Pipelines,
             "schedules": Schedules,
+            "configs": Configs,
         }
         logger.debug(f"creating http clients for {list(clients.keys())}")
         config: Dict[str, Any] = read.workspace(self.workspace)

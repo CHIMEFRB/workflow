@@ -17,6 +17,7 @@ archive:
 
 http:
   baseurls:
+    configs: http://localhost:8001
     pipelines: http://localhost:8001
     schedules: http://localhost:8001
     buckets: http://localhost:8004

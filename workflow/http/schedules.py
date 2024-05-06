@@ -42,7 +42,7 @@ class Schedules(Client):
             IDs of Schedule objects generated.
         """
         with self.session as session:
-            url = f"{self.baseurl}/v1/schedule"
+            url = f"{self.baseurl}/v2/schedule"
             response: Response = session.post(url, json=data)
             response.raise_for_status()
         return response.json()
@@ -63,7 +63,7 @@ class Schedules(Client):
         """
         with self.session as session:
             params = {"query": dumps(query)}
-            url = f"{self.baseurl}/v1/schedule?{urlencode(params)}"
+            url = f"{self.baseurl}/v2/schedule?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()[0]
@@ -90,7 +90,7 @@ class Schedules(Client):
         with self.session as session:
             query = {"id": id}
             params = {"query": dumps(query)}
-            url = f"{self.baseurl}/v1/schedule?{urlencode(params)}"
+            url = f"{self.baseurl}/v2/schedule?{urlencode(params)}"
             response: Response = session.delete(url=url)
             response.raise_for_status()
         return response
@@ -110,7 +110,7 @@ class Schedules(Client):
             List of schedule payloads.
         """
         with self.session as session:
-            query = dumps({"pipeline_config.name": schedule_name})
+            query = dumps({"config.name": schedule_name})
             projection = dumps(
                 {
                     "id": True,
@@ -119,13 +119,13 @@ class Schedules(Client):
                     "has_spawned": True,
                     "next_time": True,
                     "crontab": True,
-                    "pipeline_config.name": True,
+                    "config.name": True,
                 }
             )
             url = (
-                f"{self.baseurl}/v1/schedule?projection={projection}"
+                f"{self.baseurl}/v2/schedule?projection={projection}"
                 if schedule_name is None
-                else f"{self.baseurl}/v1/schedule?query={query}&projection={projection}"
+                else f"{self.baseurl}/v2/schedule?query={query}&projection={projection}"
             )
             response: Response = session.get(url=url)
             response.raise_for_status()
@@ -148,9 +148,9 @@ class Schedules(Client):
         with self.session as session:
             query = dumps({"name": schedule_name})
             url = (
-                f"{self.baseurl}/v1/schedule/count"
+                f"{self.baseurl}/v2/schedule/count"
                 if not schedule_name
-                else f"{self.baseurl}/v1/schedule/count?query={query}"
+                else f"{self.baseurl}/v2/schedule/count?query={query}"
             )
             response: Response = session.get(url=url)
             response.raise_for_status()

@@ -1,5 +1,6 @@
 """Manage workflow pipelines schedules."""
 
+from datetime import datetime
 from typing import Any, Dict, Optional, Tuple
 
 import click
@@ -88,7 +89,7 @@ def ls(name: Optional[str] = None, quiet: Optional[bool] = False):
             lives_text = Text(str(lives) if lives > -1 else "\u221e")
             table.add_row(
                 schedule_obj["id"],
-                schedule_obj["pipeline_config"]["name"],
+                schedule_obj["config"]["name"],
                 status,
                 lives_text,
                 str(schedule_obj["has_spawned"]),
@@ -165,6 +166,7 @@ def ps(id: str, detail: Optional[bool] = False):
         "has_spawned": "Has Spawned",
         "status": "Status",
         "next_time": "Next Execution",
+        "history": "History",
     }
     try:
         payload = http.schedules.get_schedule(query)
@@ -173,26 +175,41 @@ def ps(id: str, detail: Optional[bool] = False):
         console_content = error_text
     else:
         table.add_column(
-            f"Scheduled Pipeline: {payload['pipeline_config']['name']}",
+            f"Scheduled Pipeline: {payload['config']['name']}",
             max_width=120,
+            min_width=50,
             justify="left",
         )
         text = Text("")
         for k, v in payload.items():
-            if k == "pipeline_config":
+            if k == "config":
+                continue
+            if k == "history":
+                key_value_text = Text(
+                    f"{key_nicknames.get(k, k)}: \n", style="bright_green"
+                )
+                for history in v:
+                    history_dt = datetime.fromisoformat(history[0])
+                    legible_dt = history_dt.strftime("%B %d, %Y at %I:%M:%S %p")
+                    id = history[1]
+                    key_value_text.append(f"-- {legible_dt}:", style="bright_blue")
+                    key_value_text.append(f"\n\t{id}\n\n", style="white")
+                text.append_text(key_value_text)
                 continue
             key_value_text = Text(f"{key_nicknames.get(k, k)}: ", style="bright_green")
             key_value_text.append(
                 f"{v}\n", style="white" if k != "status" else status_colors[v]
             )
             text.append_text(key_value_text)
-        table.add_row(text)
         if detail:
-            table.add_section()
-            table.add_row(Text("Payload Details", style="magenta"))
-            table.add_section()
-            this_payload = JSON.from_data(payload["pipeline_config"], indent=2)
-            table.add_row(this_payload)
+            # table.add_section()
+            table.add_column("Details", style="magenta")
+            # table.add_row(Text("Payload Details", style="magenta"))
+            # table.add_section()
+            this_payload = JSON.from_data(payload["config"], indent=2)
+            table.add_row(text, this_payload)
+        else:
+            table.add_row(text)
         console_content = table
     finally:
         console.print(console_content)

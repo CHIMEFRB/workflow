@@ -9,6 +9,7 @@ from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.http.buckets import Buckets
 from workflow.http.pipelines import Pipelines
 from workflow.http.results import Results
+from workflow.http.schedules import Schedules
 from workflow.utils import read
 from workflow.utils.logger import get_logger
 
@@ -83,6 +84,13 @@ class HTTPContext(BaseSettings):
         exclude=True,
     )
 
+    schedules: Schedules = Field(
+        default=None,
+        validate_default=False,
+        description="Schedules API Client.",
+        exclude=True,
+    )
+
     @model_validator(mode="after")
     def create_clients(self) -> "HTTPContext":
         """Create the HTTP Clients for the Workflow Servers.
@@ -94,6 +102,7 @@ class HTTPContext(BaseSettings):
             "buckets": Buckets,
             "results": Results,
             "pipelines": Pipelines,
+            "schedules": Schedules,
         }
         logger.debug(f"creating http clients for {list(clients.keys())}")
         config: Dict[str, Any] = read.workspace(self.workspace)

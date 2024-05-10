@@ -14,11 +14,11 @@ status_colors = {
 
 status_symbols = {
     "created": "\U000026AA",  # white
-    "queued": "\u23F3",  # hourglass
-    "active": "\U0001F7E2",  # green
-    "running": "\u2699",  # gear
+    "queued": "\U0001F4C5",  # 📅
+    "active": "\U0001F7E2",  # green circle
+    "running": "\U0001F3C3",  # 🏃
     "success": "\U00002705",  # Green check
     "paused": "\U0001F7E1",  # yellow
     "failure": "\U0000274C",  # cross mark
-    "cancelled": "\U0001F534",  # red
+    "cancelled": "\U0001F6AB",  # 🚫
 }

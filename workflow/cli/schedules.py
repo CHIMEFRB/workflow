@@ -148,8 +148,7 @@ def deploy(filename: click.Path):
 @schedules.command("ps", help="Get schedule details.")
 @click.argument("id", type=str, required=True)
 @click.option(
-    "--detail",
-    "-d",
+    "--details",
     is_flag=True,
     show_default=True,
     help="Returns the Schedule Payload.",

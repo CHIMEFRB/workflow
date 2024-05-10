@@ -49,13 +49,8 @@ class Configs(Client):
         return response.json()
 
     @try_request
-    def count(self, database: str = "configs") -> Dict[str, Any]:
+    def count(self) -> Dict[str, Any]:
         """Count all documents in a collection.
-
-        Parameters
-        ----------
-        database : str
-            Database to be used. "configs" or "pipelines".
 
         Returns
         -------
@@ -64,7 +59,7 @@ class Configs(Client):
         """
         with self.session as session:
             response: Response = session.get(
-                url=f"{self.baseurl}/v2/configs/count?database={database}"
+                url=f"{self.baseurl}/v2/configs/count?database=configs"
             )
             response.raise_for_status()
         return response.json()
@@ -72,7 +67,6 @@ class Configs(Client):
     @try_request
     def get_configs(
         self,
-        database: str,
         config_name: str,
         query: Optional[str] = "{}",
         projection: Optional[str] = "{}",
@@ -81,8 +75,6 @@ class Configs(Client):
 
         Parameters
         ----------
-        database : str
-            Database to query from.
         config_name : str
             Config name, by default None
         query : str, optional
@@ -101,8 +93,6 @@ class Configs(Client):
             params = {"projection": projection, "query": query}
             if config_name:
                 params.update({"name": config_name})
-            if database:
-                params.update({"database": database})
             url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()
@@ -114,15 +104,15 @@ class Configs(Client):
         stop=(stop_after_delay(5) | stop_after_attempt(1)),
     )
     @try_request
-    def remove(self, pipeline: str, id: str) -> Response:
+    def remove(self, config: str, id: str) -> Response:
         """Removes a cancelled pipeline configuration.
 
         Parameters
         ----------
-        pipeline : str
-            PipelineConfig name.
+        config : str
+            Config name.
         id : str
-            PipelineConfig ID.
+            Config ID.
 
         Returns
         -------
@@ -131,8 +121,8 @@ class Configs(Client):
         """
         with self.session as session:
             query = {"id": id}
-            params = {"query": dumps(query), "name": pipeline}
-            url = f"{self.baseurl}/v1/pipelines?{urlencode(params)}"
+            params = {"query": dumps(query), "name": config}
+            url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
             response: Response = session.delete(url=url)
             response.raise_for_status()
         return response
@@ -157,7 +147,7 @@ class Configs(Client):
         with self.session as session:
             query = {"id": id}
             params = {"query": dumps(query), "name": pipeline}
-            url = f"{self.baseurl}/v1/pipelines/cancel?{urlencode(params)}"
+            url = f"{self.baseurl}/v2/configs/cancel?{urlencode(params)}"
             response: Response = session.put(url)
             response.raise_for_status()
         if response.status_code == 304:

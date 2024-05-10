@@ -1,20 +1,18 @@
 """Manage workflow pipelines."""
 
-import datetime as dt
 import json
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import click
 import requests
-import yaml
 from rich import pretty
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
-from workflow.utils.variables import status_colors, status_symbols
+from workflow.utils.renderers import render_pipeline
+from workflow.utils.variables import status_colors
 
 pretty.install()
 console = Console()
@@ -45,14 +43,7 @@ def version():
 
 
 @pipelines.command("ls", help="List pipelines.")
-@click.option(
-    "name",
-    "--name",
-    "-n",
-    type=str,
-    required=False,
-    help="List only Pipelines with provided name.",
-)
+@click.argument("name", type=str, required=False)
 @click.option(
     "quiet",
     "--quiet",
@@ -63,21 +54,24 @@ def version():
 )
 def ls(name: Optional[str] = None, quiet: Optional[bool] = False):
     """List all pipelines."""
+    pipelines_columns = ["status", "current_stage", "steps"]
     http = HTTPContext()
-    objects = http.pipelines.list_pipeline_configs(name)
-    table.add_column("ID", max_width=50, justify="left", style="blue")
-    if not quiet:
-        table.add_column("Name", max_width=50, justify="left", style="bright_green")
-        table.add_column("Status", max_width=50, justify="left")
-        table.add_column("Stage", max_width=50, justify="left")
-    for config in objects:
-        status = Text(config["status"], style=status_colors[config["status"]])
+    objects = http.pipelines.list_pipelines(name)
+    table.add_column("ID", max_width=100, justify="left", style="blue")
+    for key in pipelines_columns:
+        table.add_column(
+            key.capitalize().replace("_", " "),
+            max_width=50,
+            justify="left",
+        )
+    for obj in objects:
         if not quiet:
+            status = Text(obj["status"], style=status_colors[obj["status"]])
             table.add_row(
-                config["id"], config["name"], status, str(config["current_stage"])
+                obj["id"], status, str(obj["current_stage"]), str(len(obj["steps"]))
             )
             continue
-        table.add_row(config["id"])
+        table.add_row(obj["id"])
     console.print(table)
 
 
@@ -97,116 +91,37 @@ def count():
     console.print(table)
 
 
-@pipelines.command("deploy", help="Deploy a workflow pipeline.")
-@click.argument(
-    "filename",
-    type=click.Path(exists=True, dir_okay=False, readable=True),
-    required=True,
-)
-def deploy(filename: click.Path):
-    """Deploy a workflow pipeline."""
-    http = HTTPContext()
-    filepath: str = str(filename)
-    data: Dict[str, Any] = {}
-    with open(filepath) as reader:
-        data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
-    try:
-        deploy_result = http.pipelines.deploy(data)
-    except requests.HTTPError as deploy_error:
-        console.print(deploy_error.response.json()["message"])
-        return
-    table.add_column("IDs", max_width=50, justify="left", style="bright_green")
-    if isinstance(deploy_result, list):
-        for _id in deploy_result:
-            table.add_row(_id)
-    if isinstance(deploy_result, dict):
-        for v in deploy_result.values():
-            table.add_row(v)
-    console.print(table)
-
-
 @pipelines.command("ps", help="Get pipeline details.")
 @click.argument("pipeline", type=str, required=True)
 @click.argument("id", type=str, required=True)
 def ps(pipeline: str, id: str):
     """List a pipeline configuration in detail."""
     http = HTTPContext()
-    query: Dict[str, Any] = {"id": id}
+    query: str = json.dumps({"id": id})
+    projection: str = json.dumps({})
     console_content = None
-    projection = {"name": False}
-    time_fields = ["creation", "start", "stop"]
+    column_max_width = 300
+    column_min_width = 40
     try:
-        payload = http.pipelines.get_pipeline_config(pipeline, query, projection)
+        payload = http.pipelines.get_pipelines(
+            name=pipeline, query=query, projection=projection
+        )[0]
     except IndexError:
-        error_text = Text("No PipelineConfig were found", style="red")
+        error_text = Text("No Pipelines were found", style="red")
         console_content = error_text
     else:
-        table.add_column(f"Pipeline: {pipeline}", max_width=120, justify="left")
-        text = Text("")
-        for k, v in payload.items():
-            key_value_text = Text()
-            if k in time_fields and v:
-                v = dt.datetime.fromtimestamp(v)
-            if k == "pipeline":
-                key_value_text = Text(f"{k}: \n", style="bright_blue")
-                for step in v:
-                    key_value_text.append(f"  {step['name']}:")
-                    key_value_text.append(f"{status_symbols[step['status']]}\n")
-            else:
-                key_value_text = Text(f"{k}: ", style="bright_blue")
-                key_value_text.append(
-                    f"{v}\n", style="white" if k != "status" else status_colors[v]
-                )
-            text.append_text(key_value_text)
-
+        text = Text()
+        table.add_column(
+            f"Pipeline: {pipeline}",
+            min_width=column_min_width,
+            max_width=column_max_width,
+            justify="left",
+        )
+        text.append(render_pipeline(payload))
         table.add_row(text)
         console_content = table
     finally:
         console.print(console_content)
-
-
-@pipelines.command("stop", help="Kill a running pipeline.")
-@click.argument("pipeline", type=str, required=True)
-@click.argument("id", type=str, required=True)
-def stop(pipeline: str, id: Tuple[str]):
-    """Kill a running pipeline."""
-    http = HTTPContext()
-    stop_result = http.pipelines.stop(pipeline, id)
-    if not any(stop_result):
-        text = Text("No pipeline configurations were stopped.", style="red")
-        console.print(text)
-        return
-    table.add_column("Stopped IDs", max_width=50, justify="left")
-    for config in stop_result:
-        table.add_row(config["id"])
-    console.print(table)
-
-
-@pipelines.command("rm", help="Remove a pipeline.")
-@click.argument("pipeline", type=str, required=True)
-@click.argument("id", type=str, required=True)
-@click.option(
-    "--schedule", "-sch", is_flag=True, help="For interacting with the Schedule API."
-)
-def rm(pipeline: str, id: Tuple[str], schedule: bool):
-    """Remove a pipeline."""
-    http = HTTPContext()
-    content = None
-    try:
-        delete_result = http.pipelines.remove(pipeline, id, schedule)
-        if delete_result.status_code == 204:
-            text = Text("No pipeline configurations were deleted.", style="red")
-            content = text
-    except Exception as e:
-        text = Text(
-            f"No pipeline configurations were deleted.\nError: {e}", style="red"
-        )
-        content = text
-    else:
-        table.add_column("Deleted IDs", max_width=50, justify="left", style="red")
-        table.add_row(id)
-        content = table
-    console.print(content)
 
 
 def status(

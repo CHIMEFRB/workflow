@@ -63,11 +63,10 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
     """
     text = Text()
     hidden_keys = ["yaml", "services", "name"]
-    query = dumps({"id": {"$in": payload["children"]}})
+    query = dumps({"id": {"$in": payload["pipelines"]}})
     projection = dumps({"id": 1, "status": 1})
-    children_statuses = http.configs.get_configs(
-        database="pipelines",
-        config_name=payload["name"],
+    pipelines_statuses = http.pipelines.get_pipelines(
+        name=payload["name"],
         query=query,
         projection=projection,
     )
@@ -76,9 +75,9 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
         if k in hidden_keys:
             continue
         key_value_text = Text()
-        if k == "children":
+        if k == "pipelines":
             key_value_text.append(f"{k}: \n", style="bright_blue")
-            for child in children_statuses:
+            for child in pipelines_statuses:
                 key_value_text.append(
                     f"\t{child['id']}: ", style=status_colors[child["status"]]
                 )

@@ -20,7 +20,7 @@ logger = get_logger("workflow.cli")
 
 
 @click.command("run", short_help="Perform work.")
-@click.argument("bucket", type=str, required=True)
+@click.argument("buckets", type=str, nargs=-1, required=True)
 @click.option(
     "-f",
     "--function",
@@ -96,7 +96,7 @@ logger = get_logger("workflow.cli")
     help="logging level.",
 )
 def run(
-    bucket: str,
+    buckets: List[str],
     function: str,
     command: str,
     site: str,
@@ -122,7 +122,7 @@ def run(
     tags: List[str] = list(tag)
     # Setup and connect to the workflow backend
     logger.info("[bold]Workflow Run CLI[/bold]", extra=dict(markup=True, color="green"))
-    logger.info(f"Bucket   : {bucket}")
+    logger.info(f"Buckets  : {buckets}")
     logger.info(f"Function : {function}")
     logger.info(f"Command  : {command}")
     logger.info(f"Mode     : {'Static' if (function or command) else 'Dynamic'}")
@@ -187,7 +187,7 @@ def run(
             speed=1 / slowdown,
         ):
             lifecycle(
-                bucket, function, lives, sleep, site, tags, parent, buckets_url, config
+                buckets, function, lives, sleep, site, tags, parent, buckets_url, config
             )
     except Exception as error:
         logger.exception(error)
@@ -199,7 +199,7 @@ def run(
 
 
 def lifecycle(
-    bucket: str,
+    buckets: List[str],
     function: Optional[str],
     lifetime: int,
     sleep_time: int,
@@ -225,7 +225,7 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(bucket, function, base_url, site, tags, parent, config)
+        attempt(buckets, function, base_url, site, tags, parent, config)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
@@ -233,7 +233,7 @@ def lifecycle(
 
 
 def attempt(
-    bucket: str,
+    buckets: List[str],
     function: Optional[str],
     base_url: str,
     site: str,
@@ -270,7 +270,7 @@ def attempt(
 
         # Get work from the workflow backend
         try:
-            work = Work.withdraw(pipeline=bucket, site=site, tags=tags, parent=parent)
+            work = Work.withdraw(pipeline=buckets, site=site, tags=tags, parent=parent)
         except Exception as error:
             logger.exception(error)
 

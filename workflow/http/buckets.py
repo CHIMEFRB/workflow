@@ -70,7 +70,7 @@ class Buckets(Client):
     @try_request
     def withdraw(
         self,
-        pipeline: str,
+        pipeline: str | List[str],
         event: Optional[List[int]] = None,
         site: Optional[str] = None,
         priority: Optional[int] = None,
@@ -95,7 +95,9 @@ class Buckets(Client):
         Returns:
             Dict[str, Any]: The work withdrawn.
         """
-        query: Dict[str, Any] = {"pipeline": pipeline}
+        if isinstance(pipeline, str):
+            pipeline = [pipeline]
+        query: Dict[str, Any] = {"pipeline": {"$in": pipeline}}
         query.update({"site": site} if site else {})
         query.update({"priority": priority} if priority else {})
         query.update({"user": user} if user else {})

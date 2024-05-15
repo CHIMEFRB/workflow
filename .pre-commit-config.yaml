@@ -23,11 +23,11 @@ repos:
           - --py36-plus
         id: pyupgrade
     repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
+    rev: v3.15.2
   - hooks:
       - id: black
     repo: https://github.com/psf/black
-    rev: 24.1.1
+    rev: 24.4.2
   - hooks:
       - additional_dependencies:
           - types-attrs
@@ -40,7 +40,7 @@ repos:
           - --no-implicit-optional
         id: mypy
     repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.8.0
+    rev: v1.10.0
   - hooks:
       - args:
           - --convention=google
@@ -70,14 +70,14 @@ repos:
         args:
           - --autofix
     repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v4.6.0
   - hooks:
       - args:
           - -iii
           - -lll
         id: bandit
     repo: https://github.com/PyCQA/bandit
-    rev: 1.7.7
+    rev: 1.7.8
   - hooks:
       - additional_dependencies:
           - radon
@@ -96,4 +96,4 @@ repos:
         stages:
           - commit-msg
     repo: https://github.com/commitizen-tools/commitizen
-    rev: v3.13.0
+    rev: v3.25.1

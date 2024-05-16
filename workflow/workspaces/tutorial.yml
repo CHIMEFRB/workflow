@@ -1,0 +1,16 @@
+workspace: tutorial
+
+# List the valid sites for this workspace
+sites:
+  - local
+
+http:
+  baseurls:
+    pipelines: http://localhost:8001
+    schedules: http://localhost:8001
+    buckets: http://localhost:8004
+    results: http://localhost:8005
+
+config:
+  archive:
+    results: true

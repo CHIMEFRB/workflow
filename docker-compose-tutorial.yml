@@ -1,0 +1,134 @@
+services:
+  pipelines_api:
+    image: chimefrb/pipelines:latest
+    container_name: pipelines_api
+    command: python -m pipelines.server
+    ports:
+      - "8001:8001"
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8001
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_START_MANAGER_URL=http://pipelines_managers:8002/v2/start
+      - SANIC_PAUSE_MANAGER_URL=http://pipelines_managers:8002/v2/pause
+      - SANIC_STOP_MANAGER_URL=http://pipelines_managers:8002/v2/stop
+      - SANIC_HEALTH_MANAGERS_URL=http://pipelines_managers:8002/__health__
+      - SANIC_HEALTH_MANAGERS_CHECK_TIMES=10
+      - SANIC_HEALTH_MANAGERS_CHECK_INTERVAL_SECONDS=30
+      - SANIC_LISTENERS_THRESHOLD_SECONDS=120
+      - TZ=Etc/UTC
+    networks:
+      - workflow-network
+
+    restart: always
+
+  pipelines_managers:
+    image: chimefrb/pipelines:latest
+    container_name: pipelines_managers
+    command: python -m managers.server
+    ports:
+      - "8002:8002"
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8002
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_BUCKETS_URL=http://buckets:8004
+      - SANIC_RESULTS_URL=http://results:8005
+      - SANIC_UPDATE_INTERVAL_SECONDS=40
+      - SANIC_SLEEP_INTERVAL_SECONDS=30
+      - SANIC_PURGE_TIME_SECONDS=3600
+      - DOCKER_HOST=unix:///var/run/docker.sock # Replace with production address or dind
+      - TZ=Etc/UTC
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - workflow-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8002/__health__"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  dind:
+    image: docker:dind
+    command: [ "--host=tcp://0.0.0.0:2376" ]
+    deploy:
+      replicas: 1
+    privileged: true
+    expose:
+      - 2376
+    ports:
+      - "2375:2375"
+      - "2376:2376"
+    environment:
+      - DOCKER_TLS_CERTDIR=
+    networks:
+      - workflow-network
+
+  buckets:
+    image: chimefrb/buckets:latest
+    container_name: buckets
+    command: [ "/bin/bash", "-c", "python -m buckets.server" ]
+    expose:
+      - 8004
+    ports:
+      - "8004:8004"
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8004
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+    networks:
+      - workflow-network
+
+  results:
+    image: chimefrb/results:latest
+    container_name: results
+    command: [ "/bin/bash", "-c", "python -m results.server" ]
+    expose:
+      - 8005
+    ports:
+      - "8005:8005"
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8005
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+    networks:
+      - workflow-network
+
+  mongo:
+    image: mongo:latest
+    command: mongod --bind_ip_all
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - workflow-network
+
+networks:
+  workflow-network:
+    driver: bridge

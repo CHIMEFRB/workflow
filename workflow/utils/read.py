@@ -6,8 +6,10 @@ from typing import Any, Dict
 
 from requests import get
 from requests.exceptions import RequestException
+from rich.text import Text
 from yaml import safe_load
 
+from workflow.cli.workspace import localspaces, localstems, modulespaces, modulestems
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.read")
@@ -81,6 +83,33 @@ def filename(source: str) -> Any:
     except Exception as error:
         logger.exception(error)
         raise error
+
+
+def get_active_workspace() -> Text:
+    """Returns a Text with info about the active workspace.
+
+    Returns
+    -------
+    Text
+        Text instance with info.
+    """
+    _workspace = "active"
+    text = Text()
+    if _workspace in localstems:
+        for possibility in localspaces.glob(f"{_workspace}.y*ml"):
+            config = workspace(possibility)
+            text.append("Currently using ", style="green")
+            text.append(f"{config['workspace']} ", style="blue")
+            text.append("workspace.", style="green")
+    elif _workspace in modulestems:
+        for possibility in modulespaces.glob(f"{_workspace}.y*ml"):
+            config = workspace(possibility)
+            text.append("Currently using ", style="green")
+            text.append(f"{config['workspace']} ", style="blue")
+            text.append("workspace.", style="green")
+    else:
+        text.append("There is not active workspace", style="red")
+    return text
 
 
 def is_valid_url(url: str) -> bool:

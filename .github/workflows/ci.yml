@@ -56,7 +56,7 @@ jobs:
     -
       name: Run services
       run: |
-        docker-compose -f .\docker-compose-tutorial.yml up -d --build
+        docker-compose -f docker-compose-tutorial.yml up -d --build
     -
       name: Installing workflow dependencies
       run: |
@@ -79,4 +79,4 @@ jobs:
       name: Kill services
       if: always()
       run: |
-        docker-compose -f .\docker-compose-tutorial.yml down -v
+        docker-compose -f docker-compose-tutorial.yml down -v

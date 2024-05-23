@@ -129,15 +129,15 @@ class Configs(Client):
 
     @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
     @try_request
-    def stop(self, pipeline: str, id: str) -> List[Dict[str, Any]]:
+    def stop(self, config_name: str, id: str) -> List[Dict[str, Any]]:
         """Stops the manager for a PipelineConfig.
 
         Parameters
         ----------
-        pipeline : str
-            Pipeline name.
+        config_name : str
+            Config name.
         id : str
-            PipelineConfig ID.
+            Config ID.
 
         Returns
         -------
@@ -146,7 +146,7 @@ class Configs(Client):
         """
         with self.session as session:
             query = {"id": id}
-            params = {"query": dumps(query), "name": pipeline}
+            params = {"query": dumps(query), "name": config_name}
             url = f"{self.baseurl}/v2/configs/cancel?{urlencode(params)}"
             response: Response = session.put(url)
             response.raise_for_status()

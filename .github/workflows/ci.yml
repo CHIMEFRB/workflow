@@ -54,9 +54,17 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'poetry'
     -
+      name: Run services
+      run: |
+        docker-compose -f .\docker-compose-tutorial.yml up -d --build
+    -
       name: Installing workflow dependencies
       run: |
         poetry install
+    -
+      name: Set workspace for testing
+      run: |
+        poetry run workflow workspace set development
     -
       name: Run workflow tests
       run: |
@@ -67,3 +75,8 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         path-to-lcov: "coverage.lcov"
+    -
+      name: Kill services
+      if: always()
+      run: |
+        docker-compose -f .\docker-compose-tutorial.yml down -v

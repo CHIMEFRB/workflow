@@ -54,6 +54,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
         cache: 'poetry'
     -
+      name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    -
       name: Run services
       run: |
         docker-compose -f docker-compose-tutorial.yml up -d --build

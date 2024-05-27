@@ -1,8 +1,10 @@
 """Test the work object."""
 
 import pytest
+from click.testing import CliRunner
 from pydantic import ValidationError
 
+from workflow.cli.workspace import set, unset
 from workflow.definitions.work import Work
 
 
@@ -22,6 +24,15 @@ def test_bad_pipeline():
     """Test that the work object can't be instantiated with empty pipeline."""
     with pytest.raises(ValidationError):
         Work(pipeline="", site="local", user="test")
+
+
+def test_worskpace_unset():
+    """Test that the work object can't be instantiated without a setted workspace."""
+    runner = CliRunner()
+    runner.invoke(unset)
+    with pytest.raises(ValidationError):
+        Work(pipeline="", site="local", user="test")
+    runner.invoke(set, ["development"])
 
 
 def test_pipeline_reformat():

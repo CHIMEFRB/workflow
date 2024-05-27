@@ -1,6 +1,7 @@
 """Workflow command line interface."""
 
 import click
+from rich.console import Console
 
 # from workflow.cli.buckets import buckets
 from workflow.cli.pipelines import pipelines
@@ -8,11 +9,17 @@ from workflow.cli.results import results
 from workflow.cli.run import run
 from workflow.cli.schedules import schedules
 from workflow.cli.workspace import workspace
+from workflow.utils.read import get_active_workspace
+
+console = Console()
 
 
 @click.group()
 def cli():
     """Workflow Command Line Interface."""
+    # ? Get workspace
+    message = get_active_workspace()
+    console.print(message)
     pass
 
 

@@ -86,13 +86,7 @@ def set(workspace: str):
 
     name: str = config["workspace"]
     localspaces.mkdir(parents=True, exist_ok=True)
-    # Copy the workspace config to ~/.workflow/workspaces/<name>.yml
-    configpath = localspaces / f"{name}.yml"
-    activepath = localspaces / "active.yml"
-    # Write config to configpath, even if it already exists.
-    with open(configpath, "w") as filename:
-        dump(config, filename)
-        console.print(f"Copied {name} to {configpath}.", style="bold green")
+    activepath = localspaces / "workspace.yml"
     # Write config to activepath, even if it already exists.
     with open(activepath, "w") as filename:
         dump(config, filename)
@@ -100,7 +94,7 @@ def set(workspace: str):
 
 
 @workspace.command("read", help="Read workspace config.")
-@click.argument("workspace", type=str, required=True, nargs=1, default="active")
+@click.argument("workspace", type=str, required=True, nargs=1, default="workspace")
 def read(workspace: str):
     """Read the active workspace.
 
@@ -120,6 +114,8 @@ def read(workspace: str):
             console.print(config, style="green")
             return
     else:
+        print(modulestems)
+        print(localstems)
         console.print(f"Workspace {workspace} not found.", style="bold red")
         return
 
@@ -130,14 +126,14 @@ def unset():
     # Set the default console style.
     console.print("Removing the active workspace.", style="italic red")
     # If the workspace already exists, warn the user.
-    (localspaces / "active.yml").unlink(missing_ok=True)
+    (localspaces / "workspace.yml").unlink(missing_ok=True)
     console.print("Workspace Removed.", style="bold red")
 
 
 @workspace.command("purge", help="Purge all local workspaces.")
 def purge():
     """Purge all local workspaces."""
-    # Remove all files from ~/.workflow/workspaces/
+    # Remove all files from ~/.config/workflow/
     console.print("Purging all local workspaces", style="italic red")
     for workspace in localspaces.glob("*.y*ml"):
         console.print(f"Removing {workspace}", style="italic red")

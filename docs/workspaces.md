@@ -6,7 +6,7 @@ A workspace is,
 
     - Project-Specific: Each project can have their own workspace, while sharing the same installation.
     - YAML-Based: Workspaces are defined in YAML files, which can be version controlled.
-    - Stored in the client/user's home directory under the path `~/.workflow/workspaces/`
+    - Stored in the client/user's home directory under the path `~/.config/workflow`
 
 ## How do I activate a workspace?
 
@@ -32,13 +32,13 @@ To remove an active workspace,
     workflow workspace rm
     ```
 
-This will only remove the active workspace, i.e. `~/.workflow/workspaces/active.yml`.
+This will only remove the active workspace, i.e. `~/.config/workflow/workspace.yml`.
 
 !!! Important
 
     Running workflow without a workspace set will result in an runtime error.
 
-In order to purge all workspaces, from `~/.workflow/workspaces/` run:
+In order to purge all workspaces, from `~/.config/workflow/` run:
 
     ```bash
     workflow workspace purge

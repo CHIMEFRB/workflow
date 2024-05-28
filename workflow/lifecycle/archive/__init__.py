@@ -47,8 +47,6 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
         else:
             raise NameError("Creation date not found in work object.")
         basepath: Path = Path(f"{mounts.get(work.site)}")
-        if not basepath.exists():
-            raise FileNotFoundError(f"Mount {basepath} does not exist.")
         path: Path = basepath / f"/workflow/{date}/{work.pipeline}/{work.id}"
 
         if (

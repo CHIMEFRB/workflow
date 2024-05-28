@@ -1,8 +1,16 @@
 """HTTP client for interacting with the Workflow Servers."""
 
+import os
 from typing import Any, Dict, Optional
 
-from pydantic import AliasChoices, Field, FilePath, SecretStr, model_validator
+from pydantic import (
+    AliasChoices,
+    Field,
+    FilePath,
+    SecretStr,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from workflow import DEFAULT_WORKSPACE_PATH
@@ -42,8 +50,8 @@ class HTTPContext(BaseSettings):
     workspace: FilePath = Field(
         default=DEFAULT_WORKSPACE_PATH,
         frozen=True,
-        description="Path to the active workspace configuration.",
-        examples=["/path/to/workspace/config.yaml"],
+        description="Path to the workspace configuration.",
+        examples=["/home/user/.config/workflow/workspace.yaml"],
     )
     timeout: float = Field(
         default=15.0,
@@ -90,6 +98,26 @@ class HTTPContext(BaseSettings):
         description="Schedules API Client.",
         exclude=True,
     )
+
+    @field_validator("workspace", mode="before")
+    @classmethod
+    def check_workspace_is_set(cls, value: str):
+        """Check that workspace field has a valid filepath.
+
+        Parameters
+        ----------
+        value : str
+            FilePath str value.
+
+        Raises
+        ------
+        ValueError
+            If path is not a valid file.
+        """
+        if not os.path.isfile(value):
+            logger.error("No workspace set.")
+            raise ValueError("No workspace set.")
+        return value
 
     @model_validator(mode="after")
     def create_clients(self) -> "HTTPContext":

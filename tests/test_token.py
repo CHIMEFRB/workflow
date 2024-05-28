@@ -4,7 +4,7 @@ from workflow.definitions.work import Work
 from workflow.http.context import HTTPContext
 
 
-def test_work_pass_token_to_client(monkeypatch):
+def test_work_pass_token_to_client(monkeypatch, set_testing_workspace):
     """Test that the Client objects can obtain token from Work object."""
     test_token = "ghp_1234567890abcdefg"
     monkeypatch.setenv("WORKFLOW_HTTP_TOKEN", test_token)

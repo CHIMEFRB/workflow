@@ -76,7 +76,7 @@ class Work(BaseSettings):
         notify (Notify): Notification configuration for the work.
 
         workspace (FilePath): Path to the active workspace configuration.
-            Defaults to `~/.workflow/workspaces/active.yml`. (Excluded from payload)
+            Defaults to `~/.config/workflow/workspace.yml`. (Excluded from payload)
         token (SecretStr): Workflow Access Token. (Excluded from payload)
         http (HTTPContext): HTTP Context for backend connections. (Excluded from payload)
 
@@ -130,7 +130,7 @@ class Work(BaseSettings):
         default=DEFAULT_WORKSPACE_PATH,
         validate_default=True,
         description="Default workspace configuration filepath.",
-        examples=["/home/user/.workflow/active.yml"],
+        examples=["/home/user/.config/workflow/workspace.yml"],
         exclude=True,
     )
     token: SecretStr | None = Field(

@@ -50,7 +50,7 @@ class HTTPContext(BaseSettings):
     workspace: FilePath = Field(
         default=DEFAULT_WORKSPACE_PATH,
         frozen=True,
-        description="Path to the active workspace configuration.",
+        description="Path to the workspace configuration.",
         examples=["/home/user/.config/workflow/workspace.yaml"],
     )
     timeout: float = Field(
@@ -101,7 +101,7 @@ class HTTPContext(BaseSettings):
 
     @field_validator("workspace", mode="before")
     @classmethod
-    def check_workspace_is_setted(cls, value: str):
+    def check_workspace_is_set(cls, value: str):
         """Check that workspace field has a valid filepath.
 
         Parameters
@@ -115,9 +115,8 @@ class HTTPContext(BaseSettings):
             If path is not a valid file.
         """
         if not os.path.isfile(value):
-            raise ValueError(
-                "There is no workspace setted. You need to run: workflow workspace set"
-            )
+            logger.error("No workspace set.")
+            raise ValueError("No workspace set.")
         return value
 
     @model_validator(mode="after")

@@ -114,9 +114,7 @@ def read(workspace: str):
             console.print(config, style="green")
             return
     else:
-        print(modulestems)
-        print(localstems)
-        console.print(f"Workspace {workspace} not found.", style="bold red")
+        console.print("No workspace found.", style="italic bold red")
         return
 
 

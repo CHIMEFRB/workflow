@@ -93,7 +93,7 @@ def get_active_workspace() -> Text:
     Text
         Text instance with info.
     """
-    _workspace = "active"
+    _workspace = "workspace"
     text = Text()
     if _workspace in localstems:
         for possibility in localspaces.glob(f"{_workspace}.y*ml"):

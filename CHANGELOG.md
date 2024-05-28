@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0](https://github.com/CHIMEFRB/workflow/compare/v0.3.0...v0.4.0) (2024-05-28)
+
+
+### Features
+
+* add schedule cli ([#25](https://github.com/CHIMEFRB/workflow/issues/25)) ([56dcd6e](https://github.com/CHIMEFRB/workflow/commit/56dcd6e8f53853234de069bac4c77255c448cceb))
+* **cli/main.py:** adding logging on top level function ([#37](https://github.com/CHIMEFRB/workflow/issues/37)) ([7820c62](https://github.com/CHIMEFRB/workflow/commit/7820c623406f582e7fceef22785cb040d1be04b3))
+* **docker-compose-tutorial.yml:** adding docker compose for tutorial ([#35](https://github.com/CHIMEFRB/workflow/issues/35)) ([7b17e2a](https://github.com/CHIMEFRB/workflow/commit/7b17e2a987e09d8a950d9b4202b29c068321971f))
+
 ## [0.3.0](https://github.com/CHIMEFRB/workflow/compare/v0.2.0...v0.3.0) (2024-03-06)
 
 

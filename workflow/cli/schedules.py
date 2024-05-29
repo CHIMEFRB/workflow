@@ -153,7 +153,7 @@ def deploy(filename: click.Path):
     show_default=True,
     help="Returns the Schedule Payload.",
 )
-def ps(id: str, detail: Optional[bool] = False):
+def ps(id: str, details: Optional[bool] = False):
     """Gets schedules details."""
     http = HTTPContext()
     query: Dict[str, Any] = {"id": id}
@@ -200,11 +200,8 @@ def ps(id: str, detail: Optional[bool] = False):
                 f"{v}\n", style="white" if k != "status" else status_colors[v]
             )
             text.append_text(key_value_text)
-        if detail:
-            # table.add_section()
+        if details:
             table.add_column("Details", style="magenta")
-            # table.add_row(Text("Payload Details", style="magenta"))
-            # table.add_section()
             this_payload = JSON.from_data(payload["config"], indent=2)
             table.add_row(text, this_payload)
         else:

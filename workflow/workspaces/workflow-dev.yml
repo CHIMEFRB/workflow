@@ -1,0 +1,17 @@
+workspace: workflow-dev
+
+# List the valid sites for this workspace
+sites:
+  - local
+
+http:
+  baseurls:
+    configs: http://localhost:37015
+    pipelines: http://localhost:37015
+    schedules: http://localhost:37015
+    buckets: https://frb.chimenet.ca/buckets
+    results: https://frb.chimenet.ca/results
+
+config:
+  archive:
+    results: true

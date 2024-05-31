@@ -43,7 +43,7 @@ class Configs(Client):
             ID of Config object generated.
         """
         with self.session as session:
-            url = f"{self.baseurl}/v2/configs"
+            url = f"{self.baseurl}/configs"
             response: Response = session.post(url, json=data)
             response.raise_for_status()
         return response.json()
@@ -59,7 +59,7 @@ class Configs(Client):
         """
         with self.session as session:
             response: Response = session.get(
-                url=f"{self.baseurl}/v2/configs/count?database=configs"
+                url=f"{self.baseurl}/configs/count?database=configs"
             )
             response.raise_for_status()
         return response.json()
@@ -93,7 +93,7 @@ class Configs(Client):
             params = {"projection": projection, "query": query}
             if config_name:
                 params.update({"name": config_name})
-            url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
+            url = f"{self.baseurl}/configs?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()
@@ -122,7 +122,7 @@ class Configs(Client):
         with self.session as session:
             query = {"id": id}
             params = {"query": dumps(query), "name": config}
-            url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
+            url = f"{self.baseurl}/configs?{urlencode(params)}"
             response: Response = session.delete(url=url)
             response.raise_for_status()
         return response
@@ -147,7 +147,7 @@ class Configs(Client):
         with self.session as session:
             query = {"id": id}
             params = {"query": dumps(query), "name": config_name}
-            url = f"{self.baseurl}/v2/configs/cancel?{urlencode(params)}"
+            url = f"{self.baseurl}/configs/cancel?{urlencode(params)}"
             response: Response = session.put(url)
             response.raise_for_status()
         if response.status_code == 304:

@@ -31,7 +31,7 @@ class Pipelines(Client):
         with self.session as session:
             params = {"database": "pipelines"}
             response: Response = session.get(
-                url=f"{self.baseurl}/v2/configs/count?{urlencode(params)}"
+                url=f"{self.baseurl}/configs/count?{urlencode(params)}"
             )
             response.raise_for_status()
         return response.json()
@@ -54,7 +54,7 @@ class Pipelines(Client):
             params = {"database": "pipelines"}
             if name:
                 params.update({"name": name})
-            url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
+            url = f"{self.baseurl}/configs?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()
@@ -86,7 +86,7 @@ class Pipelines(Client):
                 "projection": projection,
                 "database": "pipelines",
             }
-            url = f"{self.baseurl}/v2/configs?{urlencode(params)}"
+            url = f"{self.baseurl}/configs?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()

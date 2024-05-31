@@ -6,9 +6,9 @@ sites:
 
 http:
   baseurls:
-    configs: http://localhost:37015
-    pipelines: http://localhost:37015
-    schedules: http://localhost:37015
+    configs: http://localhost:37015/v2
+    pipelines: http://localhost:37015/v2
+    schedules: http://localhost:37015/v2
     buckets: https://frb.chimenet.ca/buckets
     results: https://frb.chimenet.ca/results
 

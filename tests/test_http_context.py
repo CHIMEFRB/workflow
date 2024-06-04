@@ -16,7 +16,7 @@ config = {
             {
                 "name": "stage-1-a",
                 "stage": 1,
-                "matrix": {"event": [123456, 654321], "site": ["chime", "canfar"]},
+                "matrix": {"event": [123456, 654321], "site": ["local"]},
                 "work": {
                     "site": "${{ matrix.site }}",
                     "command": ["ls", "${{ matrix.event }}"],

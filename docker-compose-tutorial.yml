@@ -5,6 +5,8 @@ services:
     command: python -m pipelines.server
     ports:
       - "8001:8001"
+    expose:
+      - 8001
     environment:
       - SANIC_HOSTNAME=0.0.0.0
       - SANIC_PORT=8001
@@ -22,8 +24,7 @@ services:
       - SANIC_LISTENERS_THRESHOLD_SECONDS=120
       - TZ=Etc/UTC
     networks:
-      - workflow-network
-
+      - workflow
     restart: always
 
   pipelines_managers:
@@ -50,7 +51,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - workflow-network
+      - workflow
     healthcheck:
       test:
         [
@@ -63,22 +64,6 @@ services:
       timeout: 10s
       retries: 5
     restart: always
-
-  dind:
-    image: docker:dind
-    command: [ "--host=tcp://0.0.0.0:2376" ]
-    deploy:
-      replicas: 1
-    privileged: true
-    expose:
-      - 2376
-    ports:
-      - "2375:2375"
-      - "2376:2376"
-    environment:
-      - DOCKER_TLS_CERTDIR=
-    networks:
-      - workflow-network
 
   buckets:
     image: chimefrb/buckets:latest
@@ -98,7 +83,7 @@ services:
       - SANIC_MONGODB_PORT=27017
       - SANIC_CORS_ORIGINS=*
     networks:
-      - workflow-network
+      - workflow
 
   results:
     image: chimefrb/results:latest
@@ -118,7 +103,7 @@ services:
       - SANIC_MONGODB_PORT=27017
       - SANIC_CORS_ORIGINS=*
     networks:
-      - workflow-network
+      - workflow
 
   mongo:
     image: mongo:latest
@@ -127,8 +112,28 @@ services:
     ports:
       - "27017:27017"
     networks:
-      - workflow-network
+      - workflow
+
+  local:
+    image: docker:dind
+    container_name: local
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        dockerd -H tcp://0.0.0.0:4444 --tls=false \
+        & while(! docker -H tcp://0.0.0.0:4444 info >/dev/null 2>&1); \
+        do sleep 1; \
+        done \
+        && docker -H tcp://0.0.0.0:4444 swarm init && tail -f /dev/null
+    ports:
+      - "4444:4444"
+    expose:
+      - 4444
+    privileged: true
+    networks:
+      - workflow
 
 networks:
-  workflow-network:
+  workflow:
     driver: bridge

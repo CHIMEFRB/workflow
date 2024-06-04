@@ -1,9 +1,9 @@
 """Common Workflow Utilities."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
-from rich import pretty, print
+from rich import pretty
 from rich.console import Console
 from rich.table import Table
 
@@ -14,7 +14,7 @@ console = Console()
 
 
 table = Table(
-    title="\nWorkflow Buckets",
+    title="\nWorkflow",
     show_header=True,
     header_style="magenta",
     title_style="bold magenta",
@@ -23,103 +23,90 @@ table = Table(
 
 @click.group(name="buckets", help="Manage Workflow Buckets.")
 def buckets():
-    """Manage workflow pipelines."""
+    """Manage Workflow Buckets."""
     pass
 
 
-@buckets.command("version", help="Show the version.")
-def version():
-    """Show the version."""
-    http = HTTPContext()
-    console.print(http.buckets.info())
-
-
-@buckets.command("rm", help="Remove a bucket.")
-@click.argument("name", type=str, required=True)
-@click.option("event", "--event", type=int, required=False, help="CHIME/FRB Event ID.")
+@buckets.command("rm", help="Remove work from a bucket.")
+@click.argument("bucket", type=str, required=True)
+@click.option("-s", "--status", type=str, required=False, help="Filter by status.")
 @click.option(
-    "status",
-    "--status",
-    type=str,
-    required=False,
-    help="Remove works with only a particular status.",
+    "-e", "--event", type=int, required=False, multiple=True, help="Filter by event."
 )
-def prune_work(name: str, event: Optional[int] = None, status: Optional[str] = None):
-    """Remove work[s] from the buckets backend.
+@click.option(
+    "-t", "--tag", type=str, required=False, multiple=True, help="Filter by tag."
+)
+@click.option("-p", "--parent", type=str, required=False, help="Filter by parent.")
+@click.option("-f", "--force", is_flag=True, help="Do not prompt for confirmation")
+def remove(
+    bucket: str,
+    status: Optional[str] = None,
+    event: Optional[Tuple[int]] = None,
+    tag: Optional[Tuple[str]] = None,
+    parent: Optional[str] = None,
+    force: bool = False,
+):
+    """Remove work[s] from the buckets.
 
     Args:
-        name (str): Name of the workflow pipeline.
-        event (Optional[int], optional): CHIME/FRB Event ID. Defaults to None.
-        status (Optional[str], optional): Status of work[s] to prune. Defaults to None.
+        bucket (str): Name of the bucket.
+        status (Optional[str], optional): Status of work. Defaults to None.
+        event (Optional[Tuple[int]], optional): Filter by event. Defaults to None.
+        tag (Optional[Tuple[str]], optional): Filter by tag. Defaults to None.
+        parent (Optional[str], optional): Filter by parent. Defaults to None.
+        force (bool, optional): Do not prompt for confirmation. Defaults to False.
     """
     http = HTTPContext()
     events: Optional[List[int]] = None
-    if event is not None:
-        events = [event]
-    http.buckets.delete_many(pipeline=name, status=status, events=events)
+    tags: Optional[List[str]] = None
+    if event:
+        events = list(event)
+    if tag:
+        tags = list(tag)
+    http.buckets.delete_many(
+        pipeline=bucket,
+        status=status,
+        events=events,
+        tags=tags,
+        parent=parent,
+        force=force,
+    )
 
 
-@buckets.command("ls", help="List all active buckets.")
-def ls():
-    """List all active buckets."""
+@buckets.command("ls")
+@click.option("-d", "--details", is_flag=True, help="List details.")
+def ls(details: bool = False):
+    """List Buckets."""
     http = HTTPContext()
-    pipelines = http.buckets.pipelines()
-    table.add_column("Active Buckets", max_width=50, justify="left")
-    for pipeline in pipelines:
-        table.add_row(pipeline)
-    console.print(table)
-
-
-@buckets.command("ps", help="List the detail of buckets[s].")
-@click.option("all", "-a", "--all", is_flag=True, help="List details of all buckets.")
-@click.argument("name", type=str, required=False, default=None)
-def ps(name: Optional[str] = None, all: bool = False):
-    """List the details of the bucket[s].
-
-    Args:
-        name (Optional[str], optional): Name of the bucket. Defaults to None.
-        all (bool, optional): Whether to show all buckets. Defaults to False.
-    """
-    http = HTTPContext()
-    details = http.buckets.status(pipeline=None)
-    table.add_column("name", justify="left")
-    for key in details.keys():
-        table.add_column(key, justify="right")
-    table.add_row("total", *create_row(details))
-    if all:
+    if details:
+        for key in ["name", "total", "queued", "running", "success", "failure"]:
+            table.add_column(key, justify="right")
         pipelines = http.buckets.pipelines()
         for pipeline in pipelines:
-            details = http.buckets.status(pipeline=pipeline)
-            row = create_row(details)
+            info = http.buckets.status(pipeline=pipeline)
+            row = create_row(info)
             table.add_row(pipeline, *row)
-    elif name:
-        details = http.buckets.status(pipeline=name)
-        row = create_row(details)
-        table.add_row(name, *row)
+    else:
+        pipelines = http.buckets.pipelines()
+        table.add_column("Buckets", max_width=50, justify="left")
+        for pipeline in pipelines:
+            table.add_row(pipeline)
     console.print(table)
 
 
-@buckets.command("view", help="View work in a bucket.")
-@click.argument("name", type=str, required=True)
-@click.option(
-    "count",
-    "-c",
-    "--count",
-    type=int,
-    required=False,
-    default=3,
-    help="Number of work to show.",
-)
-def view(name: str, count: int = 3):
-    """View work in a bucket.
+@buckets.command("ps", help="List work in a bucket.")
+@click.argument("bucket", type=str, required=True, default=None)
+@click.option("-c", "--count", type=int, default=1, help="Number of works to list.")
+def ps(bucket: str, count: int):
+    """List work in the bucket.
 
     Args:
-        name (str): Name of the bucket.
-        count (int, optional): Number of work to show. Defaults to 3.
+        bucket (str): Name of the bucket.
+        count (int): Number of works to list.
     """
     http = HTTPContext()
-    work = http.buckets.view(query={"pipeline": name}, projection={}, limit=count)
-    print(work)
+    work = http.buckets.view(query={"pipeline": bucket}, projection={}, limit=count)
+    console.print(work)
 
 
 def create_row(details: Dict[str, Any]) -> List[str]:

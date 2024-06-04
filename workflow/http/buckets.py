@@ -4,8 +4,6 @@ from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 from requests.models import Response
-from rich.console import Console
-from rich.prompt import Prompt
 from tenacity import retry
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
@@ -13,6 +11,7 @@ from tenacity.wait import wait_random
 from workflow.http.client import Client
 from workflow.utils.decorators import try_request
 from workflow.utils.logger import get_logger
+from workflow.utils.prompt import confirmation
 
 logger = get_logger("workflow.http.buckets")
 
@@ -149,6 +148,8 @@ class Buckets(Client):
         pipeline: str,
         status: Optional[str] = None,
         events: Optional[List[int]] = None,
+        tags: Optional[List[str]] = None,
+        parent: Optional[str] = None,
         force: bool = False,
     ) -> bool:
         """Delete works belonging to a pipeline from the buckets backend.
@@ -170,6 +171,8 @@ class Buckets(Client):
         query: Dict[str, Any] = {"pipeline": pipeline}
         query.update({"status": status} if status else {})
         query.update({"event": {"$in": events}} if events else {})
+        query.update({"tags": {"$in": tags}} if tags else {})
+        query.update({"config.parent": parent} if parent else {})
         projection = {"id": True}
         result = self.view(query, projection)
         ids: List[str] = []
@@ -177,44 +180,17 @@ class Buckets(Client):
             ids = [work["id"] for work in result]
         # Get user confirmation before deleting
         if ids and not force:
-            force = self.confirmation(pipeline, len(ids), status, events)
+            msg = f"Are you sure you want to delete {len(ids)} works?"
+            # Display upto 5 ids only
+            msg += "\n\tids: " + ", ".join(ids[:5]) + ("..." if len(ids) > 5 else "")
+            msg += "\n\tstatus: " + status if status else ""
+            msg += "\n\tevents: " + ", ".join(map(str, events)) if events else ""
+            msg += "\n\ttags: " + ", ".join(tags) if tags else ""
+            msg += "\n\tparent: " + parent if parent else ""
+            force = confirmation(msg)
         if ids and force:
             return self.delete_ids(ids)
         return False
-
-    def confirmation(
-        self,
-        pipeline: str,
-        count: int,
-        status: Optional[str] = None,
-        events: Optional[List[int]] = None,
-    ) -> bool:
-        """Confirm that the user wants to delete works.
-
-        Args:
-            pipeline (str): Name of the pipeline.
-            count (int): Number of works to delete.
-            status (Optional[str], optional): Status. Defaults to None.
-            events (Optional[List[int]], optional): Events. Defaults to None.
-
-        Returns:
-            bool: Whether the user confirmed the deletion.
-        """
-        console = Console()
-        # Write a warning message to the console with emojis
-        console.print("WARNING: This action cannot be undone.", style="bold red")
-        console.print("You are about to delete the following works:")
-        console.print(f"Bucket: {pipeline}")
-        console.print(f"Status: {status if status else 'any'}")
-        console.print(f"Events: {events if events else 'any'}")
-        console.print(f"Count : {count}", style="bold red")
-        response = Prompt.ask("Are you sure? (y/n)", choices=["y", "n"])
-        if response == "y":
-            console.print("Deleting...")
-            return True
-        else:
-            console.print("Aborting...")
-            return False
 
     @try_request
     def status(self, pipeline: Optional[str] = None) -> Dict[str, Any]:

@@ -5,7 +5,7 @@ from typing import List
 import click
 from rich.console import Console
 
-# from workflow.cli.buckets import buckets
+from workflow.cli.buckets import buckets
 from workflow.cli.configs import configs
 from workflow.cli.pipelines import pipelines
 from workflow.cli.results import results
@@ -35,7 +35,7 @@ def cli():
 
 
 cli.add_command(run)
-# cli.add_command(buckets)
+cli.add_command(buckets)
 cli.add_command(results)
 cli.add_command(configs)
 cli.add_command(pipelines)

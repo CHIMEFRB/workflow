@@ -116,10 +116,8 @@ class Client(BaseSettings):
             response: Response = head(f"{baseurl}/version", timeout=5)
             response.raise_for_status()
         except RequestException as error:
-            logger.warning(f"Unable to connect to the {baseurl}.")
             logger.warning(error)
         except Exception as error:
-            logger.warning("Unknown error.")
             raise error
         return baseurl
 

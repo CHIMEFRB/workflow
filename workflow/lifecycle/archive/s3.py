@@ -120,7 +120,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
                 file_path=item,
             )
             # Update payload with new path
-            payload[index] = (
+            payload[index] = (  # noqa: E501
                 f"s3://{os.getenv('WORKFLOW_S3_ENDPOINT')}/workflow/{'/'.join([object_paths, item.split('/')[-1]])}"  # noqa: E501
             )
             # Delete file

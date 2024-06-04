@@ -24,7 +24,7 @@ logger = get_logger("workflow.cli")
 @click.option(
     "-s",
     "--site",
-    type=str,
+    type=click.STRING,
     required=True,
     show_default=True,
     help="filter work by site.",
@@ -32,7 +32,7 @@ logger = get_logger("workflow.cli")
 @click.option(
     "-t",
     "--tag",
-    type=str,
+    type=click.STRING,
     multiple=True,
     required=False,
     default=None,
@@ -42,7 +42,7 @@ logger = get_logger("workflow.cli")
 @click.option(
     "-p",
     "--parent",
-    type=str,
+    type=click.STRING,
     required=False,
     default=None,
     show_default=True,
@@ -51,7 +51,7 @@ logger = get_logger("workflow.cli")
 @click.option(
     "-f",
     "--function",
-    type=str,
+    type=click.STRING,
     required=False,
     default=None,
     show_default=True,
@@ -60,7 +60,7 @@ logger = get_logger("workflow.cli")
 @click.option(
     "-c",
     "--command",
-    type=str,
+    type=click.STRING,
     required=False,
     default=None,
     show_default=True,
@@ -69,14 +69,14 @@ logger = get_logger("workflow.cli")
 @click.option(
     "--lives",
     "-l",
-    type=int,
+    type=click.IntRange(min=-1),
     default=-1,
     show_default=True,
     help="count of work to perform.",
 )
 @click.option(
     "--sleep",
-    type=int,
+    type=click.IntRange(min=1, max=300),
     default=30,
     show_default=True,
     help="sleep between work attempts.",

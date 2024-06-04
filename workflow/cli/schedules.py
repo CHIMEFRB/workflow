@@ -32,7 +32,7 @@ STATUS = ["active", "running", "expired"]
 
 @click.group(name="schedules", help="Manage Workflow Schedules.")
 def schedules():
-    """Manage workflow Schedules."""
+    """Manage Workflow Schedules."""
     pass
 
 

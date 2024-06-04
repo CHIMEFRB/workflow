@@ -34,7 +34,7 @@ STATUS = ["created", "queued", "running", "success", "failure", "cancelled"]
 
 @click.group(name="configs", help="Manage Workflow Configs. Version 2.")
 def configs():
-    """Manage workflow configs."""
+    """Manage Workflow Configs."""
     pass
 
 

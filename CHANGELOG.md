@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/CHIMEFRB/workflow/compare/v0.4.0...v0.5.0) (2024-06-04)
+
+
+### Features
+
+* **dockerfile:** improvements to the workflow docker container ([af472b9](https://github.com/CHIMEFRB/workflow/commit/af472b98cbc3a2b7284221b2fe29e13f2c1c22af))
+
+
+### Bug Fixes
+
+* **archive:** check that basepath, mount in config, exists before continuing ([#39](https://github.com/CHIMEFRB/workflow/issues/39)) ([87fe370](https://github.com/CHIMEFRB/workflow/commit/87fe37096062da0761341e3a87c14af12a90c3b9))
+* **cli:** improved cli structure ([08ce5e3](https://github.com/CHIMEFRB/workflow/commit/08ce5e32cd08e6eecfd62dcb0b51dbdee4a6b8cc))
+
 ## [0.4.0](https://github.com/CHIMEFRB/workflow/compare/v0.3.0...v0.4.0) (2024-05-28)
 
 

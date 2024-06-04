@@ -1,6 +1,7 @@
 """POSIX archive functions."""
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -9,6 +10,49 @@ from typing import Any, Dict, List, Optional
 from workflow.utils import logger
 
 log = logger.get_logger("workflow.lifecycle.archive.posix")
+
+
+def extract_basepath(path: Path):
+    """Extract the base path from a given path.
+
+    Uses the fact that the path is build using the following format,
+    path = basepath / f"/workflow/{date}/{work.pipeline}/{work.id}"
+
+    Args:
+        path: Path to extract from.
+
+    Returns:
+        Path: Base path.
+    """
+    try:
+        split_path = re.split(r"/workflow/\d+", path.as_posix())
+        basepath = split_path[0]
+        return Path(basepath)
+    except Exception as e:
+        raise e
+
+
+def check_basepath(path: Path):
+    """Validates if the basepath exists.
+
+    If the path given contains '/workflow' it is not the basepath and so the basepath
+    is extracted before the evaluation.
+
+    Args:
+        path: Path to validate.
+
+    Raises:
+        FileNotFoundError: If the path doesn't exist.
+
+    Returns:
+        bool: True if the path exists.
+    """
+    if "/workflow" in path.as_posix():
+        path = extract_basepath(path)
+    if not path.exists():
+        raise FileNotFoundError(f"Mount {path} does not exist.")
+    else:
+        return True
 
 
 def bypass(path: Path, payload: Optional[List[str]]) -> bool:
@@ -30,6 +74,7 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
         payload (List[str]): List of files to copy.
     """
     try:
+        check_basepath(path)
         path.mkdir(parents=True, exist_ok=True)
         if not path.exists() or not path.is_dir() or not os.access(path, os.W_OK):
             log.error("Destination path is invalid or not writable.")
@@ -58,6 +103,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
     """
     status: bool = False
     try:
+        check_basepath(path)
         path.mkdir(parents=True, exist_ok=True)
         if path.exists() and path.is_dir() and os.access(path, os.W_OK) and payload:
             for index, item in enumerate(payload):
@@ -82,6 +128,7 @@ def delete(path: Path, payload: None | List[str]) -> bool:
     """
     status: bool = False
     try:
+        check_basepath(path)
         if payload:
             for item in payload:
                 os.remove(item)
@@ -99,6 +146,7 @@ def permissions(path: Path, config: Dict[str, Any]) -> bool:
     """Set the permissions for the work products in the archive."""
     status: bool = False
     try:
+        check_basepath(path)
         if not path.exists():
             raise NotADirectoryError
 

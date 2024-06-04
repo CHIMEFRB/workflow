@@ -19,26 +19,8 @@ from workflow.utils.logger import add_loki_handler, get_logger, set_tag, unset_t
 logger = get_logger("workflow.cli")
 
 
-@click.command("run", short_help="Perform work.")
-@click.argument("bucket", type=str, required=True)
-@click.option(
-    "-f",
-    "--function",
-    type=str,
-    required=False,
-    default=None,
-    show_default=True,
-    help="Override work function to execute. e.g `workflow.tasks.example`.",
-)
-@click.option(
-    "-c",
-    "--command",
-    type=str,
-    required=False,
-    default=None,
-    show_default=True,
-    help="Override work command to execute. e.g `echo hello world`.",
-)
+@click.command("run", short_help="Fetch & Perform Work.")
+@click.argument("buckets", type=str, required=True)
 @click.option(
     "-s",
     "--site",
@@ -55,7 +37,7 @@ logger = get_logger("workflow.cli")
     required=False,
     default=None,
     show_default=True,
-    help="filter work by tag, multiple values allowed.",
+    help="filter work by tag.",
 )
 @click.option(
     "-p",
@@ -67,18 +49,37 @@ logger = get_logger("workflow.cli")
     help="filter work by parent.",
 )
 @click.option(
-    "--lives",
-    type=int,
-    default=1,
+    "-f",
+    "--function",
+    type=str,
+    required=False,
+    default=None,
     show_default=True,
-    help="number of times to attempt work.",
+    help="overload function to execute.",
+)
+@click.option(
+    "-c",
+    "--command",
+    type=str,
+    required=False,
+    default=None,
+    show_default=True,
+    help="overload command to execute.",
+)
+@click.option(
+    "--lives",
+    "-l",
+    type=int,
+    default=-1,
+    show_default=True,
+    help="count of work to perform.",
 )
 @click.option(
     "--sleep",
     type=int,
     default=30,
     show_default=True,
-    help="sleep time between attempts.",
+    help="sleep between work attempts.",
 )
 @click.option(
     "-w",
@@ -86,7 +87,7 @@ logger = get_logger("workflow.cli")
     type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
     default=DEFAULT_WORKSPACE_PATH,
     show_default=True,
-    help="workspace config path.",
+    help="workspace config.",
 )
 @click.option(
     "--log-level",
@@ -97,23 +98,22 @@ logger = get_logger("workflow.cli")
 )
 def run(
     bucket: str,
-    function: str,
-    command: str,
     site: str,
     tag: Tuple[str],
     parent: Optional[str],
+    function: str,
+    command: str,
     lives: int,
     sleep: int,
     workspace: str,
     log_level: str,
 ):
-    """Perform work retrieved from the workflow buckets."""
+    """Fetch & Perform Work."""
     # Set logging level
     logger.root.setLevel(log_level)
     logger.root.handlers[0].setLevel(log_level)
     config = reader.workspace(workspace)
     baseurls = config.get("http", {}).get("baseurls", {})
-
     buckets_url = baseurls.get("buckets", None)
     loki_url = baseurls.get("loki", None)
     products_url = baseurls.get("products", None)

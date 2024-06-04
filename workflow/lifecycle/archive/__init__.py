@@ -44,9 +44,10 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
         }
         if work.creation:
             date: str = datetime.fromtimestamp(work.creation).strftime("%Y%m%d")
-        path: Path = Path(
-            f"{mounts.get(work.site)}/workflow/{date}/{work.pipeline}/{work.id}"
-        )
+        else:
+            raise NameError("Creation date not found in work object.")
+        basepath: Path = Path(f"{mounts.get(work.site)}")
+        path: Path = basepath / f"/workflow/{date}/{work.pipeline}/{work.id}"
 
         if (
             work.config.archive.products

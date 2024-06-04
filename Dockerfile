@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
 
-# `python-base` sets up all our shared environment variables
-FROM python:3.10-slim as base
+# Build Command
+# export DOCKER_BUILDKIT=1; docker buildx build -t chimefrb/workflow:latest .
+
+ARG PYTHON_VERSION=3.10
+ARG PROJECT_NAME=workflow
+
+FROM python:${PYTHON_VERSION}-slim as base
 
 # Setup Environment Variables
 ENV PYTHONUNBUFFERED=1 \
@@ -9,12 +14,11 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=true \
     PIP_DISABLE_PIP_VERSION_CHECK=on \
     PIP_DEFAULT_TIMEOUT=100 \
-    POETRY_VERSION=1.2.2 \
     POETRY_HOME="/opt/poetry" \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1 \
-    PYSETUP_PATH="/opt/pysetup" \
-    VENV_PATH="/opt/pysetup/.venv" \
+    PYSETUP_PATH="/opt/${PROJECT_NAME}" \
+    VENV_PATH="/opt/${PROJECT_NAME}/.venv" \
     DEBIAN_FRONTEND=noninteractive \
     OPENMP_ENABLED=1
 
@@ -24,6 +28,7 @@ ENV PATH="$POETRY_HOME/bin:$VENV_PATH/bin:$PATH"
 # Setup Shell for the Docker Image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+FROM base as builder
 # Install system dependencies
 RUN set -ex \
     && apt-get update -yqq \
@@ -41,19 +46,27 @@ RUN set -ex \
     && rm -rf /usr/share/man \
     && rm -rf /usr/share/doc \
     && rm -rf /usr/share/doc-base \
-    # Setup SSH
+    # Setup SSH for Github Access
     && mkdir -p ~/.ssh \
     && touch ~/.ssh/known_hosts \
     && chmod 0600 ~/.ssh/known_hosts ~/.ssh \
-    && ssh-keyscan github.com >> ~/.ssh/known_hosts \
-    # Install Poetry
-    && pip install "poetry==$POETRY_VERSION"
+    && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-CMD ["/bin/bash"]
+# Install Poetry
+RUN set -ex \
+    && pip install --upgrade pip poetry --no-cache-dir
 
-FROM base as production_pipelines
+# Copy Project Files
 COPY . $PYSETUP_PATH
 WORKDIR $PYSETUP_PATH
-RUN poetry install --without=dev
-# Run the project
-CMD ["workflow", "workspace", "set", "development"]
+# Install Project Dependencies
+RUN set -ex \
+    && poetry install --without dev --no-interaction --no-ansi --no-cache -v
+
+FROM base as production
+# Copy Virtual Environment
+COPY --from=builder $VENV_PATH $VENV_PATH
+# Copy Project Files
+COPY --from=builder $PYSETUP_PATH $PYSETUP_PATH
+WORKDIR $PYSETUP_PATH
+CMD ["workflow"]

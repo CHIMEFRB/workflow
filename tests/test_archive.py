@@ -143,7 +143,7 @@ class TestPosix:
     def test_posix_copy(self, work, directory):
         """Test the copy method."""
         file = work.plots[0]
-        path = directory / "posix" / "method" / "copy"
+        path = directory / "workflow/20240501" / "posix" / "method" / "copy"
         result = posix.copy(path, [file])
         assert result is True
         assert (path / file).exists()
@@ -151,7 +151,7 @@ class TestPosix:
     def test_posix_delete(self, work, directory):
         """Test the delete method."""
         file = work.plots[0]
-        path = directory / "posix" / "method" / "delete"
+        path = directory / "workflow/20240501" / "posix" / "method" / "delete"
         result = posix.delete(path, work.plots)
         assert result is True
         assert not Path(file).exists()
@@ -160,7 +160,7 @@ class TestPosix:
     def test_posix_move(self, work, directory):
         """Test the move method."""
         file = work.plots[0]
-        path = directory / "posix" / "method" / "move"
+        path = directory / "workflow/20240501" / "posix" / "method" / "move"
         result = posix.move(path, [file])
         assert result is True
         assert (path / file).exists()

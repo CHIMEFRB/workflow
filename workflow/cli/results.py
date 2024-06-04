@@ -29,9 +29,9 @@ status_colors = {
 yes_no_colors = {"yes": "green", "no": "red"}
 
 
-@click.group(name="results", help="Manage workflow results.")
+@click.group(name="results", help="Manage Workflow Results.")
 def results():
-    """Manage workflow results."""
+    """Manage Workflow Results."""
     pass
 
 

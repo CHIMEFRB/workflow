@@ -21,7 +21,7 @@ table = Table(
 )
 
 
-@click.group(name="buckets", help="Manage workflow buckets.")
+@click.group(name="buckets", help="Manage Workflow Buckets.")
 def buckets():
     """Manage workflow pipelines."""
     pass

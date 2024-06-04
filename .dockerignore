@@ -1,0 +1,12 @@
+# Ignore the following directories
+docs/
+tests/
+.vscode/
+__pycache__/
+*.egg-info/
+*.egg/
+*.pyc
+.git/
+.github/
+htmlcov/
+.venv/

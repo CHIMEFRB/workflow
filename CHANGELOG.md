@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/CHIMEFRB/workflow/compare/v0.5.0...v0.6.0) (2024-06-04)
+
+
+### Features
+
+* **cli:** added buckets cli ([de14f28](https://github.com/CHIMEFRB/workflow/commit/de14f2841fb9f7f17c8c20240718af8bbe609055))
+
 ## [0.5.0](https://github.com/CHIMEFRB/workflow/compare/v0.4.0...v0.5.0) (2024-06-04)
 
 

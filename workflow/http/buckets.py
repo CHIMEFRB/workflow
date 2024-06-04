@@ -1,6 +1,7 @@
 """Workflow Buckets API."""
 
 from typing import Any, Dict, List, Optional, Union
+from urllib.parse import urlencode
 
 from requests.models import Response
 from rich.console import Console
@@ -54,10 +55,10 @@ class Buckets(Client):
         >>> buckets.deposit([work.payload], return_ids=True)
         ["5f9b5e1b7e5c4b5eb1b""]
         """
-        params: Dict[str, Any] = {}
+        params: Dict[str, Any] = {"return_ids": return_ids}
         with self.session as session:
             response: Response = session.post(
-                url=f"{self.baseurl}/work",
+                url=f"{self.baseurl}/work?{urlencode(params)}",
                 json=works,
                 params=params,
                 timeout=self.timeout,

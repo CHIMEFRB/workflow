@@ -1,6 +1,6 @@
 services:
   pipelines_api:
-    image: chimefrb/pipelines:pipelines-v2.7.1
+    image: chimefrb/pipelines:latest
     container_name: pipelines_api
     command: python -m pipelines.server
     ports:
@@ -29,7 +29,7 @@ services:
     restart: always
 
   pipelines_managers:
-    image: chimefrb/pipelines:pipelines-v2.7.1
+    image: chimefrb/pipelines:latest
     container_name: pipelines_managers
     command: python -m managers.server
     ports:

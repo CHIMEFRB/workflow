@@ -31,7 +31,7 @@ STATUS = ["created", "queued", "running", "success", "failure", "cancelled"]
 
 @click.group(name="pipelines", help="Manage Workflow Pipelines.")
 def pipelines():
-    """Manage workflow pipelines."""
+    """Manage Workflow Pipelines."""
     pass
 
 

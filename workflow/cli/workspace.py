@@ -24,9 +24,9 @@ modulespaces = Path(MODULE_PATH, "workflow", "workspaces")
 modulestems = [space.stem for space in modulespaces.glob("*.y*ml")]
 
 
-@click.group(name="workspace", help="Manage workflow workspaces.")
+@click.group(name="workspace", help="Manage Workflow Workspaces.")
 def workspace():
-    """Manage Workspaces."""
+    """Manage Workflow Workspaces."""
     pass
 
 
@@ -45,7 +45,12 @@ def ls():
         table.add_row(workspace.stem, workspace.as_posix())
     table.add_row("", "From Local Configuration Folder", style="red italic")
     for workspace in localspaces.glob("*.y*ml"):
-        table.add_row(workspace.stem, workspace.as_posix())
+        if workspace.stem == "workspace":
+            table.add_row(
+                f"{workspace.stem} (active)", workspace.as_posix(), style="italic"
+            )
+        else:
+            table.add_row(workspace.stem, workspace.as_posix())
     console.print(table)
 
 

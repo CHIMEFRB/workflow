@@ -1,5 +1,7 @@
 """Workflow command line interface."""
 
+from typing import List
+
 import click
 from rich.console import Console
 
@@ -15,10 +17,18 @@ from workflow.utils.read import get_active_workspace
 console = Console()
 
 
-@click.group()
+class OrderedCommands(click.Group):
+    """Order Click Commands."""
+
+    def list_commands(self, ctx: click.Context) -> List[str]:
+        """List Commands."""
+        return list(self.commands)
+
+
+@click.group(cls=OrderedCommands)
 def cli():
     """Workflow Command Line Interface."""
-    # ? Get workspace
+    # ? Get Workspace
     message = get_active_workspace()
     console.print(message)
     pass

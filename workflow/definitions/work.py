@@ -410,21 +410,21 @@ class Work(BaseSettings):
     @classmethod
     def withdraw(
         cls,
-        pipeline: str,
+        pipeline: str | List[str],
         event: Optional[List[int]] = None,
         site: Optional[str] = None,
         priority: Optional[int] = None,
         user: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        parent: Optional[str] = None,
+        parent: Optional[List[str]] = None,
         timeout: float = 15.0,
         token: Optional[SecretStr] = None,
         http: Optional[HTTPContext] = None,
-    ) -> Any:
+    ) -> Optional["Work"]:
         """Withdraw work from the buckets backend.
 
         Args:
-            pipeline (str):Pipeline to withdraw work from. (Required)
+            pipeline (Union[str, List[str]]): Name of the pipeline to withdraw work for.
             event (Optional[List[int]]): Unique event ids to withdraw work for.
             site (Optional[str]): Name of the site to withdraw work for.
             priority (Optional[int]): Priority of the work to withdraw.

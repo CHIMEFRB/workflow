@@ -70,18 +70,18 @@ class Buckets(Client):
     @try_request
     def withdraw(
         self,
-        pipeline: str,
+        pipeline: str | List[str],
         event: Optional[List[int]] = None,
         site: Optional[str] = None,
         priority: Optional[int] = None,
         user: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        parent: Optional[str] = None,
+        parent: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Withdraw `queued` work from the buckets backend.
 
         Args:
-            pipeline (str): The pipeline to withdraw from. Required.
+            pipeline (str | List[str]): The pipeline to withdraw work from.
             event (Optional[List[int]], optional): The event to filter by.
             site (Optional[str], optional): The site to filter by.
             priority (Optional[int], optional): The priority to withdraw from.
@@ -95,13 +95,15 @@ class Buckets(Client):
         Returns:
             Dict[str, Any]: The work withdrawn.
         """
-        query: Dict[str, Any] = {"pipeline": pipeline}
+        if isinstance(pipeline, str):
+            pipeline = [pipeline]
+        query: Dict[str, Any] = {"pipeline": {"$in": pipeline}}
         query.update({"site": site} if site else {})
         query.update({"priority": priority} if priority else {})
         query.update({"user": user} if user else {})
         query.update({"event": {"$in": event}} if event else {})
         query.update({"tags": {"$in": tags}} if tags else {})
-        query.update({"config.parent": parent} if parent else {})
+        query.update({"config.parent": {"$in": parent}} if parent else {})
         with self.session as session:
             response: Response = session.post(
                 url=f"{self.baseurl}/work/withdraw", json=query

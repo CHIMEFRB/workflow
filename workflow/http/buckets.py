@@ -81,7 +81,7 @@ class Buckets(Client):
         """Withdraw `queued` work from the buckets backend.
 
         Args:
-            pipeline (str): The pipeline to withdraw from. Required.
+            pipeline (str | List[str]): The pipeline to withdraw work from.
             event (Optional[List[int]], optional): The event to filter by.
             site (Optional[str], optional): The site to filter by.
             priority (Optional[int], optional): The priority to withdraw from.

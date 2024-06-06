@@ -1,5 +1,6 @@
 """Workflow decorators."""
 
+import functools
 from typing import Any, Callable
 
 from workflow.utils.logger import get_logger
@@ -17,6 +18,7 @@ def try_request(func: Callable[..., Any]) -> Callable[..., Any]:
         Callable[..., Any]: The wrapped function.
     """
 
+    @functools.wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         try:
             return func(*args, **kwargs)

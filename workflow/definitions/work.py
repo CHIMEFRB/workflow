@@ -416,7 +416,7 @@ class Work(BaseSettings):
         priority: Optional[int] = None,
         user: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        parent: Optional[str] = None,
+        parent: Optional[List[str]] = None,
         timeout: float = 15.0,
         token: Optional[SecretStr] = None,
         http: Optional[HTTPContext] = None,

@@ -76,7 +76,7 @@ class Buckets(Client):
         priority: Optional[int] = None,
         user: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        parent: Optional[str] = None,
+        parent: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Withdraw `queued` work from the buckets backend.
 
@@ -103,7 +103,7 @@ class Buckets(Client):
         query.update({"user": user} if user else {})
         query.update({"event": {"$in": event}} if event else {})
         query.update({"tags": {"$in": tags}} if tags else {})
-        query.update({"config.parent": parent} if parent else {})
+        query.update({"config.parent": {"$in": parent}} if parent else {})
         with self.session as session:
             response: Response = session.post(
                 url=f"{self.baseurl}/work/withdraw", json=query

@@ -45,6 +45,7 @@ logger = get_logger("workflow.cli")
     "-p",
     "--parent",
     type=click.STRING,
+    multiple=True,
     required=False,
     default=None,
     show_default=True,
@@ -110,7 +111,7 @@ def run(
     bucket: Tuple[str],
     site: str,
     tag: Tuple[str],
-    parent: Optional[str],
+    parent: Tuple[str],
     function: str,
     command: str,
     lives: int,
@@ -142,8 +143,9 @@ def run(
     loki_url = baseurls.get("loki", None)
     products_url = baseurls.get("products", None)
 
-    # Reformate tag to be a list of strings
+    # Reformat the tags, parent and buckets
     tags: List[str] = list(tag)
+    parents: List[str] = list(parent)
     buckets: List[str] = list(bucket)
     # Setup and connect to the workflow backend
     logger.info(
@@ -168,11 +170,11 @@ def run(
         "[bold red]Work Filters [/bold red]",
         extra=dict(markup=True, color="green"),
     )
-    logger.info(f"Site  : {site}")
+    logger.info(f"Site   : {site}")
     if tags:
-        logger.info(f"Tags  : {tags}")
+        logger.info(f"Tags   : {tags}")
     if parent:
-        logger.info(f"Parent: {parent}")
+        logger.info(f"Parents: {parents}")
     logger.info(
         "[bold red]Execution Environment [/bold red]",
         extra=dict(markup=True, color="green"),
@@ -218,7 +220,15 @@ def run(
             speed=1 / slowdown,
         ):
             lifecycle(
-                buckets, function, lives, sleep, site, tags, parent, buckets_url, config
+                buckets,
+                function,
+                lives,
+                sleep,
+                site,
+                tags,
+                parents,
+                buckets_url,
+                config,
             )
     except Exception as error:
         logger.exception(error)
@@ -236,7 +246,7 @@ def lifecycle(
     sleep_time: int,
     site: str,
     tags: List[str],
-    parent: Optional[str],
+    parents: List[str],
     base_url: str,
     config: Dict[str, Any],
 ):
@@ -256,7 +266,7 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(buckets, function, base_url, site, tags, parent, config)
+        attempt(buckets, function, base_url, site, tags, parents, config)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
@@ -268,8 +278,8 @@ def attempt(
     function: Optional[str],
     base_url: str,
     site: str,
-    tags: Optional[List[str]],
-    parent: Optional[str],
+    tags: List[str],
+    parents: List[str],
     config: Dict[str, Any],
 ) -> bool:
     """Attempt to perform work.
@@ -301,7 +311,7 @@ def attempt(
 
         # Get work from the workflow backend
         try:
-            work = Work.withdraw(pipeline=buckets, site=site, tags=tags, parent=parent)
+            work = Work.withdraw(pipeline=buckets, site=site, tags=tags, parent=parents)
         except Exception as error:
             logger.exception(error)
 

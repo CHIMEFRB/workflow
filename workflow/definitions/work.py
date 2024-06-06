@@ -420,7 +420,7 @@ class Work(BaseSettings):
         timeout: float = 15.0,
         token: Optional[SecretStr] = None,
         http: Optional[HTTPContext] = None,
-    ) -> Any:
+    ) -> Optional["Work"]:
         """Withdraw work from the buckets backend.
 
         Args:

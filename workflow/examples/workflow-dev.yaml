@@ -1,0 +1,31 @@
+version: 2
+name: workflow-dev
+
+defaults:
+  user: shiny
+  site: chime
+
+deployments:
+  - name: dev
+    site: chime
+    image: chimefrb/workflow:workflow-dev
+    resources:
+      cores: 1
+      ram: 1G
+    replicas: 1
+
+pipeline:
+  runs_on: dev
+  steps:
+    - name: "frb-api-version"
+      stage: 1
+      work:
+        command: ["frb-api", "generate-token", "--help"]
+    - name: "linux-version"
+      stage: 2
+      work:
+        command: ["uname", "-a"]
+    - name: "python-version"
+      stage: 3
+      work:
+        command: ["python", "--version"]

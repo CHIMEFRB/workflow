@@ -1,7 +1,9 @@
 """Fetch and process Work using any method compatible with Tasks API."""
 
+import json
 import platform
 import signal
+import sys
 import time
 from threading import Event
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -20,7 +22,7 @@ logger = get_logger("workflow.cli")
 
 
 @click.command("run", short_help="Fetch & Perform Work.")
-@click.argument("buckets", type=str, required=True)
+@click.argument("bucket", type=str, nargs=-1, required=True)
 @click.option(
     "-s",
     "--site",
@@ -90,6 +92,14 @@ logger = get_logger("workflow.cli")
     help="workspace config.",
 )
 @click.option(
+    "-r",
+    "--runspace",
+    default=None,
+    required=False,
+    type=click.STRING,
+    help="runtime",
+)
+@click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     default="INFO",
@@ -97,7 +107,7 @@ logger = get_logger("workflow.cli")
     help="logging level.",
 )
 def run(
-    bucket: str,
+    bucket: Tuple[str],
     site: str,
     tag: Tuple[str],
     parent: Optional[str],
@@ -106,13 +116,27 @@ def run(
     lives: int,
     sleep: int,
     workspace: str,
+    runspace: Optional[str],
     log_level: str,
 ):
     """Fetch & Perform Work."""
     # Set logging level
     logger.root.setLevel(log_level)
     logger.root.handlers[0].setLevel(log_level)
-    config = reader.workspace(workspace)
+    # Inform the user of the runtime workspace was loaded,
+    # instead of the default workspace
+    config: Dict[str, Any] = {}
+    if runspace:
+        try:
+            config = json.loads(runspace)
+            logger.info(f"Runtime Workspace: {runspace}")
+            workspace = "[italics]from runtime [/italics blue]"
+        except json.JSONDecodeError:
+            logger.error("Invalid JSON provided for runspace")
+            sys.exit(1)
+    else:
+        config = reader.workspace(workspace)
+    # Get the base urls from the config
     baseurls = config.get("http", {}).get("baseurls", {})
     buckets_url = baseurls.get("buckets", None)
     loki_url = baseurls.get("loki", None)
@@ -120,16 +144,23 @@ def run(
 
     # Reformate tag to be a list of strings
     tags: List[str] = list(tag)
+    buckets: List[str] = list(bucket)
     # Setup and connect to the workflow backend
-    logger.info("[bold]Workflow Run CLI[/bold]", extra=dict(markup=True, color="green"))
-    logger.info(f"Bucket   : {bucket}")
+    logger.info(
+        "[bold red]Workflow Run CLI[/bold red]", extra=dict(markup=True, color="green")
+    )
+    logger.info(f"Bucket   : {buckets}")
     logger.info(f"Function : {function}")
     logger.info(f"Command  : {command}")
     logger.info(f"Mode     : {'Static' if (function or command) else 'Dynamic'}")
-    # Print inifinity symbol if lifetime is -1, otherwise print lifetime
     logger.info(f"Lives    : {'infinite' if lives == -1 else lives}")
     logger.info(f"Sleep    : {sleep}s")
     logger.info(f"Log Level: {log_level}")
+    logger.info(
+        "[bold red]Workspace [/bold red]",
+        extra=dict(markup=True, color="green"),
+    )
+    logger.info(f"Workspace: {workspace}")
     logger.info(f"Base URL : {buckets_url}")
     logger.info(f"Loki URL : {loki_url}")
     logger.info(f"Prod URL : {products_url}")
@@ -137,13 +168,13 @@ def run(
         "[bold red]Work Filters [/bold red]",
         extra=dict(markup=True, color="green"),
     )
-    logger.info(f"Site: {site}")
+    logger.info(f"Site  : {site}")
     if tags:
-        logger.info(f"Tags: {tags}")
+        logger.info(f"Tags  : {tags}")
     if parent:
-        logger.info(f"Parent Pipeline: {parent}")
+        logger.info(f"Parent: {parent}")
     logger.info(
-        "[bold]Execution Environment [/bold]",
+        "[bold red]Execution Environment [/bold red]",
         extra=dict(markup=True, color="green"),
     )
     logger.info(f"Operating System: {platform.system()}")
@@ -151,7 +182,7 @@ def run(
     logger.info(f"Python Compiler : {platform.python_compiler()}")
     logger.info(f"Virtualization  : {container.virtualization()}")
     logger.info(
-        "[bold]Configuration Checks [/bold]",
+        "[bold red]Backend Checks [/bold red]",
         extra=dict(markup=True, color="green"),
     )
     loki_status = add_loki_handler(logger, loki_url, config)
@@ -181,13 +212,13 @@ def run(
         console = Console(force_terminal=True, tab_size=4)
         with console.status(
             status="",
-            spinner="toggle2",
+            spinner="dots",
             spinner_style="bold green",
             refresh_per_second=1,
             speed=1 / slowdown,
         ):
             lifecycle(
-                bucket, function, lives, sleep, site, tags, parent, buckets_url, config
+                buckets, function, lives, sleep, site, tags, parent, buckets_url, config
             )
     except Exception as error:
         logger.exception(error)
@@ -199,7 +230,7 @@ def run(
 
 
 def lifecycle(
-    bucket: str,
+    buckets: List[str],
     function: Optional[str],
     lifetime: int,
     sleep_time: int,
@@ -225,7 +256,7 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(bucket, function, base_url, site, tags, parent, config)
+        attempt(buckets, function, base_url, site, tags, parent, config)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
@@ -233,7 +264,7 @@ def lifecycle(
 
 
 def attempt(
-    bucket: str,
+    buckets: List[str],
     function: Optional[str],
     base_url: str,
     site: str,
@@ -244,7 +275,7 @@ def attempt(
     """Attempt to perform work.
 
     Args:
-        bucket (str): Name of the bucket to perform work from.
+        buckets (str): Name of the buckets to perform work from.
         function (Optional[str]): Static function to perform work.
         base_url (str): URL of the workflow backend.
         site (str): Site to filter work by.
@@ -270,7 +301,7 @@ def attempt(
 
         # Get work from the workflow backend
         try:
-            work = Work.withdraw(pipeline=bucket, site=site, tags=tags, parent=parent)
+            work = Work.withdraw(pipeline=buckets, site=site, tags=tags, parent=parent)
         except Exception as error:
             logger.exception(error)
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/CHIMEFRB/workflow/compare/v0.6.0...v0.7.0) (2024-06-06)
+
+
+### Features
+
+* **cli:** multiple buckets + runspace ([#47](https://github.com/CHIMEFRB/workflow/issues/47)) ([817e125](https://github.com/CHIMEFRB/workflow/commit/817e125aa23911f75563cdf4a1fe4d858b37d55e))
+
 ## [0.6.0](https://github.com/CHIMEFRB/workflow/compare/v0.5.0...v0.6.0) (2024-06-04)
 
 

@@ -129,8 +129,8 @@ def run(
     if runspace:
         try:
             config = json.loads(runspace)
-            logger.info(f"Runtime Workspace: {runspace}")
-            workspace = "[italics]from runtime [/italics blue]"
+            logger.info(f"Runtime Workspace Loaded: {config}")
+            workspace = "[bold italic magenta]From Runtime[/bold italic magenta]"
         except json.JSONDecodeError:
             logger.error("Invalid JSON provided for runspace")
             sys.exit(1)

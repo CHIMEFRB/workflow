@@ -1,7 +1,7 @@
 services:
-  pipelines_api:
+  pipelines:
     image: chimefrb/pipelines:latest
-    container_name: pipelines_api
+    container_name: pipelines
     command: python -m pipelines.server
     ports:
       - "8001:8001"
@@ -15,10 +15,10 @@ services:
       - SANIC_DEBUG=true
       - SANIC_MONGODB_HOSTNAME=mongo
       - SANIC_MONGODB_PORT=27017
-      - SANIC_START_MANAGER_URL=http://pipelines_managers:8002/v2/start
-      - SANIC_PAUSE_MANAGER_URL=http://pipelines_managers:8002/v2/pause
-      - SANIC_STOP_MANAGER_URL=http://pipelines_managers:8002/v2/stop
-      - SANIC_HEALTH_MANAGERS_URL=http://pipelines_managers:8002/__health__
+      - SANIC_START_MANAGER_URL=http://managers:8002/v2/start
+      - SANIC_PAUSE_MANAGER_URL=http://managers:8002/v2/pause
+      - SANIC_STOP_MANAGER_URL=http://managers:8002/v2/stop
+      - SANIC_HEALTH_MANAGERS_URL=http://managers:8002/__health__
       - SANIC_HEALTH_MANAGERS_CHECK_TIMES=10
       - SANIC_HEALTH_MANAGERS_CHECK_INTERVAL_SECONDS=30
       - SANIC_LISTENERS_THRESHOLD_SECONDS=120
@@ -27,9 +27,9 @@ services:
       - workflow
     restart: always
 
-  pipelines_managers:
+  managers:
     image: chimefrb/pipelines:latest
-    container_name: pipelines_managers
+    container_name: managers
     command: python -m managers.server
     ports:
       - "8002:8002"

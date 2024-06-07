@@ -61,7 +61,7 @@ COPY . $PYSETUP_PATH
 WORKDIR $PYSETUP_PATH
 # Install Project Dependencies
 RUN set -ex \
-    && poetry install --without dev --no-interaction --no-ansi --no-cache -v
+    && poetry install --without dev --without docs --no-interaction --no-ansi --no-cache -v
 
 FROM base as production
 # Copy Virtual Environment

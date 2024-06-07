@@ -1,4 +1,5 @@
 {
+  ".": "0.8.1",
   "packages": {
     ".": {
       "extra-files": [
@@ -7,6 +8,5 @@
       "package-name": "workflow",
       "release-type": "python"
     }
-  },
-  ".": "0.8.1"
+  }
 }

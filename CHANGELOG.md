@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/CHIMEFRB/workflow/compare/v0.8.0...v0.8.1) (2024-06-07)
+
+
+### Bug Fixes
+
+* **release:** fixed the release-please action config ([eb0411c](https://github.com/CHIMEFRB/workflow/commit/eb0411c1c75fcdd360be80e408f5457455a76c85))
+
 ## [0.8.0](https://github.com/CHIMEFRB/workflow/compare/v0.7.0...v0.8.0) (2024-06-07)
 
 

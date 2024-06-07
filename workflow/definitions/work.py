@@ -78,7 +78,7 @@ class Work(BaseSettings):
         workspace (FilePath): Path to the active workspace configuration.
             Defaults to `~/.config/workflow/workspace.yml`. (Excluded from payload)
         token (SecretStr): Workflow Access Token. (Excluded from payload)
-        http (HTTPContext): HTTP Context for backend connections. (Excluded from payload)
+        http (HTTPContext): HTTP Context for backends. (Excluded from payload)
 
 
     Raises:

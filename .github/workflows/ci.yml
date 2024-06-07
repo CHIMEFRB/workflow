@@ -18,31 +18,31 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
     runs-on: ${{ matrix.os }}
     steps:
     -
       name: Checking out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     -
       name: Setting up python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     -
-      uses: pre-commit/action@v3.0.0
+      uses: pre-commit/action@v3.0.1
 
   tests:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
     runs-on: ${{ matrix.os }}
     needs: pre-commit
     steps:
     -
       name: Checking out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     -
       name: Installing poetry
       run: |
@@ -62,19 +62,19 @@ jobs:
     -
       name: Run services
       run: |
-        docker-compose -f docker-compose-tutorial.yml up -d --build
+        docker-compose -f docker-compose.yml up -d
     -
-      name: Installing workflow dependencies
+      name: Install dependencies
       run: |
-        poetry install
+        poetry install --all-extras
     -
-      name: Set workspace for testing
+      name: Setup Workflow Workspace
       run: |
         poetry run workflow workspace set development
     -
       name: Run workflow tests
       run: |
-        poetry run pytest --cov . --cov-report=lcov -s -v
+        poetry run pytest --cov workflow/ --cov-report=lcov -s -v
     -
       name: Upload coverage report
       uses: coverallsapp/github-action@master
@@ -85,4 +85,4 @@ jobs:
       name: Kill services
       if: always()
       run: |
-        docker-compose -f docker-compose-tutorial.yml down -v
+        docker-compose -f docker-compose.yml down -v

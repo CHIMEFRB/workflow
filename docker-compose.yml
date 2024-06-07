@@ -1,26 +1,12 @@
-version: "3.8"
-
 services:
-  mongo:
-    image: mongo:latest
-    command: ["mongod", "--bind_ip_all"]
-    container_name: mongo
-    restart: always
+  pipelines:
+    image: chimefrb/pipelines:latest
+    container_name: pipelines
+    command: python -m pipelines.server
     ports:
-      - 27017:27017
-      - 27018:27018
-      - 27019:27019
-    deploy:
-      mode: replicated
-      replicas: 1
-
-  buckets:
-    image: chimefrb/buckets:latest
-    command: ["/bin/bash", "-c", "python -m buckets.server"]
-    container_name: buckets
-    restart: always
-    ports:
-      - 8001:8001
+      - "8001:8001"
+    expose:
+      - 8001
     environment:
       - SANIC_HOSTNAME=0.0.0.0
       - SANIC_PORT=8001
@@ -29,19 +15,24 @@ services:
       - SANIC_DEBUG=true
       - SANIC_MONGODB_HOSTNAME=mongo
       - SANIC_MONGODB_PORT=27017
-    deploy:
-      mode: replicated
-      replicas: 1
-    depends_on:
-      - mongo
-
-  results:
-    image: chimefrb/results:latest
-    command: ["/bin/bash", "-c", "python -m results.server"]
-    container_name: results
+      - SANIC_START_MANAGER_URL=http://managers:8002/v2/start
+      - SANIC_PAUSE_MANAGER_URL=http://managers:8002/v2/pause
+      - SANIC_STOP_MANAGER_URL=http://managers:8002/v2/stop
+      - SANIC_HEALTH_MANAGERS_URL=http://managers:8002/__health__
+      - SANIC_HEALTH_MANAGERS_CHECK_TIMES=10
+      - SANIC_HEALTH_MANAGERS_CHECK_INTERVAL_SECONDS=30
+      - SANIC_LISTENERS_THRESHOLD_SECONDS=120
+      - TZ=Etc/UTC
+    networks:
+      - workflow
     restart: always
+
+  managers:
+    image: chimefrb/pipelines:latest
+    container_name: managers
+    command: python -m managers.server
     ports:
-      - 8002:8002
+      - "8002:8002"
     environment:
       - SANIC_HOSTNAME=0.0.0.0
       - SANIC_PORT=8002
@@ -50,8 +41,99 @@ services:
       - SANIC_DEBUG=true
       - SANIC_MONGODB_HOSTNAME=mongo
       - SANIC_MONGODB_PORT=27017
-    deploy:
-      mode: replicated
-      replicas: 1
-    depends_on:
-      - mongo
+      - SANIC_BUCKETS_URL=http://buckets:8004
+      - SANIC_RESULTS_URL=http://results:8005
+      - SANIC_UPDATE_INTERVAL_SECONDS=40
+      - SANIC_SLEEP_INTERVAL_SECONDS=30
+      - SANIC_PURGE_TIME_SECONDS=3600
+      - DOCKER_HOST=unix:///var/run/docker.sock # Replace with production address or dind
+      - TZ=Etc/UTC
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - workflow
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8002/__health__"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  buckets:
+    image: chimefrb/buckets:latest
+    container_name: buckets
+    command: [ "/bin/bash", "-c", "python -m buckets.server" ]
+    expose:
+      - 8004
+    ports:
+      - "8004:8004"
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8004
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+    networks:
+      - workflow
+
+  results:
+    image: chimefrb/results:latest
+    container_name: results
+    command: [ "/bin/bash", "-c", "python -m results.server" ]
+    expose:
+      - 8005
+    ports:
+      - "8005:8005"
+    environment:
+      - SANIC_HOSTNAME=0.0.0.0
+      - SANIC_PORT=8005
+      - SANIC_ACCESS_LOG=true
+      - SANIC_AUTO_RELOAD=true
+      - SANIC_DEBUG=true
+      - SANIC_MONGODB_HOSTNAME=mongo
+      - SANIC_MONGODB_PORT=27017
+      - SANIC_CORS_ORIGINS=*
+    networks:
+      - workflow
+
+  mongo:
+    image: mongo:latest
+    command: mongod --bind_ip_all
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - workflow
+
+  local:
+    image: docker:dind
+    container_name: local
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        dockerd -H tcp://0.0.0.0:4444 --tls=false \
+        & while(! docker -H tcp://0.0.0.0:4444 info >/dev/null 2>&1); \
+        do sleep 1; \
+        done \
+        && docker -H tcp://0.0.0.0:4444 swarm init && tail -f /dev/null
+    ports:
+      - "4444:4444"
+    expose:
+      - 4444
+    privileged: true
+    networks:
+      - workflow
+
+networks:
+  workflow:
+    driver: bridge

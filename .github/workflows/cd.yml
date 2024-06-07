@@ -5,16 +5,18 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   deployment:
     runs-on: ubuntu-latest
     steps:
       -
-        name: Create release
-        id: release-please
-        uses: google-github-actions/release-please-action@v3
+        name: Release Please Action
+        id: release
+        uses: googleapis/release-please-action@v4.1.1
         with:
           release-type: python
-          package-name: workflow
-          extra-files: |
-            workflow/__init__.py
+          manifest-file: .release-please-manifest.json

@@ -1,5 +1,6 @@
 {
   "extra-files": [
     "workflow/__init__.py"
-  ]
+  ],
+  ".": "0.8.0"
 }

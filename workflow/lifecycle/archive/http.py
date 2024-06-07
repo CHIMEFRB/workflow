@@ -41,7 +41,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
     raise NotImplementedError
 
 
-def delete(path: Path, payload: None | List[str]) -> bool:
+def delete(path: Path, payload: Optional[List[str]]) -> bool:
     """Delete the work products from the archive.
 
     Args:

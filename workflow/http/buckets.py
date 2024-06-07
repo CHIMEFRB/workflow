@@ -70,7 +70,7 @@ class Buckets(Client):
     @try_request
     def withdraw(
         self,
-        pipeline: str | List[str],
+        pipeline: Union[str, List[str]],
         event: Optional[List[int]] = None,
         site: Optional[str] = None,
         priority: Optional[int] = None,
@@ -269,7 +269,7 @@ class Buckets(Client):
             Dict[str, Any]: The audit results.
         """
         reply: Dict[str, Any] = {}
-        urls: dict[str, str] = {
+        urls: Dict[str, str] = {
             "failed": "/audit/failed",
             "expired": "/audit/expired",
             "stale": "/audit/stale/7.0",

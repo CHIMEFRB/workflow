@@ -4,7 +4,7 @@ import ast
 import subprocess
 import time
 from sys import getsizeof
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
 from mergedeep import merge  # type: ignore
@@ -13,6 +13,8 @@ from workflow.definitions.work import Work
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
+
+Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]]]
 
 
 def function(func: Callable[..., Any], work: Work) -> Work:
@@ -30,10 +32,10 @@ def function(func: Callable[..., Any], work: Work) -> Work:
     func, parameters = gather(func, work)
     logger.info(f"executing: {func.__name__}(**{parameters})")
     start = time.time()
-    outcome: None | Dict[str, Any] | Tuple[Dict[str, Any], List[str], List[str]] = None
-    results: None | Dict[str, Any] = None
-    products: None | List[str] = None
-    plots: None | List[str] = None
+    outcome: Optional[Outcome] = None
+    results: Optional[Dict[str, Any]] = None
+    products: Optional[List[str]] = None
+    plots: Optional[List[str]] = None
     try:
         outcome = func(**parameters)
         # * If the outcome is a dict, assume it is results
@@ -133,7 +135,7 @@ def command(command: List[str], work: Work) -> Work:
         stdout = process.stdout.decode("utf-8").splitlines()
         stderr = process.stderr.decode("utf-8").splitlines()
         # Convert last line of stdout to a Tuple
-        response: None | Any = None
+        response: Any = None
         try:
             response = ast.literal_eval(stdout[-1])
         except SyntaxError as error:

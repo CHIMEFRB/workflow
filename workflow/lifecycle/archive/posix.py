@@ -119,7 +119,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
         return status
 
 
-def delete(path: Path, payload: None | List[str]) -> bool:
+def delete(path: Path, payload: Optional[List[str]]) -> bool:
     """Delete the work products from the archive.
 
     Args:
@@ -150,8 +150,8 @@ def permissions(path: Path, config: Dict[str, Any]) -> bool:
         if not path.exists():
             raise NotADirectoryError
 
-        user: str | None = config.get("user")
-        group: str | None = config.get("group")
+        user: Optional[str] = config.get("user")
+        group: Optional[str] = config.get("group")
         if not user and not group:
             raise ValueError("Either user or group must be specified.")
 

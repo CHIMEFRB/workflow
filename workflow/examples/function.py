@@ -1,17 +1,17 @@
 """Sample CHIME/FRB Workflow Compatible Function."""
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 
 def math(
-    a: float | int, b: float | int
+    a: Union[float, int], b: Union[float, int]
 ) -> Tuple[Dict[str, float], List[str], List[str]]:
     """Sample CHIME/FRB Workflow Compatible Function.
 
     Args:
-        a (float | int): A number
-        b (float | int): Another number
+        a (Union[float, int]): A number
+        b (Union[float, int]): Another number
 
     Raises:
         error: If the arguments are not

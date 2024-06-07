@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from requests import get
 from requests.exceptions import RequestException
@@ -15,7 +15,7 @@ from workflow.utils.logger import get_logger
 logger = get_logger("workflow.utils.read")
 
 
-def workspace(source: str | Path) -> Dict[str, Any]:
+def workspace(source: Union[str, Path]) -> Dict[str, Any]:
     """Read a namespace YAML file.
 
     Args:

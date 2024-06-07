@@ -14,4 +14,4 @@ CONFIG_PATH: Path = Path.home() / ".config" / "workflow"
 # Active Workspace Path
 DEFAULT_WORKSPACE_PATH: Path = CONFIG_PATH / "workspace.yml"
 # Workflow Client Version
-__version__ = "0.7.0"  # {x-release-please-version}
+__version__ = "0.8.0"  # {x-release-please-version}

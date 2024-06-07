@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/CHIMEFRB/workflow/compare/v0.7.0...v0.8.0) (2024-06-07)
+
+
+### Features
+
+* **python:** working build for py38,py39,py310 ([6c0b3ef](https://github.com/CHIMEFRB/workflow/commit/6c0b3ef00417eb4b72bb5067bb597c3b7b305ae4))
+
 ## [0.7.0](https://github.com/CHIMEFRB/workflow/compare/v0.6.0...v0.7.0) (2024-06-06)
 
 

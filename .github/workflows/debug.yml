@@ -1,3 +1,4 @@
+name: Debug SSH Session
 on:
     workflow_dispatch:
       inputs:

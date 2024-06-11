@@ -3,8 +3,7 @@
 # Build Command
 # export DOCKER_BUILDKIT=1; docker buildx build -t chimefrb/workflow:latest .
 
-ARG PYTHON_VERSION=3.10
-ARG PROJECT_NAME=workflow
+ARG PYTHON_VERSION=3.8
 
 FROM python:${PYTHON_VERSION}-slim as base
 
@@ -17,8 +16,8 @@ ENV PYTHONUNBUFFERED=1 \
     POETRY_HOME="/opt/poetry" \
     POETRY_VIRTUALENVS_IN_PROJECT=true \
     POETRY_NO_INTERACTION=1 \
-    PYSETUP_PATH="/opt/${PROJECT_NAME}" \
-    VENV_PATH="/opt/${PROJECT_NAME}/.venv" \
+    PYSETUP_PATH="/opt/workflow" \
+    VENV_PATH="/opt/workflow/.venv" \
     DEBIAN_FRONTEND=noninteractive \
     OPENMP_ENABLED=1
 
@@ -63,10 +62,9 @@ WORKDIR $PYSETUP_PATH
 RUN set -ex \
     && poetry install --without dev --without docs --no-interaction --no-ansi --no-cache -v
 
+# Final Image
 FROM base as production
-# Copy Virtual Environment
 COPY --from=builder $VENV_PATH $VENV_PATH
-# Copy Project Files
 COPY --from=builder $PYSETUP_PATH $PYSETUP_PATH
 WORKDIR $PYSETUP_PATH
 RUN workflow workspace set development

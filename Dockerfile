@@ -69,4 +69,5 @@ COPY --from=builder $VENV_PATH $VENV_PATH
 # Copy Project Files
 COPY --from=builder $PYSETUP_PATH $PYSETUP_PATH
 WORKDIR $PYSETUP_PATH
+RUN workflow workspace set development
 CMD ["workflow"]

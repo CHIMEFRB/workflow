@@ -5,6 +5,8 @@ import platform
 import signal
 import sys
 import time
+from json import dump
+from pathlib import Path
 from threading import Event
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -16,9 +18,13 @@ from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.work import Work
 from workflow.lifecycle import archive, container, execute, validate
 from workflow.utils import read as reader
+from workflow.utils.invokers import call_unset
 from workflow.utils.logger import add_loki_handler, get_logger, set_tag, unset_tag
+from workflow.utils.renderers import clean_output
 
 logger = get_logger("workflow.cli")
+
+localspaces = Path(DEFAULT_WORKSPACE_PATH).parent
 
 
 @click.command("run", short_help="Fetch & Perform Work.")
@@ -132,11 +138,23 @@ def run(
             config = json.loads(runspace)
             logger.info(f"Runtime Workspace Loaded: {config}")
             workspace = "[bold italic magenta]From Runtime[/bold italic magenta]"
+            name: str = config["workspace"]
+            localspaces.mkdir(parents=True, exist_ok=True)
+            activepath = localspaces / "workspace.yml"
+            # Write config to activepath, even if it already exists.
+            with open(activepath, "w") as filename:
+                dump(config, filename)
+                logger.info(f"Runspace {name} set to active.")
         except json.JSONDecodeError:
             logger.error("Invalid JSON provided for runspace")
+            logger.error(runspace)
             sys.exit(1)
     else:
-        config = reader.workspace(workspace)
+        try:
+            config = reader.workspace(workspace)
+        except FileNotFoundError:
+            logger.error("Workspace file provided does not exists.")
+            return
     # Get the base urls from the config
     baseurls = config.get("http", {}).get("baseurls", {})
     buckets_url = baseurls.get("buckets", None)
@@ -195,6 +213,10 @@ def run(
         logger.info("Base URL : ✅")
         logger.debug(f"base_url: {buckets_url}")
     except Exception as error:
+        if runspace:
+            unset_result = call_unset()
+            unset_result = clean_output(unset_result.output)
+            logger.info(f"[bold red]{unset_result}[/bold red]")
         logger.error(error)
         raise click.ClickException("unable to connect to workflow backend")
 
@@ -233,6 +255,10 @@ def run(
     except Exception as error:
         logger.exception(error)
     finally:
+        if runspace:
+            unset_result = call_unset()
+            unset_result = clean_output(unset_result.output)
+            logger.info(f"[bold red]{unset_result}[/bold red]")
         logger.info(
             "[bold]Workflow Lifecycle Complete[/bold]",
             extra=dict(markup=True, color="green"),

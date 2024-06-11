@@ -1,6 +1,7 @@
 """Functions to render objects to rich.console."""
 
 import datetime as dt
+import re
 from json import dumps
 from typing import Any, Dict
 
@@ -92,3 +93,20 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
         text.append_text(key_value_text)
 
     return text
+
+
+def clean_output(message: str) -> str:
+    """Cleans strings from Click.command output.
+
+    Parameters
+    ----------
+    message : str
+        String to be cleaned.
+
+    Returns
+    -------
+    str
+        Escaped string.
+    """
+    ansi_escape = re.compile(r"\x1B[@-_][0-?]*[ -/]*[@-~]")
+    return ansi_escape.sub("", message)

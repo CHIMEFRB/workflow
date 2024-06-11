@@ -16,7 +16,7 @@ def confirmation(msg: str) -> bool:
         bool: True if the user confirms, False otherwise.
     """
     console.print(
-        "\nATTENTION: This action is irreversible",
+        "Please confirm the following action:",
         style="bold red",
         justify="center",
     )

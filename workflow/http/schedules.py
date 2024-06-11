@@ -96,12 +96,12 @@ class Schedules(Client):
         return response
 
     @try_request
-    def list_schedules(self, schedule_name: str) -> List[Dict[str, Any]]:
+    def list_schedules(self, name: Optional[str]) -> List[Dict[str, Any]]:
         """Gets the list of all schedules.
 
         Parameters
         ----------
-        schedule_name : str
+        name : Optional[str]
             Schedule name.
 
         Returns
@@ -110,7 +110,7 @@ class Schedules(Client):
             List of schedule payloads.
         """
         with self.session as session:
-            query = dumps({"config.name": schedule_name})
+            query = dumps({"config.name": name})
             projection = dumps(
                 {
                     "id": True,
@@ -124,7 +124,7 @@ class Schedules(Client):
             )
             url = (
                 f"{self.baseurl}/schedule?projection={projection}"
-                if schedule_name is None
+                if name is None
                 else f"{self.baseurl}/schedule?query={query}&projection={projection}"
             )
             response: Response = session.get(url=url)

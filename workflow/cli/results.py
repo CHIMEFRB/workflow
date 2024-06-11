@@ -1,14 +1,13 @@
 """Results CLI Interface."""
 
 from json import dumps
-from typing import Optional
+from typing import Any, Dict, Tuple
 
 import click
 from rich import pretty
 from rich.console import Console
 from rich.json import JSON
 from rich.table import Table
-from rich.text import Text
 
 from workflow.http.context import HTTPContext
 
@@ -42,12 +41,11 @@ def version():
     console.print(http.results.info())
 
 
-@results.command("count", help="Returns count of all pipelines on results backend.")
-@click.option("--status", "-s", help="Count by status")
-def count(status: Optional[str] = None):
+@results.command("count", help="Count of results per pipeline.")
+def count():
     """Count pipelines on results backend."""
     http = HTTPContext()
-    count_result = http.results.count()
+    count_result = http.results.status()
     table.add_column("Pipeline", max_width=50, justify="left", style="bright_blue")
     table.add_column("Count", max_width=50, justify="left")
     for pipeline, count in count_result.items():
@@ -55,99 +53,116 @@ def count(status: Optional[str] = None):
     console.print(table)
 
 
-@results.command("view", help="Returns Results from the specified pipeline.")
+@results.command("view", help="View a set of filtered Results.")
 @click.argument("pipeline", type=str, required=True)
-@click.option("status", "-s", type=str, required=False, help="Filter by status.")
-@click.option("skip", "-k", type=int, required=False, help="Skip n results.")
 @click.option(
-    "limit", "-l", type=int, default=50, required=False, help="Deliver only n results."
+    "--status",
+    type=str,
+    multiple=True,
+    required=False,
+    default=None,
+    show_default=True,
+    help="Filter by status.",
+)
+@click.option(
+    "--event",
+    type=int,
+    multiple=True,
+    required=False,
+    default=None,
+    show_default=True,
+    help="Filter by event.",
+)
+@click.option(
+    "--tags",
+    type=str,
+    multiple=True,
+    required=False,
+    default=None,
+    show_default=True,
+    help="Filter by tags.",
+)
+@click.option(
+    "--limit",
+    type=int,
+    default=10,
+    show_default=True,
+    required=False,
+    help="Number of results to view.",
+)
+@click.option(
+    "--skip",
+    type=int,
+    default=0,
+    show_default=True,
+    required=False,
+    help="Number of results to skip.",
+)
+@click.option(
+    "--details",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    required=False,
+    help="Show detailed information.",
+)
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    required=False,
+    help="Output as JSON.",
 )
 def view(
     pipeline: str,
-    status: Optional[str] = None,
-    skip: Optional[int] = None,
-    limit: Optional[int] = None,
+    status: Tuple[str],
+    event: Tuple[int],
+    tags: Tuple[str],
+    skip: int = 0,
+    limit: int = 10,
+    details: bool = False,
+    json: bool = False,
 ):
-    """View a set of filtered Results.
-
-    Parameters
-    ----------
-    pipeline : str
-        Pipeline name.
-    status : Optional[str], optional
-        Results status, by default None
-    skip : Optional[int], optional
-        Skip n results, by default None
-    limit : Optional[int], optional
-        Deliver n results, by default None
-    """
+    """View a set of filtered Results."""
     http = HTTPContext()
-    payload = {
-        "query": {"pipeline": pipeline},
-        "projection": {
+    if details:
+        projection = {}
+    else:
+        projection = {
             "id": True,
-            "pipeline": True,
+            "results": True,
             "products": True,
             "plots": True,
-            "function": True,
-            "command": True,
             "status": True,
-        },
-    }
+        }
+    query: Dict[str, Any] = {}
     if status:
-        payload["query"].update({"status": status})  # type: ignore
-    if skip:
-        payload.update({"skip": skip})  # type: ignore
-    if limit:
-        payload.update({"limit": limit})  # type: ignore
+        query["status"] = {"$in": list(status)}
+    if event:
+        query["event"] = {"$in": list(event)}
+    if tags:
+        query["tags"] = {"$in": list(tags)}
 
-    view_result = http.results.view(payload)
-    table.add_column("ID", max_width=50, justify="left", style="bright_blue")
-    table.add_column("Pipeline", max_width=50, justify="left", style="bright_blue")
-    table.add_column("Products", max_width=50, justify="left")
-    table.add_column("Plots", max_width=50, justify="left")
-    table.add_column("Function", max_width=50, justify="left")
-    table.add_column("Command", max_width=50, justify="left")
-    table.add_column("Status", max_width=50, justify="left")
-    for result in view_result:
-        result_status = Text(result["status"], style=status_colors[result["status"]])
-        has_products = "Yes" if result["products"] else "No"
-        has_products = Text(has_products, style=yes_no_colors[has_products.lower()])
-        has_plots = "Yes" if result["plots"] else "No"
-        has_plots = Text(has_plots, style=yes_no_colors[has_plots.lower()])
-        _function = (
-            result["function"] if result["function"] else Text("-------", style="red")
-        )
-        table.add_row(
-            result["id"],
-            result["pipeline"],
-            has_products,
-            has_plots,
-            _function,
-            " ".join(result["command"]),
-            result_status,
-        )
+    results = http.results.view(
+        pipeline=pipeline, query=query, projection=projection, skip=skip, limit=limit
+    )
+
+    if json:
+        console.print(JSON(dumps(results), indent=2))
+        return
+
+    if not results:
+        console.print("No results found.")
+        return
+    from typing import List
+
+    values: List[JSON] = []
+    for name in results[0].keys():
+        table.add_column(name, justify="left", style="bright_blue")
+    for result in results:
+        for value in result.values():
+            values.append(JSON(dumps(value), indent=1))
+    table.add_row(*values)
     console.print(table)
-
-
-@results.command("inspect", help="Returns detailed information about specified Result.")
-@click.argument("pipeline", type=str, required=True)
-@click.argument("id", type=str, required=True)
-def inspect(pipeline: str, id: str):
-    """Returns details for one specific results.
-
-    Parameters
-    ----------
-    pipeline : str
-        Pipeline name.
-    id : str
-        Results ID.
-    """
-    http = HTTPContext()
-    payload = {
-        "query": {"pipeline": pipeline, "id": id},
-    }
-    inspect_result = http.results.view(payload)[0]
-    table.add_column(f"{pipeline} - {id}", max_width=100, justify="left")
-    table.add_row(JSON(dumps(inspect_result), indent=2))
-    console.print(table)
+    return

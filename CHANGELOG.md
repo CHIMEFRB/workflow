@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.9.0](https://github.com/CHIMEFRB/workflow/compare/v0.8.2...v0.9.0) (2024-06-12)
+
+
+### Features
+
+* **github-actions:** added deployment action to publish docker containers ([1c5d71c](https://github.com/CHIMEFRB/workflow/commit/1c5d71c5cbe79147c4ab0f3d76e6a21e71aa7042))
+* **results:** added workflow results API & CLI ([0d20eaf](https://github.com/CHIMEFRB/workflow/commit/0d20eafb5a4969af69b488c6458393de79123210))
+* **workflow:** updates to tests, and general api cleanup ([644a744](https://github.com/CHIMEFRB/workflow/commit/644a744bea3173afb629c3dc1e7ad20c7325d645))
+
+
+### Bug Fixes
+
+* **dockerfile:** fixes ([cdf4004](https://github.com/CHIMEFRB/workflow/commit/cdf40048733ee44de83fbf83b1049159209ce254))
+* **github-actions:** added debug ssh session ([bce85d6](https://github.com/CHIMEFRB/workflow/commit/bce85d653ecba20ca71e219df3bc29e4d440a3b3))
+
 ## [0.8.2](https://github.com/CHIMEFRB/workflow/compare/v0.8.1...v0.8.2) (2024-06-07)
 
 

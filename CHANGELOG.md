@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/CHIMEFRB/workflow/compare/v0.9.0...v0.9.1) (2024-06-12)
+
+
+### Bug Fixes
+
+* **run.py:** fixing error when runspace is provided ([#54](https://github.com/CHIMEFRB/workflow/issues/54)) ([2a0f262](https://github.com/CHIMEFRB/workflow/commit/2a0f262ceea64b7084ff621ffbc1d784f6fa1a1b))
+
 ## [0.9.0](https://github.com/CHIMEFRB/workflow/compare/v0.8.2...v0.9.0) (2024-06-12)
 
 

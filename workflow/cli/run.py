@@ -93,7 +93,7 @@ localspaces = Path(DEFAULT_WORKSPACE_PATH).parent
 @click.option(
     "-w",
     "--workspace",
-    type=click.Path(exists=True, file_okay=True, dir_okay=False, readable=True),
+    type=click.Path(exists=False, file_okay=True, dir_okay=False, readable=True),
     default=DEFAULT_WORKSPACE_PATH,
     show_default=True,
     help="workspace config.",

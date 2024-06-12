@@ -9,7 +9,6 @@ from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
 
 from workflow.http.client import Client
-from workflow.utils.decorators import try_request
 from workflow.utils.logger import get_logger
 from workflow.utils.prompt import confirmation
 
@@ -26,8 +25,7 @@ class Buckets(Client):
         Buckets: A client for interacting with the Buckets backend.
     """
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
-    @try_request
+    @retry(wait=wait_random(min=0.1, max=2), stop=(stop_after_delay(30)))
     def deposit(
         self, works: List[Dict[str, Any]], return_ids: bool = False
     ) -> Union[bool, List[str]]:
@@ -67,7 +65,6 @@ class Buckets(Client):
             return response.json()
         return True
 
-    @try_request
     def withdraw(
         self,
         pipeline: Union[str, List[str]],
@@ -111,8 +108,7 @@ class Buckets(Client):
             response.raise_for_status()
         return response.json()
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
-    @try_request
+    @retry(wait=wait_random(min=0.1, max=2), stop=(stop_after_delay(30)))
     def update(self, works: List[Dict[str, Any]]) -> bool:
         """Update works in the buckets backend.
 
@@ -127,8 +123,7 @@ class Buckets(Client):
             response.raise_for_status()
         return response.json()
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
-    @try_request
+    @retry(wait=wait_random(min=0.1, max=2), stop=(stop_after_delay(30)))
     def delete_ids(self, ids: List[str]) -> bool:
         """Delete works from the buckets backend with the given ids.
 
@@ -194,7 +189,6 @@ class Buckets(Client):
             return self.delete_ids(ids)
         return False
 
-    @try_request
     def status(self, pipeline: Optional[str] = None) -> Dict[str, Any]:
         """View the status of the buckets backend.
 
@@ -214,7 +208,6 @@ class Buckets(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def pipelines(self) -> List[str]:
         """View the current pipelines in the buckets backend.
 
@@ -226,7 +219,6 @@ class Buckets(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def view(
         self,
         query: Dict[str, Any],
@@ -258,7 +250,6 @@ class Buckets(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def audit(self) -> Dict[str, Any]:
         """Audit work buckets backend.
 
@@ -281,7 +272,6 @@ class Buckets(Client):
                 reply[process] = response.json()
         return reply
 
-    @try_request
     def info(self) -> Dict[str, Any]:
         """Get the version of the buckets backend.
 

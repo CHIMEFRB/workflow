@@ -1,0 +1,3 @@
+local:
+  docker:
+    client_url: unix:///var/run/docker.sock

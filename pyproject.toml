@@ -34,10 +34,6 @@ pytest-env = "*"
 ruff = "*"
 commitizen = "*"
 
-[tool.poetry.group.docs.dependencies]
-mkdocs-material = "*"
-mkdocstrings-python = "*"
-
 [tool.poetry.scripts]
 workflow = "workflow.cli.main:cli"
 

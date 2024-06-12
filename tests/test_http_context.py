@@ -59,7 +59,7 @@ class TestHTTPContext:
 
     def test_http_configs_list(self):
         http = HTTPContext()
-        response = http.configs.get_configs(config_name=None)
+        response = http.configs.get_configs(name=None)
         assert isinstance(response, list)
 
     def test_http_configs_count(self):

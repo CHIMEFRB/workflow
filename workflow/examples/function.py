@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple, Union
 
 
 def math(
-    a: Union[float, int], b: Union[float, int]
+    alpha: Union[float, int], beta: Union[float, int]
 ) -> Tuple[Dict[str, float], List[str], List[str]]:
     """Sample CHIME/FRB Workflow Compatible Function.
 
@@ -21,16 +21,16 @@ def math(
             The results, products, and plots
     """
     try:
-        assert isinstance(a, (float, int)), "a must be a number"
-        assert isinstance(b, (float, int)), "b must be a number"
+        assert isinstance(alpha, (float, int)), "alpha must be a number"
+        assert isinstance(beta, (float, int)), "beta must be a number"
         results: Dict[str, float] = {
-            "sum": a + b,
-            "difference": a - b,
-            "product": a * b,
-            "quotient": a / b,
-            "power": a**b,
-            "root": a ** (1 / b),
-            "log": a ** (1 / b),
+            "sum": alpha + beta,
+            "difference": alpha - beta,
+            "product": alpha * beta,
+            "quotient": alpha / beta,
+            "power": alpha**beta,
+            "root": alpha ** (1 / beta),
+            "log": alpha ** (1 / beta),
         }
         # Make a csv file with results
         with open("/tmp/sample.csv", "w") as file:

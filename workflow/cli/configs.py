@@ -123,9 +123,7 @@ def ls(name: Optional[str] = None, quiet: bool = False):
     if quiet:
         projection = {"id": 1}
     http = HTTPContext()
-    objects = http.configs.get_configs(
-        config_name=name, projection=json.dumps(projection)
-    )
+    objects = http.configs.get_configs(name=name, projection=json.dumps(projection))
 
     # ? Add columns for each key
     table.add_column("ID", max_width=40, justify="left", style="blue")
@@ -172,7 +170,7 @@ def ps(name: str, id: str, details: bool):
     column_min_width = 40
     try:
         payload = http.configs.get_configs(
-            config_name=name, query=query, projection=projection
+            name=name, query=query, projection=projection
         )[0]
     except IndexError:
         error_text = Text("No Configs were found", style="red")

@@ -3,7 +3,7 @@
 # Build Command
 # export DOCKER_BUILDKIT=1; docker buildx build -t chimefrb/workflow:latest .
 
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_VERSION=3.10
 
 FROM python:${PYTHON_VERSION}-slim as base
 
@@ -60,7 +60,7 @@ COPY . $PYSETUP_PATH
 WORKDIR $PYSETUP_PATH
 # Install Project Dependencies
 RUN set -ex \
-    && poetry install --without dev --without docs --no-interaction --no-ansi --no-cache -v
+    && poetry install --without dev --no-interaction --no-ansi --no-cache -v
 
 # Final Image
 FROM base as production

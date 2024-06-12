@@ -30,7 +30,7 @@ services:
   managers:
     image: chimefrb/pipelines:latest
     container_name: managers
-    command: python -m managers.server
+    command: ["/bin/bash", "-c", "touch /etc/site.yml && python -m managers.server"]
     ports:
       - "8002:8002"
     environment:
@@ -46,10 +46,12 @@ services:
       - SANIC_UPDATE_INTERVAL_SECONDS=40
       - SANIC_SLEEP_INTERVAL_SECONDS=30
       - SANIC_PURGE_TIME_SECONDS=3600
+      - SANIC_SITE_CONFIG_FILEPATH=/etc/site.yml
       - DOCKER_HOST=unix:///var/run/docker.sock # Replace with production address or dind
       - TZ=Etc/UTC
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./tests/workflow-site.yml:/etc/site.yml
     networks:
       - workflow
     healthcheck:
@@ -68,7 +70,7 @@ services:
   buckets:
     image: chimefrb/buckets:latest
     container_name: buckets
-    command: [ "/bin/bash", "-c", "python -m buckets.server" ]
+    command: [ "/bin/bash", "-c", "workflow workspace set development && python -m buckets.server" ]
     expose:
       - 8004
     ports:
@@ -88,7 +90,7 @@ services:
   results:
     image: chimefrb/results:latest
     container_name: results
-    command: [ "/bin/bash", "-c", "python -m results.server" ]
+    command: [ "/bin/bash", "-c", "workflow workspace set development && python -m results.server" ]
     expose:
       - 8005
     ports:
@@ -111,26 +113,6 @@ services:
     container_name: mongo
     ports:
       - "27017:27017"
-    networks:
-      - workflow
-
-  local:
-    image: docker:dind
-    container_name: local
-    command:
-      - "/bin/sh"
-      - "-c"
-      - |
-        dockerd -H tcp://0.0.0.0:4444 --tls=false \
-        & while(! docker -H tcp://0.0.0.0:4444 info >/dev/null 2>&1); \
-        do sleep 1; \
-        done \
-        && docker -H tcp://0.0.0.0:4444 swarm init && tail -f /dev/null
-    ports:
-      - "4444:4444"
-    expose:
-      - 4444
-    privileged: true
     networks:
       - workflow
 

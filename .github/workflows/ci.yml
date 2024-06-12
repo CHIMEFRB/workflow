@@ -68,12 +68,9 @@ jobs:
       run: |
         poetry install --all-extras
     -
-      name: Setup Workflow Workspace
-      run: |
-        poetry run workflow workspace set development
-    -
       name: Run workflow tests
       run: |
+        poetry run workflow workspace set development
         poetry run pytest --cov workflow/ --cov-report=lcov -s -v
     -
       name: Upload coverage report

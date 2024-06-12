@@ -6,11 +6,10 @@ from urllib.parse import urlencode
 
 from requests.models import Response
 from tenacity import retry
-from tenacity.stop import stop_after_attempt, stop_after_delay
+from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_random
 
 from workflow.http.client import Client
-from workflow.utils.decorators import try_request
 
 
 class Configs(Client):
@@ -24,11 +23,8 @@ class Configs(Client):
     """
 
     @retry(
-        reraise=True,
-        wait=wait_random(min=1.5, max=3.5),
-        stop=(stop_after_delay(5) | stop_after_attempt(1)),
+        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
     )
-    @try_request
     def deploy(self, data: Dict[str, Any]):
         """Deploys a Config from payload data.
 
@@ -48,7 +44,6 @@ class Configs(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def count(self) -> Dict[str, Any]:
         """Count all documents in a collection.
 
@@ -64,10 +59,9 @@ class Configs(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def get_configs(
         self,
-        config_name: str,
+        name: Optional[str] = None,
         query: Optional[str] = "{}",
         projection: Optional[str] = "{}",
     ) -> List[Dict[str, Any]]:
@@ -75,7 +69,7 @@ class Configs(Client):
 
         Parameters
         ----------
-        config_name : str
+        name : str
             Config name, by default None
         query : str, optional
             Query payload.
@@ -91,19 +85,16 @@ class Configs(Client):
             # ? When using urlencode, internal dict object get single-quoted
             # ? This can trigger error on workflow-pipelines backend
             params = {"projection": projection, "query": query}
-            if config_name:
-                params.update({"name": config_name})
+            if name:
+                params.update({"name": name})
             url = f"{self.baseurl}/configs?{urlencode(params)}"
             response: Response = session.get(url=url)
             response.raise_for_status()
         return response.json()
 
     @retry(
-        reraise=True,
-        wait=wait_random(min=1.5, max=3.5),
-        stop=(stop_after_delay(5) | stop_after_attempt(1)),
+        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
     )
-    @try_request
     def remove(self, config: str, id: str) -> Response:
         """Removes a cancelled pipeline configuration.
 
@@ -127,8 +118,9 @@ class Configs(Client):
             response.raise_for_status()
         return response
 
-    @retry(wait=wait_random(min=0.5, max=1.5), stop=(stop_after_delay(30)))
-    @try_request
+    @retry(
+        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
+    )
     def stop(self, config_name: str, id: str) -> List[Dict[str, Any]]:
         """Stops the manager for a PipelineConfig.
 
@@ -154,7 +146,9 @@ class Configs(Client):
             return []
         return response.json()
 
-    @try_request
+    @retry(
+        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
+    )
     def info(self) -> Dict[str, Any]:
         """Get the version of the pipelines backend.
 

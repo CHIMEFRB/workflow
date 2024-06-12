@@ -3,6 +3,7 @@ workspace: workflow-dev
 # List the valid sites for this workspace
 sites:
   - local
+  - chime
 
 http:
   baseurls:

@@ -9,10 +9,15 @@ from requests.exceptions import RequestException
 from rich.text import Text
 from yaml import safe_load
 
-from workflow.cli.workspace import localspaces, localstems, modulespaces, modulestems
+from workflow import DEFAULT_WORKSPACE_PATH, MODULE_PATH
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.read")
+
+localspaces = Path(DEFAULT_WORKSPACE_PATH).parent
+localstems = [space.stem for space in localspaces.glob("*.y*ml")]
+modulespaces = Path(MODULE_PATH, "workflow", "workspaces")
+modulestems = [space.stem for space in modulespaces.glob("*.y*ml")]
 
 
 def workspace(source: Union[str, Path]) -> Dict[str, Any]:

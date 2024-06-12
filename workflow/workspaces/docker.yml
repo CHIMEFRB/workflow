@@ -1,4 +1,4 @@
-workspace: development
+workspace: docker
 
 # List the valid sites for this workspace
 sites:
@@ -17,11 +17,11 @@ archive:
 
 http:
   baseurls:
-    configs: http://localhost:8001/v2
-    pipelines: http://localhost:8001/v2
-    schedules: http://localhost:8001/v2
-    buckets: http://localhost:8004
-    results: http://localhost:8005
+    configs: http://pipelines_api:8001/v2
+    pipelines: http://pipelines_api:8001/v2
+    schedules: http://pipelines_api:8001/v2
+    buckets: http://buckets:8004
+    results: http://results:8005
 
 config:
   archive:

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/CHIMEFRB/workflow/compare/v0.9.1...v0.10.0) (2024-06-13)
+
+
+### Features
+
+* **client:** the http client now accepts either a str | List[str] as argument for baseurls ([460a731](https://github.com/CHIMEFRB/workflow/commit/460a73191d0349c9d05dc6409917a7161cb25f9e))
+
+
+### Bug Fixes
+
+* **github-actions:** fix for tests ([80f8b26](https://github.com/CHIMEFRB/workflow/commit/80f8b2627b0a85a532dc2f4b6658b677072b0044))
+
 ## [0.9.1](https://github.com/CHIMEFRB/workflow/compare/v0.9.0...v0.9.1) (2024-06-12)
 
 

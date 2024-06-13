@@ -7,11 +7,21 @@ sites:
 
 http:
   baseurls:
-    configs: http://localhost:37015/v2
-    pipelines: http://localhost:37015/v2
-    schedules: http://localhost:37015/v2
-    buckets: https://frb.chimenet.ca/buckets
-    results: https://frb.chimenet.ca/results
+    configs:
+      - http://localhost:37015/v2
+      - http://frb-vsop.chime:37015/v2
+    pipelines:
+      - http://localhost:37015/v2
+      - http://frb-vsop.chime:37015/v2
+    schedules:
+      - http://localhost:37015/v2
+      - http://frb-vsop.chime:37015/v2
+    buckets:
+      - http://frb-vsop.chime:8004
+      - https://frb.chimenet.ca/buckets
+    results:
+      - http://frb-vsop.chime:8005
+      - https://frb.chimenet.ca/results
 
 config:
   archive:

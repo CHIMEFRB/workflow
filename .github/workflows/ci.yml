@@ -63,6 +63,8 @@ jobs:
       name: Run services
       run: |
         docker-compose -f docker-compose.yml up -d
+        sleep 10
+        docker compose logs
     -
       name: Run workflow tests
       run: |

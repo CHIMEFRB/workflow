@@ -2,7 +2,7 @@
 
 from platform import machine, platform, python_version, release, system
 from time import asctime, gmtime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Union
 from warnings import warn
 
 from pydantic import (
@@ -49,7 +49,9 @@ class Client(BaseSettings):
         validate_assignment=True,
         extra="ignore",
     )
-    baseurl: str = Field(..., description="Base URLs for the server")
+    baseurl: Union[str, List[str]] = Field(
+        ..., description="Base URLs to for the server"
+    )
     timeout: float = Field(default=15.0, description="Request timeout in seconds")
     token: Optional[SecretStr] = Field(
         default=None,
@@ -98,11 +100,11 @@ class Client(BaseSettings):
         return self
 
     @field_validator("baseurl")
-    def validate_baseurl(cls, baseurl: str) -> str:
+    def validate_baseurl(cls, baseurl: Union[str, List[str]]) -> str:
         """Validate the baseurl.
 
         Args:
-            baseurl (str): The baseurl to validate.
+            baseurl(Union[str, List[str]]): Baseurls to validate.
 
         Raises:
             AttributeError: The baseurl is not a valid URL.
@@ -111,15 +113,17 @@ class Client(BaseSettings):
         Returns:
             str: The validated baseurl.
         """
-        try:
-            AnyHttpUrl(baseurl)
-            response: Response = head(f"{baseurl}/version", timeout=5)
-            response.raise_for_status()
-        except RequestException as error:
-            logger.warning(error)
-        except Exception as error:
-            raise error
-        return baseurl
+        if isinstance(baseurl, str):
+            baseurl = [baseurl]
+        for url in baseurl:
+            try:
+                AnyHttpUrl(url)  # type: ignore
+                response: Response = head(f"{url}/version", timeout=5)
+                response.raise_for_status()
+                return url
+            except RequestException as error:
+                logger.debug(error)
+        raise AttributeError(f"Unable to validate any baseurl: {baseurl}")
 
     @field_validator("token", mode="after", check_fields=True)
     def validate_token(cls, token: Optional[str]) -> Optional[str]:

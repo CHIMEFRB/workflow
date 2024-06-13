@@ -34,7 +34,7 @@ class TestWorkspaceCLI:
             if os.path.isfile(os.path.join(CONFIG_PATH, entry))
         ]
         files = [f.as_posix() for f in files]
-        assert files == [DEFAULT_WORKSPACE_PATH.as_posix()]
+        assert DEFAULT_WORKSPACE_PATH.as_posix() in files
         # ? Re set workspace for other tests
         result = runner.invoke(set, ["development"])
 

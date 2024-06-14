@@ -284,3 +284,36 @@ class Buckets(Client):
             response.raise_for_status()
         server_info = response.json()
         return {"client": client_info, "server": server_info}
+
+    def reset(
+        self,
+        pipeline: str,
+        skip: int = 0,
+        limit: Optional[int] = 100,
+    ) -> bool:
+        """Reset the pipeline in the buckets backend.
+
+        Args:
+            pipeline (str): The pipeline to reset.
+            skip (int, optional): The number of works to skip. Defaults to 0.
+            limit (Optional[int], optional): The number of works to limit to.
+                Defaults to 100.
+
+        Returns:
+            bool: Whether the pipeline was reset.
+        """
+        # TODO: Remove this once PERF and BUG are resolved
+        raise NotImplementedError("This method is not implemented yet.")
+        num_works = len(
+            self.view({"pipeline": pipeline}, {"id": True}, limit=1_000_000, skip=0)
+        )
+        # PERF: Need a reliable way to reset all works in a pipeline
+        while num_works > 0:
+            # BUG: If work gets removed while resetting, the loop will never end
+            works = self.view({"pipeline": pipeline}, {}, skip=skip, limit=limit)
+            for item in works:
+                item["status"] = "queued"
+                item["attempt"] = 0
+            response = self.update(works)
+            num_works -= len(works)
+        return response

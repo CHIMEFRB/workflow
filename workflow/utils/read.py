@@ -42,7 +42,7 @@ def workspace(source: Union[str, Path]) -> Dict[str, Any]:
 
     if isinstance(source, str):
         if is_valid_url(source):
-            logger.debug(f"workspace @ {source}")
+            logger.info(f"workspace @ {source}")
             return url(source)
 
     logger.error(f"workspace: {source} does not exist.")
@@ -64,7 +64,7 @@ def url(source: str) -> Any:
     try:
         response = get(source)
         response.raise_for_status()
-        return response.json()
+        return safe_load(response.text)
     except RequestException as error:
         logger.exception(error)
         raise error

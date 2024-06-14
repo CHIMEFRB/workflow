@@ -54,18 +54,6 @@ services:
       - ./tests/workflow-site.yml:/etc/site.yml
     networks:
       - workflow
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-f",
-          "http://localhost:8002/__health__"
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    restart: always
 
   buckets:
     image: chimefrb/buckets:latest

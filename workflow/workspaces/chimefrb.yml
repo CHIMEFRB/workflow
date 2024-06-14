@@ -28,7 +28,7 @@ archive:
     loki: "/data/frb-archiver/loki"
     products: "/data/frb-archiver/products"
   s3:
-    minion:
+    minio:
       url: "https://s3.us-west-2.amazonaws.com/frb-archiver"
 
 config:

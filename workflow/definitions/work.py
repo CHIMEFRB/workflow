@@ -456,8 +456,7 @@ class Work(BaseSettings):
         """
         # Context is used to source environtment variables, which are overwriten
         # by the arguments passed to the function.
-        if not http:
-            http = HTTPContext(timeout=timeout, token=token)
+        http = http or HTTPContext(timeout=timeout, token=token)
         payload = http.buckets.withdraw(
             pipeline=pipeline,
             event=event,
@@ -495,10 +494,8 @@ class Work(BaseSettings):
         Returns:
             Union[bool, List[str]]: True if successful, False otherwise.
         """
-        if not token and self.token:
-            token = self.token
-        if not self.http:
-            self.http = HTTPContext(timeout=timeout, token=token)
+        self.token = token or self.token
+        self.http = http or self.http or HTTPContext(timeout=timeout, token=token)
         return self.http.buckets.deposit(works=[self.payload], return_ids=return_ids)
 
     def update(self) -> bool:

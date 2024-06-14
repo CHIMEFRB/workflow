@@ -2,7 +2,7 @@
 
 from platform import machine, platform, python_version, release, system
 from time import asctime, gmtime
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
 from warnings import warn
 
 from pydantic import (
@@ -18,8 +18,7 @@ from requests import Session, head
 from requests.exceptions import RequestException
 from requests.models import Response
 
-from workflow import DEFAULT_WORKSPACE_PATH, __version__
-from workflow.utils import read
+from workflow import __version__
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.http.client")
@@ -75,15 +74,10 @@ class Client(BaseSettings):
             Client: The validated client instance.
 
         """
-        config: Dict[str, Any] = read.workspace(DEFAULT_WORKSPACE_PATH)
-        if config.get("auth", {}).get("type", None) == "token":
-            if config.get("auth", {}).get("provider", None) == "github":
-                if self.token:
-                    self.session.headers.update(
-                        {"x-access-token": self.token.get_secret_value()}
-                    )
-                else:
-                    logger.warning("HTTP Token not found, workspace requires it.")
+        if self.token:
+            self.session.headers.update(
+                {"x-access-token": self.token.get_secret_value()}
+            )
         self.session.headers.update({"Content-Type": "application/json; charset=utf-8"})
         self.session.headers.update({"Accept": "*/*"})
         self.session.headers.update({"User-Agent": "workflow-client"})
@@ -120,6 +114,7 @@ class Client(BaseSettings):
                 AnyHttpUrl(url)  # type: ignore
                 response: Response = head(f"{url}/version", timeout=5)
                 response.raise_for_status()
+                logger.debug(f"Validated baseurl: {url}")
                 return url
             except RequestException as error:
                 logger.debug(error)

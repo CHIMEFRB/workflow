@@ -1,26 +1,23 @@
 """Fetch and process Work using any method compatible with Tasks API."""
 
-import json
 import platform
 import signal
-import sys
 import time
-from json import dump
 from pathlib import Path
 from threading import Event
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
-import requests
+from click_params import JSON, URL, FirstOf
 from rich.console import Console
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.work import Work
-from workflow.lifecycle import archive, container, execute, validate
+from workflow.http.buckets import Buckets
+from workflow.lifecycle import archive, container, execute, validation
 from workflow.utils import read as reader
-from workflow.utils.invokers import call_unset
+from workflow.utils import validate, write
 from workflow.utils.logger import add_loki_handler, get_logger, set_tag, unset_tag
-from workflow.utils.renderers import clean_output
 
 logger = get_logger("workflow.cli")
 
@@ -93,18 +90,14 @@ localspaces = Path(DEFAULT_WORKSPACE_PATH).parent
 @click.option(
     "-w",
     "--workspace",
-    type=click.Path(exists=False, file_okay=True, dir_okay=False, readable=True),
-    default=DEFAULT_WORKSPACE_PATH,
+    type=FirstOf(
+        click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True),
+        URL,
+        JSON,
+    ),
+    default=(DEFAULT_WORKSPACE_PATH.as_posix()),
     show_default=True,
     help="workspace config.",
-)
-@click.option(
-    "-r",
-    "--runspace",
-    default=None,
-    required=False,
-    type=click.STRING,
-    help="runtime",
 )
 @click.option(
     "--log-level",
@@ -122,39 +115,64 @@ def run(
     command: str,
     lives: int,
     sleep: int,
-    workspace: str,
-    runspace: Optional[str],
+    workspace: Union[str, Dict[Any, Any]],
     log_level: str,
 ):
-    """Fetch & Perform Work."""
+    """Fetch and perform work.
+
+    Args:
+        bucket (Tuple[str]): Bucket to fetch work from.
+        site (str): Site to filter work by.
+        tag (Tuple[str]): Tags to filter work by.
+        parent (Tuple[str]): Parent pipeline to filter work by.
+        function (str): Python function to execute.
+        command (str): Command to execute.
+        lives (int): Number of work to perform.
+        sleep (int): Time to sleep between work attempts.
+        workspace (str): Path or URL to the workspace file.
+        runspace (Optional[str]): Runtime JSON workspace.
+        log_level (str): Logging level.
+
+    Raises:
+        click.ClickException: _description_
+    """
     # Set logging level
     logger.root.setLevel(log_level)
     logger.root.handlers[0].setLevel(log_level)
-    # Inform the user of the runtime workspace was loaded,
-    # instead of the default workspace
+
+    logger.info(f"Workspace: {workspace}")
+    logger.info(f"Log Level: {log_level}")
+
+    # workspace passed as a string for Path or URL
+    if isinstance(workspace, str):
+        if Path(workspace).absolute().exists():
+            if workspace == DEFAULT_WORKSPACE_PATH.as_posix():
+                logger.info("Running with active workspace.")
+            else:
+                logger.info(f"Saving {workspace} as active workspace.")
+                # Save the workspace path to the default location
+                write.workspace(Path(workspace))
+        # Check if the workspace is a URL
+        elif validate.url(workspace):
+            logger.info(f"Running with workspace from URL {workspace}")
+            # Fetch the workspace from the URL
+            payload = reader.url(workspace)
+            # Save the workspace to the default location
+            write.workspace(payload)
+
+    if isinstance(workspace, dict):
+        logger.info(f"Running with workspace from {workspace}")
+        # Save the workspace to the default location
+        write.workspace(workspace)
+
+    # At this point, the default workspace should exist
+
     config: Dict[str, Any] = {}
-    if runspace:
-        try:
-            config = json.loads(runspace)
-            logger.info(f"Runtime Workspace Loaded: {config}")
-            workspace = "[bold italic magenta]From Runtime[/bold italic magenta]"
-            name: str = config["workspace"]
-            localspaces.mkdir(parents=True, exist_ok=True)
-            activepath = localspaces / "workspace.yml"
-            # Write config to activepath, even if it already exists.
-            with open(activepath, "w") as filename:
-                dump(config, filename)
-                logger.info(f"Runspace {name} set to active.")
-        except json.JSONDecodeError:
-            logger.error("Invalid JSON provided for runspace")
-            logger.error(runspace)
-            sys.exit(1)
-    else:
-        try:
-            config = reader.workspace(workspace)
-        except FileNotFoundError:
-            logger.error("Workspace file provided does not exists.")
-            return
+    try:
+        config = reader.workspace(DEFAULT_WORKSPACE_PATH)
+    except Exception as error:
+        logger.exception(error)
+        return
     # Get the base urls from the config
     baseurls = config.get("http", {}).get("baseurls", {})
     buckets_url = baseurls.get("buckets", None)
@@ -181,18 +199,16 @@ def run(
         extra=dict(markup=True, color="green"),
     )
     logger.info(f"Workspace: {workspace}")
-    logger.info(f"Base URL : {buckets_url}")
-    logger.info(f"Loki URL : {loki_url}")
-    logger.info(f"Prod URL : {products_url}")
+    logger.info(f"Buckets URL : {buckets_url}")
+    logger.info(f"Loki    URL : {loki_url}")
+    logger.info(f"Prod    URL : {products_url}")
     logger.info(
         "[bold red]Work Filters [/bold red]",
         extra=dict(markup=True, color="green"),
     )
     logger.info(f"Site   : {site}")
-    if tags:
-        logger.info(f"Tags   : {tags}")
-    if parent:
-        logger.info(f"Parents: {parents}")
+    logger.info(f"Tags   : {tags}") if tags else None
+    logger.info(f"Parents: {parents}") if parents else None
     logger.info(
         "[bold red]Execution Environment [/bold red]",
         extra=dict(markup=True, color="green"),
@@ -209,20 +225,14 @@ def run(
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
 
     try:
-        requests.get(buckets_url).headers
-        logger.info("Base URL : ✅")
-        logger.debug(f"base_url: {buckets_url}")
+        Buckets(baseurl=buckets_url)
     except Exception as error:
-        if runspace:
-            unset_result = call_unset()
-            unset_result = clean_output(unset_result.output)
-            logger.info(f"[bold red]{unset_result}[/bold red]")
         logger.error(error)
         raise click.ClickException("unable to connect to workflow backend")
 
     # Check if the function value provided is valid
     if function:
-        validate.function(function)
+        validation.function(function)
         logger.info("Function : ✅")
 
     try:
@@ -255,10 +265,6 @@ def run(
     except Exception as error:
         logger.exception(error)
     finally:
-        if runspace:
-            unset_result = call_unset()
-            unset_result = clean_output(unset_result.output)
-            logger.info(f"[bold red]{unset_result}[/bold red]")
         logger.info(
             "[bold]Workflow Lifecycle Complete[/bold]",
             extra=dict(markup=True, color="green"),
@@ -330,7 +336,7 @@ def attempt(
     try:
         if function:
             mode = "static"
-            user_func = validate.function(function)
+            user_func = validation.function(function)
         else:
             mode = "dynamic"
             user_func = None
@@ -354,12 +360,12 @@ def attempt(
 
             # Get the user function from the work object dynamically
             if function:
-                user_func = validate.function(function)
+                user_func = validation.function(function)
                 work = execute.function(user_func, work)
 
             # If we have a valid command, execute it
             if command:
-                validate.command(command[0])
+                validation.command(command[0])
                 work = execute.command(command, work)
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")

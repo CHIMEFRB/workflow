@@ -2,7 +2,7 @@ from os import chmod
 
 import pytest
 
-from workflow.lifecycle.validate import command, function
+from workflow.lifecycle.validation import command, function
 
 
 @pytest.mark.skip

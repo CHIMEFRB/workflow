@@ -119,7 +119,12 @@ def read(workspace: str):
             console.print(config, style="green")
             return
     else:
-        console.print("No workspace found.", style="italic bold red")
+        console.print("No local workspace found.", style="italic bold red")
+    # Check if workspace is a url.
+    if "://" in workspace:
+        console.print("Reading from URL.", style="italic blue")
+        config = reader.workspace(workspace)
+        console.print(config, style="green")
         return
 
 

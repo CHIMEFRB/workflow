@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any, Dict, Union
 
 from requests import get
-from requests.exceptions import RequestException
 from rich.text import Text
 from yaml import safe_load
 
 from workflow import DEFAULT_WORKSPACE_PATH, MODULE_PATH
+from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.read")
@@ -21,7 +21,7 @@ modulestems = [space.stem for space in modulespaces.glob("*.y*ml")]
 
 
 def workspace(source: Union[str, Path]) -> Dict[str, Any]:
-    """Read a namespace YAML file.
+    """Read a workspace config from a source.
 
     Args:
         source (str | Path): Source of the workspace.
@@ -41,7 +41,7 @@ def workspace(source: Union[str, Path]) -> Dict[str, Any]:
                 raise ValueError(msg)
 
     if isinstance(source, str):
-        if is_valid_url(source):
+        if validate.url(source):
             logger.info(f"workspace @ {source}")
             return url(source)
 
@@ -65,7 +65,7 @@ def url(source: str) -> Any:
         response = get(source)
         response.raise_for_status()
         return safe_load(response.text)
-    except RequestException as error:
+    except Exception as error:
         logger.exception(error)
         raise error
 

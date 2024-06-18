@@ -74,7 +74,7 @@ def set(workspace: str):
     console.print(f"Locating workspace {workspace}", style="italic blue")
     if Path(workspace).absolute().exists():
         console.print(f"Reading {workspace}", style="italic blue")
-        config = reader.workspace(workspace)
+        config = reader.workspace(Path(workspace).absolute())
     elif workspace in localstems:
         for possibility in localspaces.glob(f"{workspace}.y*ml"):
             console.print(f"Reading {possibility}", style="italic blue")

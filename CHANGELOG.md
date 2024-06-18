@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/CHIMEFRB/workflow/compare/v1.0.1...v1.1.0) (2024-06-18)
+
+
+### Miscellaneous Chores
+
+* release 1.1.0 ([65098ae](https://github.com/CHIMEFRB/workflow/commit/65098aecd54ce07dadcf04b353b76c2e91edc7da))
+
 ## [1.0.1](https://github.com/CHIMEFRB/workflow/compare/v1.0.0...v1.0.1) (2024-06-18)
 
 

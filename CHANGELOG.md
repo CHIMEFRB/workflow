@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.0.0](https://github.com/CHIMEFRB/workflow/compare/v0.10.0...v1.0.0) (2024-06-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **http:** work object by default only instantiates a buckets connection in the http context
+* **workspace:** this change marks a departure from multiple config files and assumed that default workspace is always set
+
+### Features
+
+* **http:** httpcontext now supports requesting individual backends ([569d502](https://github.com/CHIMEFRB/workflow/commit/569d50205a1466627ad712a7c13db50860e8afe4))
+* **workspace:** consolidated all workflow settings under single workspace file ([3f616ab](https://github.com/CHIMEFRB/workflow/commit/3f616aba86fedddcf5cb04524a8cce5b3b23dc16))
+
+
+### Bug Fixes
+
+* **http:** removed the clients dependency read workspace ([afd2273](https://github.com/CHIMEFRB/workflow/commit/afd227302263816f83bcab47487f2e12d2ff6c47))
+* **utils:** reading workspace from a url now properly works ([ac6f890](https://github.com/CHIMEFRB/workflow/commit/ac6f8909bd6d0441978c0a592581a9f83af94ca6))
+* **workspace:** fixed spelling error ([a52c9ca](https://github.com/CHIMEFRB/workflow/commit/a52c9caaedaf092f964fff1b5cb88733832207ab))
+* **workspace:** fixed urls for dev workspace ([e789499](https://github.com/CHIMEFRB/workflow/commit/e789499a3efd745113255a49d5a2a6a883005826))
+* **work:** work now attemps to reuse http context ([7df33e4](https://github.com/CHIMEFRB/workflow/commit/7df33e4b9a46cbde2dff8cb26e0e14673222b21f))
+
 ## [0.10.0](https://github.com/CHIMEFRB/workflow/compare/v0.9.1...v0.10.0) (2024-06-13)
 
 

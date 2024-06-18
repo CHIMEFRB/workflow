@@ -6,6 +6,8 @@
 
 Workflow is a Python-based system designed to manage and automate any task in a structured manner. It provides a framework for defining (work), scheduling (buckets), sequencing (pipelines), executing (managers) and archiving (results) the output of any task. The system is designed to be modular with a low threshold of entry for new users, while also providing advanced features for power users.
 
+For more information, please refer to the [Workflow documentation](https://chimefrb.github.io/workflow-docs/).
+
 ## Getting Started
 
 To get started with the Workflow project, you need to have Python 3.8.1 or later installed. You can then install the project's dependencies using Poetry:

@@ -8,8 +8,10 @@ import yaml
 from click.testing import CliRunner
 
 from workflow import CONFIG_PATH, DEFAULT_WORKSPACE_PATH, workspaces
+from workflow.cli.buckets import buckets
 from workflow.cli.run import run
 from workflow.cli.workspace import ls, set
+from workflow.definitions.work import Work
 
 
 class TestWorkspaceCLI:
@@ -83,3 +85,19 @@ class TestWorkspaceCLI:
             ],
         )
         assert result.exit_code == 0
+
+    def test_workflow_buckets_cli(self):
+        """Test the bucket CLI commands."""
+        runner = CliRunner()
+        result = runner.invoke(buckets, ["--help"])
+        assert result.exit_code == 0
+        task = Work(pipeline="cli-bucket", user="cli-test", site="local")
+        assert task.deposit()
+        result = runner.invoke(buckets, ["ls"])
+        assert "cli-bucket" in result.output
+        result = runner.invoke(buckets, ["ls", "--details"])
+        assert result.exit_code == 0
+        result = runner.invoke(buckets, ["ps", "cli-bucket"])
+        assert "cli-bucket" in result.output
+        result = runner.invoke(buckets, ["rm", "cli-bucket", "-f"])
+        assert "cli-bucket" not in result.output

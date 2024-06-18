@@ -62,7 +62,9 @@ jobs:
     -
       name: Run services
       run: |
-        docker-compose -f docker-compose.yml up -d
+        docker compose -f docker-compose.yml up buckets mongo results -d
+        sleep 10
+        docker compose -f docker-compose.yml up -d
         sleep 10
         docker compose logs
     -

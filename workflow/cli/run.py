@@ -144,7 +144,7 @@ def run(
             write.workspace(payload)
 
     if isinstance(workspace, dict):
-        logger.info(f"Running with workspace from {workspace}")
+        logger.info(f"Running with dict workspace: {workspace}")
         # Save the workspace to the default location
         write.workspace(workspace)
 

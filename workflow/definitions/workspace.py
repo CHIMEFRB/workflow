@@ -2,14 +2,12 @@
 
 from typing import Any, Dict, List, Literal, Optional, Union
 
+from docker.types import DriverConfig, Mount
 from pydantic import BaseModel, Field, model_validator
-
-from docker.types import Mount, DriverConfig
 
 
 class DockerDeployerNetwork(BaseModel):
-    """
-    Definition of Workflow Docker Deployer Network Configuration.
+    """Definition of Workflow Docker Deployer Network Configuration.
 
     Args:
         BaseModel (BaseModel): Pydantic BaseModel.
@@ -34,10 +32,16 @@ class DockerDeployerNetwork(BaseModel):
         examples=["host", "bridge", "overlay"],
     )
 
+    class Config:
+        """Pydantic configuration for the DockerDeployerNetwork model."""
+
+        allow_population_by_field_name = True
+        # Allow extra fields in the model.
+        extra = "allow"
+
 
 class WorkspaceDockerDeployer(BaseModel):
-    """
-    Definition of Workflow Workspace Docker Deployer Configuration.
+    """Definition of Workflow Workspace Docker Deployer Configuration.
 
     Args:
         BaseModel (BaseModel): Pydantic BaseModel.
@@ -71,7 +75,10 @@ class WorkspaceDockerDeployer(BaseModel):
     )
     volumes: Optional[Dict[str, Mount]] = Field(
         title="volumes",
-        description="The volumes to be created (if non-existing) and mounted to each Docker Service.",
+        description=(
+            "The volumes to be created (if non-existing) "
+            "and mounted to each Docker Service."
+        ),
         examples=[
             {
                 "volume-mount": {
@@ -98,30 +105,41 @@ class WorkspaceDockerDeployer(BaseModel):
     )
     networks: Optional[Dict[str, DockerDeployerNetwork]] = Field(
         title="networks",
-        description="The networks to be created (if non-existing) and mounted to each Docker Service.",
+        description=(
+            "The networks to be created (if non-existing) "
+            "and mounted to each Docker Service."
+        ),
         examples=[
             {
-                "some-swarm-name": {"attachable": True, "driver": "overlay"},
-                "some-local-network": {"driver": "bridge"},
+                "swarm-network": {"attachable": True, "driver": "overlay"},
+                "local-network": {"driver": "bridge"},
             }
         ],
         default=None,
     )
     labels: Optional[Dict[str, str]] = Field(
         title="labels",
-        description="The custom key-value labels to be mounted to each Docker Service",
-        examples=[{"some_label": "some_value", "some_other_label": "some_other_value"}],
+        description=(
+            "The custom key-value labels to be attached to each Docker Service"
+        ),
+        examples=[{"label1": "value1", "label2": "value2"}],
         default=None,
     )
     constraints: Optional[List[str]] = Field(
         title="constraints",
-        description="The Docker constraints to constrain the scheduling of each Docker Service",
+        description=(
+            "The Docker constraints to constrain "
+            "the scheduling of each Docker Service"
+        ),
         examples=[["node.role == worker", "node.labels.type == compute"]],
         default=None,
     )
     log_driver: Optional[DriverConfig] = Field(
         title="log_driver",
-        description="The log driver to determine where logs are sent to for each Docker Service",
+        description=(
+            "The log driver to determine where logs "
+            "are sent to for each Docker Service"
+        ),
         examples=[
             {
                 "name": "json-file",

@@ -13,7 +13,7 @@ from workflow.lifecycle.archive import http, posix, run, s3
 from workflow.utils import read
 
 workspace_path = (
-    Path(__file__).parent.parent / "workflow" / "workspaces" / "sample-test.yaml"
+    Path(__file__).parent.parent / "workflow" / "workspaces" / "development.yml"
 )
 WORKSPACE = read.workspace(workspace_path)
 

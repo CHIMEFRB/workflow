@@ -2,7 +2,6 @@
 
 import datetime as dt
 import re
-from json import dumps
 from typing import Any, Dict
 
 from rich.text import Text
@@ -64,8 +63,8 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
     """
     text = Text()
     hidden_keys = ["yaml", "services", "name"]
-    query = dumps({"id": {"$in": payload["pipelines"]}})
-    projection = dumps({"id": 1, "status": 1})
+    query = {"id": {"$in": payload["pipelines"]}}
+    projection = {"id": 1, "status": 1}
     pipelines_statuses = http.pipelines.get_pipelines(
         name=payload["name"],
         query=query,
@@ -80,11 +79,12 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
             key_value_text.append(f"{k}: \n", style="bright_blue")
             for child in pipelines_statuses:
                 key_value_text.append(
-                    f"\t{child['id']}: ", style=status_colors[child["status"]]
+                    f"\t{child['id']}: ",  # type: ignore
+                    style=status_colors[child["status"]],  # type: ignore
                 )
                 key_value_text.append(
-                    f"{status_symbols[child['status']]}\n",
-                    style=status_colors[child["status"]],
+                    f"{status_symbols[child['status']]}\n",  # type: ignore
+                    style=status_colors[child["status"]],  # type: ignore
                 )
             text.append_text(key_value_text)
             continue

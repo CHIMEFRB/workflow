@@ -97,15 +97,17 @@ def count():
 def ps(pipeline: str, id: str):
     """List a pipeline configuration in detail."""
     http = HTTPContext()
-    query: str = json.dumps({"id": id})
-    projection: str = json.dumps({})
+    query: Dict[str, str] = {"id": id}
+    projection: Dict[str, str] = {}
     console_content = None
     column_max_width = 300
     column_min_width = 40
     try:
         payload = http.pipelines.get_pipelines(
             name=pipeline, query=query, projection=projection
-        )[0]
+        )[
+            0  # type: ignore
+        ]
     except IndexError:
         error_text = Text("No Pipelines were found", style="red")
         console_content = error_text

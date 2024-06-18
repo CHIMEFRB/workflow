@@ -1,4 +1,4 @@
-workspace: workflow-dev
+workspace: site-dev
 
 # List the valid sites for this workspace
 sites:

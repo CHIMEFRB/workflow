@@ -2,10 +2,9 @@ from os import chmod
 
 import pytest
 
-from workflow.lifecycle.validation import command, function
+from workflow.utils.validate import command, function
 
 
-@pytest.mark.skip
 def test_validate_function():
     """Test the validate function function."""
     result = function("os.chmod")

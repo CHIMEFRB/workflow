@@ -63,7 +63,7 @@ class TestWorkspaceCLI:
             ],
         )
 
-    def test_workflow_run_execution_with_runspace(self):
+    def test_workflow_run_with_json_workspace(self):
         runner = CliRunner()
         directory = Path(workspaces.__file__).parent
         devspace = directory / "development.yml"
@@ -78,7 +78,7 @@ class TestWorkspaceCLI:
                 "--site=local",
                 "--lives=1",
                 "--sleep=1",
-                f"--runspace={runspace}",
+                f"--workspace={runspace}",
                 "some-pipeline-name",
             ],
         )

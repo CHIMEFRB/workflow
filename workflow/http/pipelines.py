@@ -36,7 +36,6 @@ class Pipelines(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def list_pipelines(self, name: Optional[str] = None) -> List[Dict[str, Any]]:
         """View the current pipeline configurations in the pipelines backend.
 
@@ -59,7 +58,6 @@ class Pipelines(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def get_pipelines(
         self, name: str, query: Dict[str, Any], projection: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -91,7 +89,6 @@ class Pipelines(Client):
             response.raise_for_status()
         return response.json()
 
-    @try_request
     def info(self) -> Dict[str, Any]:
         """Get the version of the pipelines backend.
 
@@ -106,3 +103,23 @@ class Pipelines(Client):
             response.raise_for_status()
         server_info = response.json()
         return {"client": client_info, "server": server_info}
+
+    def status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get the status of all pipelines.
+
+        Parameters
+        ----------
+        params : Dict[str, Any]
+            Dictionary with query parameters.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Dictionary with pipeline status.
+        """
+        with self.session as session:
+            response: Response = session.get(
+                url=f"{self.baseurl}/status", params=params
+            )
+            response.raise_for_status()
+        return response.json()

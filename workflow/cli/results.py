@@ -37,14 +37,14 @@ def results():
 @results.command("version", help="Show the version.")
 def version():
     """Show the version."""
-    http = HTTPContext()
+    http = HTTPContext(backends=["results"])
     console.print(http.results.info())
 
 
 @results.command("count", help="Count of results per pipeline.")
 def count():
     """Count pipelines on results backend."""
-    http = HTTPContext()
+    http = HTTPContext(backends=["results"])
     count_result = http.results.status()
     table.add_column("Pipeline", max_width=50, justify="left", style="bright_blue")
     table.add_column("Count", max_width=50, justify="left")

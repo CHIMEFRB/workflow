@@ -25,12 +25,11 @@ services:
       - TZ=Etc/UTC
     networks:
       - workflow
-    restart: always
 
   managers:
     image: chimefrb/pipelines:latest
     container_name: managers
-    command: ["/bin/bash", "-c", "touch /etc/site.yml && python -m managers.server"]
+    command: ["/bin/bash", "-c", "python -m managers.server"]
     ports:
       - "8002:8002"
     environment:
@@ -46,12 +45,13 @@ services:
       - SANIC_UPDATE_INTERVAL_SECONDS=40
       - SANIC_SLEEP_INTERVAL_SECONDS=30
       - SANIC_PURGE_TIME_SECONDS=3600
-      - SANIC_SITE_CONFIG_FILEPATH=/etc/site.yml
-      - DOCKER_HOST=unix:///var/run/docker.sock # Replace with production address or dind
+      - SANIC_DEPLOYER_REDEPLOY_WAIT_TIME=30
+      - SANIC_DEPLOYER_MAX_REPLICAS=256
+      - SANIC_WORKSPACE_FILEPATH=/etc/workspace.yml
       - TZ=Etc/UTC
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./tests/workflow-site.yml:/etc/site.yml
+      - ./workflow/workspaces/development.yml:/etc/workspace.yml
     networks:
       - workflow
 
@@ -106,4 +106,6 @@ services:
 
 networks:
   workflow:
+    name: workflow
     driver: bridge
+    attachable: true

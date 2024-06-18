@@ -4,6 +4,7 @@ import platform
 import signal
 import time
 from pathlib import Path
+from sys import stderr, stdout
 from threading import Event
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -13,10 +14,9 @@ from rich.console import Console
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.work import Work
-from workflow.http.buckets import Buckets
-from workflow.lifecycle import archive, container, execute, validation
-from workflow.utils import read as reader
-from workflow.utils import validate, write
+from workflow.http.context import HTTPContext
+from workflow.lifecycle import archive, container, execute
+from workflow.utils import read, validate, write
 from workflow.utils.logger import add_loki_handler, get_logger, set_tag, unset_tag
 
 logger = get_logger("workflow.cli")
@@ -118,24 +118,7 @@ def run(
     workspace: Union[str, Dict[Any, Any]],
     log_level: str,
 ):
-    """Fetch and perform work.
-
-    Args:
-        bucket (Tuple[str]): Bucket to fetch work from.
-        site (str): Site to filter work by.
-        tag (Tuple[str]): Tags to filter work by.
-        parent (Tuple[str]): Parent pipeline to filter work by.
-        function (str): Python function to execute.
-        command (str): Command to execute.
-        lives (int): Number of work to perform.
-        sleep (int): Time to sleep between work attempts.
-        workspace (str): Path or URL to the workspace file.
-        runspace (Optional[str]): Runtime JSON workspace.
-        log_level (str): Logging level.
-
-    Raises:
-        click.ClickException: _description_
-    """
+    """Fetch and perform work."""
     # Set logging level
     logger.root.setLevel(log_level)
     logger.root.handlers[0].setLevel(log_level)
@@ -156,7 +139,7 @@ def run(
         elif validate.url(workspace):
             logger.info(f"Running with workspace from URL {workspace}")
             # Fetch the workspace from the URL
-            payload = reader.url(workspace)
+            payload = read.url(workspace)
             # Save the workspace to the default location
             write.workspace(payload)
 
@@ -169,16 +152,12 @@ def run(
 
     config: Dict[str, Any] = {}
     try:
-        config = reader.workspace(DEFAULT_WORKSPACE_PATH)
+        config = read.workspace(DEFAULT_WORKSPACE_PATH)
     except Exception as error:
         logger.exception(error)
         return
     # Get the base urls from the config
     baseurls = config.get("http", {}).get("baseurls", {})
-    buckets_url = baseurls.get("buckets", None)
-    loki_url = baseurls.get("loki", None)
-    products_url = baseurls.get("products", None)
-
     # Reformat the tags, parent and buckets
     tags: List[str] = list(tag)
     parents: List[str] = list(parent)
@@ -198,10 +177,9 @@ def run(
         "[bold red]Workspace [/bold red]",
         extra=dict(markup=True, color="green"),
     )
-    logger.info(f"Workspace: {workspace}")
-    logger.info(f"Buckets URL : {buckets_url}")
-    logger.info(f"Loki    URL : {loki_url}")
-    logger.info(f"Prod    URL : {products_url}")
+    logger.info(f"Buckets URL : {baseurls.get('buckets')}")
+    logger.info(f"Loki    URL : {baseurls.get('loki')}")
+    logger.info(f"Prod    URL : {baseurls.get('products')}")
     logger.info(
         "[bold red]Work Filters [/bold red]",
         extra=dict(markup=True, color="green"),
@@ -221,18 +199,18 @@ def run(
         "[bold red]Backend Checks [/bold red]",
         extra=dict(markup=True, color="green"),
     )
-    loki_status = add_loki_handler(logger, loki_url, config)
+    loki_status = add_loki_handler(logger, baseurls.get("loki"), config)
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
 
     try:
-        Buckets(baseurl=buckets_url)
+        HTTPContext(backends=["buckets"]).buckets.info()
+        logger.info("Buckets  : ✅")
     except Exception as error:
-        logger.error(error)
-        raise click.ClickException("unable to connect to workflow backend")
-
+        logger.exception(error)
+        return
     # Check if the function value provided is valid
     if function:
-        validation.function(function)
+        validate.function(function)
         logger.info("Function : ✅")
 
     try:
@@ -240,16 +218,13 @@ def run(
             "[bold]Starting Workflow Lifecycle[/bold]",
             extra=dict(markup=True, color="green"),
         )
-        slowdown: float = 1.0
-        if container.virtualization():
-            slowdown = 1000.0
         console = Console(force_terminal=True, tab_size=4)
+        tty: bool = stdout.isatty() or stderr.isatty()
         with console.status(
             status="",
-            spinner="dots",
+            spinner="aesthetic" if tty else "dots",
             spinner_style="bold green",
-            refresh_per_second=1,
-            speed=1 / slowdown,
+            refresh_per_second=10 if tty else 0.1,
         ):
             lifecycle(
                 buckets,
@@ -259,7 +234,6 @@ def run(
                 site,
                 tags,
                 parents,
-                buckets_url,
                 config,
             )
     except Exception as error:
@@ -279,7 +253,6 @@ def lifecycle(
     site: str,
     tags: List[str],
     parents: List[str],
-    base_url: str,
     config: Dict[str, Any],
 ):
     """Run the workflow lifecycle."""
@@ -298,7 +271,7 @@ def lifecycle(
 
     # Run the lifecycle until the exit event is set or the lifetime is reached
     while lifetime != 0 and not exit.is_set():
-        attempt(buckets, function, base_url, site, tags, parents, config)
+        attempt(buckets, function, site, tags, parents, config)
         lifetime -= 1
         logger.debug(f"sleeping: {sleep_time}s")
         exit.wait(sleep_time)
@@ -308,7 +281,6 @@ def lifecycle(
 def attempt(
     buckets: List[str],
     function: Optional[str],
-    base_url: str,
     site: str,
     tags: List[str],
     parents: List[str],
@@ -336,7 +308,7 @@ def attempt(
     try:
         if function:
             mode = "static"
-            user_func = validation.function(function)
+            user_func = validate.function(function)
         else:
             mode = "dynamic"
             user_func = None
@@ -360,12 +332,12 @@ def attempt(
 
             # Get the user function from the work object dynamically
             if function:
-                user_func = validation.function(function)
+                user_func = validate.function(function)
                 work = execute.function(user_func, work)
 
             # If we have a valid command, execute it
             if command:
-                validation.command(command[0])
+                validate.command(command[0])
                 work = execute.command(command, work)
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")
@@ -377,11 +349,11 @@ def attempt(
     finally:
         if work:
             product_url = config.get("http", {}).get("baseurls", {}).get("products", "")
-            if any(work.notify.slack.dict().values()) and work.products:
+            if any(work.notify.slack.model_dump().values()) and work.products:
                 work.products = [
                     f"<{product_url}{product}|{product}>" for product in work.products
                 ]
-            if any(work.notify.slack.dict().values()) and work.plots:
+            if any(work.notify.slack.model_dump().values()) and work.plots:
                 work.plots = [f"<{product_url}{plot}|{plot}>" for plot in work.plots]
             work.update()  # type: ignore
             logger.info("work completed: ✅")

@@ -4,17 +4,6 @@ workspace: development
 sites:
   - local
 
-# Show archiving locations
-archive:
-  mounts:
-    allenby: "/"
-    aro: "/"
-    chime: "/data/chime/baseband/processed"
-    canfar: "/arc/projects/chime_frb/data/canfar/processed"
-    gbo: "/"
-    kko: "/"
-    hco: "/"
-
 http:
   baseurls:
     configs: http://localhost:8001/v2
@@ -23,14 +12,37 @@ http:
     buckets: http://localhost:8004
     results: http://localhost:8005
 
+archive:
+  mounts:
+    local: "/"
+
 config:
   archive:
-    results: true
     plots:
-      methods: ["move", "delete"] # Defines the methods enabled by the workspace admin
+      methods:
+        - "bypass"
+        - "copy"
+        - "delete"
+        - "move"
       storage: "s3"
-      permissions: List[Linux Groups]?
     products:
-      methods: ["move", "delete"] # Can also be copy or delete
+      methods:
+        - "bypass"
+        - "copy"
+        - "delete"
+        - "move"
       storage: "posix"
-  slack:
+    results: true
+    permissions:
+      posix:
+        user: "user"
+        group: "chime-frb-ro"
+        command: "setfacl -R -m g:{group}:r {path}"
+
+deployers:
+  local:
+    docker:
+      # client_url: npipe:////./pipe/docker_engine
+      client_url: unix:///var/run/docker.sock
+      networks:
+        workflow: # This network maps to the docker-compose.yml network name

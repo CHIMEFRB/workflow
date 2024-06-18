@@ -1,7 +1,7 @@
 """HTTP client for interacting with the Workflow Servers."""
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import (
     AliasChoices,
@@ -52,7 +52,7 @@ class HTTPContext(BaseSettings):
         default=DEFAULT_WORKSPACE_PATH,
         frozen=True,
         description="Path to the workspace configuration.",
-        examples=["/home/user/.config/workflow/workspace.yaml"],
+        examples=[DEFAULT_WORKSPACE_PATH.as_posix()],
     )
     timeout: float = Field(
         default=15.0,
@@ -71,6 +71,11 @@ class HTTPContext(BaseSettings):
         ),
         description="Workflow Access Token.",
         examples=["ghp_1234567890abcdefg"],
+    )
+    backends: List[str] = Field(
+        default=["buckets", "results", "pipelines", "schedules", "configs"],
+        description="List of backend services to create clients for.",
+        examples=[["buckets", "results", "pipelines", "schedules", "configs"]],
     )
     buckets: Buckets = Field(
         default=None,
@@ -141,23 +146,26 @@ class HTTPContext(BaseSettings):
             "schedules": Schedules,
             "configs": Configs,
         }
-        logger.debug(f"creating http clients for {list(clients.keys())}")
+        logger.debug(f"creating http clients for {self.backends}.")
         config: Dict[str, Any] = read.workspace(self.workspace)
         baseurls = config.get("http", {}).get("baseurls", {})
         logger.debug(f"baseurls: {baseurls}")
-        for _name, _class in clients.items():
-            baseurl = baseurls.get(_name, None)
-            client = getattr(self, _name)
+        for backend in self.backends:
+            baseurl = baseurls.get(backend, None)
+            client = getattr(self, backend)
+            logger.debug(f"creating {backend} client @ {baseurl}.")
             if baseurl and not client:
                 try:
                     setattr(
                         self,
-                        _name,
-                        _class(baseurl=baseurl, token=self.token, timeout=self.timeout),
+                        backend,
+                        clients[backend](
+                            baseurl=baseurl, token=self.token, timeout=self.timeout
+                        ),
                     )
-                    logger.debug(f"created {_name} client @ {baseurl}.")
+                    logger.debug(f"created {backend} client @ {baseurl}.")
                 except Exception as error:
-                    logger.error(f"failed to create {_name} client @ {baseurl}.")
+                    logger.error(f"failed to create {backend} client @ {baseurl}.")
                     logger.exception(error)
                     raise error
         return self

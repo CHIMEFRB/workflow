@@ -123,6 +123,7 @@ class Work(BaseSettings):
         env_prefix="WORKFLOW_",
         secrets_dir="/run/secrets",
         extra="ignore",
+        json_schema_mode_override="serialization",
     )
     # * Runtime configurations for the Work Object, these are not part of the payload.
     # * and describe the behavior of the work object in the current instantiation.

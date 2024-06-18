@@ -1,8 +1,6 @@
-# Workflow
-
 [![Continuous Integration](https://github.com/CHIMEFRB/workflow/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/CHIMEFRB/workflow/actions/workflows/ci.yml) [![Continuous Deployment](https://github.com/CHIMEFRB/workflow/actions/workflows/cd.yml/badge.svg)](https://github.com/CHIMEFRB/workflow/actions/workflows/cd.yml) [![Coverage Status](https://coveralls.io/repos/github/CHIMEFRB/workflow/badge.svg?branch=main&t=WaYxol)](https://coveralls.io/github/CHIMEFRB/workflow?branch=main)
 
----
+# Workflow
 
 Workflow is a Python-based system designed to manage and automate any task in a structured manner. It provides a framework for defining (work), scheduling (buckets), sequencing (pipelines), executing (managers) and archiving (results) the output of any task. The system is designed to be modular with a low threshold of entry for new users, while also providing advanced features for power users.
 
@@ -56,8 +54,6 @@ poetry run pytest
 ## License
 
 Workflow is licensed under the MIT license.
-
-MIT License
 
 Copyright (c) 2024 CHIME/FRB Collaboration
 

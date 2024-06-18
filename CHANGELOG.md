@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.1](https://github.com/CHIMEFRB/workflow/compare/v1.0.0...v1.0.1) (2024-06-18)
+
+
+### Bug Fixes
+
+* **cli:** workspace set fix when passing path ([2d9ab04](https://github.com/CHIMEFRB/workflow/commit/2d9ab04ae909bf8587bbb9c49d752dff2d38e7ae))
+* **json-schema:** added default mode as serialization ([5587cf7](https://github.com/CHIMEFRB/workflow/commit/5587cf719244aec470b538778fe27dc111c2715a))
+
+
+### Documentation
+
+* **readme:** added readme, moved docs to workflow-docs repo, consolidated test configs to pyproject ([20ba2b2](https://github.com/CHIMEFRB/workflow/commit/20ba2b20dc076cf3b92a51552c635daa63fbf14e))
+* **readme:** formatting ([3681bd1](https://github.com/CHIMEFRB/workflow/commit/3681bd192cbda256d234ad04adc426f8d8678644))
+* **readme:** update ([06f9a45](https://github.com/CHIMEFRB/workflow/commit/06f9a45253f633ee03d8ba0468af9eac23be3e11))
+
 ## [1.0.0](https://github.com/CHIMEFRB/workflow/compare/v0.10.0...v1.0.0) (2024-06-18)
 
 

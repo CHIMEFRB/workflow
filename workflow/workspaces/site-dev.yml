@@ -26,3 +26,11 @@ http:
 config:
   archive:
     results: true
+
+deployers:
+  local:
+    docker:
+      client_url: tcp://frb-vsop.chime:2375
+  chime:
+    docker:
+      client_url: tcp://frb-vsop.chime:2375

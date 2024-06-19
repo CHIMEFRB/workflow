@@ -97,8 +97,8 @@ def count():
 def ps(pipeline: str, id: str):
     """List a pipeline configuration in detail."""
     http = HTTPContext()
-    query: Dict[str, str] = {"id": id}
-    projection: Dict[str, str] = {}
+    query: str = json.dumps({"id": id})
+    projection: str = json.dumps({})
     console_content = None
     column_max_width = 300
     column_min_width = 40

@@ -58,9 +58,7 @@ class Pipelines(Client):
             response.raise_for_status()
         return response.json()
 
-    def get_pipelines(
-        self, name: str, query: Dict[str, Any], projection: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def get_pipelines(self, name: str, query: str, projection: str) -> Dict[str, Any]:
         """Gets details for one pipeline configuration.
 
         Parameters

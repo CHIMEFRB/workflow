@@ -2,6 +2,7 @@
 
 import datetime as dt
 import re
+from json import dumps as json_dumps
 from typing import Any, Dict
 
 from rich.text import Text
@@ -63,8 +64,8 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
     """
     text = Text()
     hidden_keys = ["yaml", "services", "name"]
-    query = {"id": {"$in": payload["pipelines"]}}
-    projection = {"id": 1, "status": 1}
+    query = json_dumps({"id": {"$in": payload["pipelines"]}})
+    projection = json_dumps({"id": 1, "status": 1})
     pipelines_statuses = http.pipelines.get_pipelines(
         name=payload["name"],
         query=query,

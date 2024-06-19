@@ -1,0 +1,31 @@
+version: "2"
+name: example-pipeline
+
+defaults:
+  user: developer
+  site: local
+
+deployments:
+  - name: sm
+    site: local
+    image: chimefrb/workflow:latest
+    sleep: 1
+    resources:
+      cores: 1
+      ram: 2G
+    replicas: 1
+
+pipeline:
+  runs_on: sm
+  steps:
+    - name: math
+      stage: 1
+      matrix:
+        alpha: [1, 2, 3]
+        beta: [1, 2, 3]
+      work:
+        site: chime
+        function: workflow.examples.function.math
+        parameters:
+          a: ${{ matrix.alpha }}
+          b: ${{ matrix.beta }}

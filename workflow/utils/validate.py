@@ -4,7 +4,7 @@ import platform
 import re
 import subprocess
 from importlib import import_module
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List, Tuple
 
 from workflow.utils.logger import get_logger
 
@@ -90,3 +90,48 @@ def command(command: str) -> bool:
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+def validate_deployments(config: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+    """Perform checks on config payload with deployments.
+
+    Parameters
+    ----------
+    config : Dict[str, Any]
+        Config payload.
+
+    Returns
+    -------
+    bool
+        TODO
+    """
+    unused_deployments = []
+    orphaned_steps = []
+    deployments = config.get("deployments", [])
+    steps = config["pipeline"]["steps"]
+
+    for deployment in deployments:
+        n_used = int()
+        top_level = False
+        # ? First case: unused deployments
+        if config["pipeline"].get("runs_on", None):
+            if deployment["name"] in config["pipeline"]["runs_on"]:
+                n_used += 1
+                top_level = True
+        for step in steps:
+            has_runs_on = False
+            if step.get("runs_on", None):
+                used = deployment["name"] in step["runs_on"]
+                has_runs_on = True
+                if used:
+                    n_used += 1
+                # ? Second case: orphaned steps
+                if not used and not has_runs_on:
+                    orphaned_steps.append(step["name"])
+            if not top_level and not has_runs_on:
+                orphaned_steps.append(step["name"])
+
+        if n_used == 0:
+            unused_deployments.append(deployment["name"])
+
+    return (unused_deployments, list(set(orphaned_steps)))

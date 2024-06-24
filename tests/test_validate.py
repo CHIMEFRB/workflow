@@ -1,8 +1,9 @@
 from os import chmod
+from typing import Any, Dict
 
 import pytest
 
-from workflow.utils.validate import command, function
+from workflow.utils.validate import command, function, validate_deployments
 
 
 def test_validate_function():
@@ -23,3 +24,13 @@ def test_validate_command():
     # Test invalid command
     result = command("invalid_command")
     assert result is False
+
+
+def test_validate_deployments(config_with_deployments: Dict[str, Any]):
+    """Tests the validate_deployment function."""
+    unused, orphaned = validate_deployments(config=config_with_deployments)
+    assert unused
+    assert orphaned
+    assert unused == ["ld1", "ld2", "ld4"]
+    orphaned.sort()
+    assert orphaned == ["echo", "printenv-2", "uname"]

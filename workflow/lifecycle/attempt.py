@@ -1,14 +1,13 @@
 """Workflow lifecycle module."""
 
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from requests import exceptions
 
 from workflow.definitions.work import Work
 from workflow.http.context import HTTPContext
 from workflow.lifecycle import archive, execute
-from workflow.utils import validate
 from workflow.utils.logger import get_logger, set_tag, unset_tag
 
 logger = get_logger("workflow.lifecycle.attempt")
@@ -42,7 +41,6 @@ def work(
         bool: _description_
     """
     work: Optional[Work] = None
-    user_func: Optional[Callable[..., Any]] = None
     status: bool = False
 
     try:
@@ -87,16 +85,16 @@ def work(
             # Get the user function from the work object dynamically
             if work.function:
                 logger.debug(f"executing function: {work.function}")
-                user_func = validate.function(work.function)
-                work = execute.function(user_func, work)
+                work = execute.function(work)
 
             # If we have a valid command, execute it
             if work.command:
                 logger.debug(f"executing command: {work.command}")
-                validate.command(work.command[0])
-                work = execute.command(work.command, work)
+                work = execute.command(work)
+
             if int(work.timeout) + int(work.start) < time.time():  # type: ignore
                 raise TimeoutError("work timed out")
+
             archive.run(work, config)
             status = True
     except Exception as error:

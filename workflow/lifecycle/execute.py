@@ -10,6 +10,7 @@ import click
 from mergedeep import merge  # type: ignore
 
 from workflow.definitions.work import Work
+from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
@@ -17,7 +18,7 @@ logger = get_logger("workflow.lifecycle.execute")
 Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]]]
 
 
-def function(func: Callable[..., Any], work: Work) -> Work:
+def function(work: Work) -> Work:
     """Execute a Python function.
 
     Args:
@@ -27,16 +28,17 @@ def function(func: Callable[..., Any], work: Work) -> Work:
     Returns:
         Work: The work object
     """
-    # Execute the function
-    logger.debug(f"executing func: {func}")
-    func, parameters = gather(func, work)
-    logger.info(f"call signature: {func.__name__}(**{parameters})")
+    logger.debug(f"executing func: {work.function}")
     start = time.time()
     outcome: Optional[Outcome] = None
     results: Optional[Dict[str, Any]] = None
     products: Optional[List[str]] = None
     plots: Optional[List[str]] = None
     try:
+        assert isinstance(work.function, str), "missing function to execute"
+        func: Callable[..., Any] = validate.function(work.function)
+        func, parameters = gather(func, work)
+        logger.info(f"func call sig: {func.__name__}(**{parameters})")
         outcome = func(**parameters)
         # * If the outcome is a dict, assume it is results
         logger.debug(f"call outcome: {outcome}")
@@ -111,7 +113,7 @@ def gather(
     return func, parameters
 
 
-def command(command: List[str], work: Work) -> Work:
+def command(work: Work) -> Work:
     """Execute a command.
 
     Args:
@@ -123,9 +125,12 @@ def command(command: List[str], work: Work) -> Work:
     """
     # Execute command in a subprocess with stdout and stderr redirected to PIPE
     # and timeout of work.timeout
-    logger.debug(f"executing command: {command}")
+    logger.debug(f"executing command: {work.command}")
     start = time.time()
     try:
+        assert isinstance(work.command, list), "missing command to execute"
+        validate.command(work.command[0])
+        command = work.command
         process = subprocess.run(
             command,
             stdout=subprocess.PIPE,

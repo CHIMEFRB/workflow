@@ -3,7 +3,26 @@
 from pathlib import Path
 from typing import Dict, List, Tuple, Union
 
+import click
 
+
+@click.command("math", help="Sample CHIME/FRB Workflow Compatible Function.")
+@click.option(
+    "--alpha",
+    "-a",
+    default=1.0,
+    type=Union[float, int],
+    required=True,
+    help="A number.",
+)
+@click.option(
+    "--beta",
+    "-b",
+    default=1.0,
+    type=Union[float, int],
+    required=True,
+    help="Another number.",
+)
 def math(
     alpha: Union[float, int], beta: Union[float, int]
 ) -> Tuple[Dict[str, float], List[str], List[str]]:
@@ -14,7 +33,7 @@ def math(
         b (Union[float, int]): Another number
 
     Raises:
-        error: If the arguments are not
+        error: If the arguments are not numbers
 
     Returns:
         Tuple[Dict[str, float], List[str], List[str]]:

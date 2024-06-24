@@ -30,7 +30,7 @@ def function(func: Callable[..., Any], work: Work) -> Work:
     # Execute the function
     logger.debug(f"executing func: {func}")
     func, parameters = gather(func, work)
-    logger.info(f"executing: {func.__name__}(**{parameters})")
+    logger.info(f"call signature: {func.__name__}(**{parameters})")
     start = time.time()
     outcome: Optional[Outcome] = None
     results: Optional[Dict[str, Any]] = None
@@ -39,6 +39,7 @@ def function(func: Callable[..., Any], work: Work) -> Work:
     try:
         outcome = func(**parameters)
         # * If the outcome is a dict, assume it is results
+        logger.debug(f"call outcome: {outcome}")
         if isinstance(outcome, dict):
             results = outcome
         # * If the outcome is tuple of len 3, assume it is results, products, plots
@@ -46,7 +47,7 @@ def function(func: Callable[..., Any], work: Work) -> Work:
             results, products, plots = outcome
         else:
             logger.warning(f"could not parse work outcome: {outcome}")
-            logger.error(f"outcome ignored for work: {work.id}")
+            logger.warning(f"outcome ignored for work: {work.id}")
         logger.debug(f"results: {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots: {plots}")
@@ -89,9 +90,10 @@ def gather(
             Tuple of user function and parameters
     """
     defaults: Dict[Any, Any] = {}
+    known: List[Any] = list(work.parameters.keys()) if work.parameters else []
     if isinstance(func, click.Command):
+        logger.info("click cli command detected")
         # Get default options from the click command
-        known: List[Any] = list(work.parameters.keys()) if work.parameters else []
         for parameter in func.params:
             if parameter.name not in known:  # type: ignore
                 defaults[parameter.name] = parameter.default
@@ -105,6 +107,7 @@ def gather(
         parameters = {**work.parameters, **defaults}
     else:
         parameters = defaults
+    logger.debug(f"parameters: {parameters}")
     return func, parameters
 
 
@@ -141,7 +144,7 @@ def command(command: List[str], work: Work) -> Work:
         except SyntaxError as error:
             logger.warning(f"could not parse stdout: {error}")
         except IndexError as error:
-            logger.exception(error)
+            logger.warning(error)
         if isinstance(response, tuple):
             if isinstance(response[0], dict):
                 work.results = response[0]

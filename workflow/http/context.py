@@ -1,7 +1,7 @@
 """HTTP client for interacting with the Workflow Servers."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Self
 
 from pydantic import (
     AliasChoices,
@@ -114,18 +114,17 @@ class HTTPContext(BaseSettings):
 
     @field_validator("workspace", mode="before")
     @classmethod
-    def check_workspace_is_set(cls, value: str):
+    def check_workspace_is_set(cls, value: str) -> str:
         """Check that workspace field has a valid filepath.
 
-        Parameters
-        ----------
-        value : str
-            FilePath str value.
+        Args:
+            value (str): FilePath str value.
 
-        Raises
-        ------
-        ValueError
-            If path is not a valid file.
+        Raises:
+            ValueError: If path is not a valid file.
+
+        Returns:
+            str: FilePath str value.
         """
         if not os.path.isfile(value):
             logger.error("No workspace set.")
@@ -133,11 +132,11 @@ class HTTPContext(BaseSettings):
         return value
 
     @model_validator(mode="after")
-    def create_clients(self) -> "HTTPContext":
+    def create_clients(self) -> Self:
         """Create the HTTP Clients for the Workflow Servers.
 
         Returns:
-            HTTPContext: The current HTTPContext object.
+            Self: The current HTTPContext object.
         """
         clients: Dict[str, Any] = {
             "buckets": Buckets,
@@ -166,6 +165,5 @@ class HTTPContext(BaseSettings):
                     logger.debug(f"created {backend} client @ {baseurl}.")
                 except Exception as error:
                     logger.error(f"failed to create {backend} client @ {baseurl}.")
-                    logger.exception(error)
-                    raise error
+                    logger.error(error)
         return self

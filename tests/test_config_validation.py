@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import pytest
 
-from workflow.utils.validate import command, function, validate_deployments
+from workflow.utils.validate import command, deployments, function
 
 
 def test_validate_function():
@@ -28,7 +28,7 @@ def test_validate_command():
 
 def test_validate_deployments(config_with_deployments: Dict[str, Any]):
     """Tests the validate_deployment function."""
-    unused, orphaned = validate_deployments(config=config_with_deployments)
+    unused, orphaned = deployments(config=config_with_deployments)
     assert unused
     assert orphaned
     assert unused == ["ld1", "ld2", "ld4"]

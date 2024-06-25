@@ -1,7 +1,7 @@
 """HTTP client for interacting with the Workflow Servers."""
 
 import os
-from typing import Any, Dict, List, Optional, Self
+from typing import Any, Dict, List, Optional
 
 from pydantic import (
     AliasChoices,
@@ -12,6 +12,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing_extensions import Self
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.http.buckets import Buckets

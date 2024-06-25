@@ -103,7 +103,7 @@ def arguments(arguments: Optional[Dict[str, Any]]) -> List[str]:
     args: List[str] = []
     if arguments:
         for key, value in arguments.items():
-            args.append(f"--{key}={value}")
+            args.append(f"{key}={value}")
     return args
 
 
@@ -118,21 +118,23 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
         Tuple[Callable[..., Any], Dict[str, Any]]:
             Tuple of user function and parameters
     """
-    defaults: Dict[str, Any] = {}
+    # Options calculated from the click command and work parameters
+    options: Dict[str, Any] = {}
+    # Parameters passed to work object
+    parameters: Dict[str, Any] = work.parameters or {}
+    # Known work parameters keys
     known: List[Any] = list(work.parameters.keys()) if work.parameters else []
-
     if isinstance(func, click.Command):
         logger.info(f"click cli detected for func {work.function}")
         # Get default options from the click command
         for parameter in func.params:
             if parameter.name not in known:  # type: ignore
-                defaults[str(parameter.name)] = parameter.default
-        logger.info(f"click cli defaults: {defaults}")
-    # If work.parameters is empty, merge an empty dict with the defaults
-    # Otherwise, merge the work.parameters with the defaults
-    if work.parameters:
-        work.parameters = {**work.parameters, **defaults}
-    else:
-        work.parameters = defaults
+                options[parameter.opts[-1]] = parameter.default
+            elif parameter.name in known:
+                options[parameter.opts[-1]] = parameters.get(
+                    parameter.name  # type: ignore
+                )
+        logger.info(f"click cli options: {options}")
+        work.parameters = options
     logger.debug(f"work parameters: {work.parameters}")
     return work

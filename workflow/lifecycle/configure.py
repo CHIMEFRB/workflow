@@ -103,7 +103,10 @@ def arguments(arguments: Optional[Dict[str, Any]]) -> List[str]:
     args: List[str] = []
     if arguments:
         for key, value in arguments.items():
-            args.append(f"{key}={value}")
+            if len(key) == 2:
+                args.append(f"{key} {value}")
+            else:
+                args.append(f"{key}={value}")
     return args
 
 

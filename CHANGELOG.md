@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.2.0](https://github.com/CHIMEFRB/workflow/compare/v1.1.0...v1.2.0) (2024-06-25)
+
+
+### Features
+
+* **cli/configs.py:** adding validation for deployments ([#67](https://github.com/CHIMEFRB/workflow/issues/67)) ([1154568](https://github.com/CHIMEFRB/workflow/commit/1154568351a3a2d13b8439ef4bfd82281147bd21))
+* **cli:** improved the cli run command significantly ([894fd08](https://github.com/CHIMEFRB/workflow/commit/894fd080d4c4a13f2545aaaa20e1362c8f843eb9))
+
+
+### Bug Fixes
+
+* **cleanup:** tutorial ([53e7008](https://github.com/CHIMEFRB/workflow/commit/53e700835cf868cdc26999f9dc75357f6a5b92c7))
+* **cli:** fixing ls and ps functions not receiving the right datatype for query and projection ([#64](https://github.com/CHIMEFRB/workflow/issues/64)) ([87767cb](https://github.com/CHIMEFRB/workflow/commit/87767cb674a3d72639d00e8b1b990c7cc5f48348))
+* **imports:** fixed typings imports error ([98edf99](https://github.com/CHIMEFRB/workflow/commit/98edf99814a348a72add48ca54ee6ba0fb5e6dd9))
+* **lifecycle:** fixed issue when running click cli wrapped functions were not reporting results,prods & plots properly ([769cb73](https://github.com/CHIMEFRB/workflow/commit/769cb735eebcead024136222a86b82ee3635491b))
+
 ## [1.1.0](https://github.com/CHIMEFRB/workflow/compare/v1.0.1...v1.1.0) (2024-06-18)
 
 

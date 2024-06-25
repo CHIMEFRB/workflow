@@ -1,6 +1,5 @@
 """Workflow lifecycle module."""
 
-import time
 from typing import Any, Dict, List, Optional
 
 from requests import exceptions
@@ -92,24 +91,22 @@ def work(
                 logger.debug(f"executing command: {work.command}")
                 work = execute.command(work)
 
-            if int(work.timeout) + int(work.start) < time.time():  # type: ignore
-                raise TimeoutError("work timed out")
+            # * Note: work.status is already set to either "success" or "failure"
+            # * in the execute module. We don't need to set it here.
 
             archive.run(work, config)
+            work.update()
             status = True
     except Exception as error:
-        logger.exception(error)
-        work.status = "failure"  # type: ignore
+        logger.error(error)
+        if work:
+            work.results = {"error": str(error)}
+            work.products = None
+            work.plots = None
+            work.status = "failure"
     finally:
         if work:
-            product_url = config.get("http", {}).get("baseurls", {}).get("products", "")
-            if any(work.notify.slack.model_dump().values()) and work.products:
-                work.products = [
-                    f"<{product_url}{product}|{product}>" for product in work.products
-                ]
-            if any(work.notify.slack.model_dump().values()) and work.plots:
-                work.plots = [f"<{product_url}{plot}|{plot}>" for plot in work.plots]
-            work.update()  # type: ignore
+            work.update()
             logger.info("work completed: ✅")
-        unset_tag()
+            unset_tag()
         return status

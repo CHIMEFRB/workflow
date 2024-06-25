@@ -6,11 +6,10 @@ from workflow.examples.function import math
 
 
 def test_math_function():
-    # Run the function
-    a = 5
-    b = 2
-    results, products, plots = math(a, b)
 
+    a: int = 5
+    b: int = 2
+    results, products, plots = math(5, 2)
     # Check the results
     assert isinstance(results, Dict)
     assert isinstance(products, List)

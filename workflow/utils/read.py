@@ -9,7 +9,6 @@ from rich.text import Text
 from yaml import safe_load
 
 from workflow import DEFAULT_WORKSPACE_PATH, MODULE_PATH
-from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.read")
@@ -21,14 +20,17 @@ modulestems = [space.stem for space in modulespaces.glob("*.y*ml")]
 
 
 def workspace(source: Union[str, Path]) -> Dict[str, Any]:
-    """Read a workspace config from a source.
+    """Read a workspace configuration from source.
 
     Args:
-        source (str | Path): Source of the workspace.
+        source (Union[str, Path]): Source of the workspace.
             Can be a URL, a file path, or a namespace name.
 
+    Raises:
+        ValueError: If not a yaml file, source
+
     Returns:
-        Any: The namespace contents.
+        Dict[str, Any]: Workspace Configuration
     """
     if isinstance(source, Path):
         if source.exists():
@@ -41,7 +43,7 @@ def workspace(source: Union[str, Path]) -> Dict[str, Any]:
                 raise ValueError(msg)
 
     if isinstance(source, str):
-        if validate.url(source):
+        if is_valid_url(source):
             logger.info(f"workspace @ {source}")
             return url(source)
 

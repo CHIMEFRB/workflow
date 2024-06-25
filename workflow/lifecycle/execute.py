@@ -10,14 +10,16 @@ import click
 from mergedeep import merge  # type: ignore
 
 from workflow.definitions.work import Work
+from workflow.lifecycle import configure
+from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
 
-Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]]]
+Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]], Any, None]
 
 
-def function(func: Callable[..., Any], work: Work) -> Work:
+def function(work: Work) -> Work:
     """Execute a Python function.
 
     Args:
@@ -27,47 +29,49 @@ def function(func: Callable[..., Any], work: Work) -> Work:
     Returns:
         Work: The work object
     """
-    # Execute the function
-    logger.debug(f"executing func: {func}")
-    func, parameters = gather(func, work)
-    logger.info(f"executing: {func.__name__}(**{parameters})")
+    logger.debug(f"executing func: {work.function}")
     start = time.time()
-    outcome: Optional[Outcome] = None
+    outcome: Outcome = None
     results: Optional[Dict[str, Any]] = None
     products: Optional[List[str]] = None
     plots: Optional[List[str]] = None
     try:
-        outcome = func(**parameters)
-        # * If the outcome is a dict, assume it is results
-        if isinstance(outcome, dict):
-            results = outcome
-        # * If the outcome is tuple of len 3, assume it is results, products, plots
-        elif isinstance(outcome, tuple) and len(outcome) == 3:
-            results, products, plots = outcome
+        assert isinstance(work.function, str), "missing function to execute"
+        func: Callable[..., Any] = validate.function(work.function)
+        arguments: List[str] = []
+        # Configure default values for the function
+        work = configure.defaults(func, work)
+        # Paramters to execute the function with
+        parameters: Dict[str, Any] = work.parameters or {}
+
+        if isinstance(func, click.Command):
+            arguments = configure.arguments(parameters)
+            logger.info(
+                f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
+            )
+            outcome = func.main(args=arguments, standalone_mode=False)
         else:
-            logger.warning(f"could not parse work outcome: {outcome}")
-            logger.error(f"outcome ignored for work: {work.id}")
+            logger.info(
+                f"executing as python function: {func.__name__}(**{work.parameters})"
+            )
+            outcome = func(**parameters)
+        logger.info(f"func call outcome: {outcome}")
+        results, products, plots = validate.outcome(outcome)
         logger.debug(f"results: {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots: {plots}")
-        # * Merge function output with work object
+        # * Merge work object with results, products, and plots
         if results:
-            # * Check if results are less than 4MB
-            if getsizeof(results) > 4_000_000:
-                logger.error(
-                    f"results size {getsizeof(results)/1000000:.2f}MB exceeds 4MB"
-                )
-                logger.error("results not mapped to work object")
-                results = None
             work.results = merge(work.results or {}, results)  # type: ignore
         if products:
             work.products = (work.products or []) + products
         if plots:
             work.plots = (work.plots or []) + plots
+        work = validate.size(work)
         work.status = "success"
     except Exception as error:
         work.status = "failure"
-        logger.exception(error)
+        logger.error(error)
     finally:
         end = time.time()
         work.stop = end
@@ -75,40 +79,7 @@ def function(func: Callable[..., Any], work: Work) -> Work:
         return work
 
 
-def gather(
-    func: Callable[..., Any], work: Work
-) -> Tuple[Callable[..., Any], Dict[str, Any]]:
-    """Gather the parameters for the user function.
-
-    Args:
-        func (Callable[..., Any]): User function
-        work (Work): Work object
-
-    Returns:
-        Tuple[Callable[..., Any], Dict[str, Any]]:
-            Tuple of user function and parameters
-    """
-    defaults: Dict[Any, Any] = {}
-    if isinstance(func, click.Command):
-        # Get default options from the click command
-        known: List[Any] = list(work.parameters.keys()) if work.parameters else []
-        for parameter in func.params:
-            if parameter.name not in known:  # type: ignore
-                defaults[parameter.name] = parameter.default
-        if defaults:
-            logger.debug(f"click cli defaults: {defaults}")
-        func = func.callback  # type: ignore
-    # If work.parameters is empty, merge an empty dict with the defaults
-    # Otherwise, merge the work.parameters with the defaults
-    parameters: Dict[str, Any] = {}
-    if work.parameters:
-        parameters = {**work.parameters, **defaults}
-    else:
-        parameters = defaults
-    return func, parameters
-
-
-def command(command: List[str], work: Work) -> Work:
+def command(work: Work) -> Work:
     """Execute a command.
 
     Args:
@@ -120,9 +91,12 @@ def command(command: List[str], work: Work) -> Work:
     """
     # Execute command in a subprocess with stdout and stderr redirected to PIPE
     # and timeout of work.timeout
-    logger.debug(f"executing command: {command}")
+    logger.debug(f"executing command: {work.command}")
     start = time.time()
     try:
+        assert isinstance(work.command, list), "missing command to execute"
+        validate.command(work.command[0])
+        command = work.command
         process = subprocess.run(
             command,
             stdout=subprocess.PIPE,
@@ -141,7 +115,7 @@ def command(command: List[str], work: Work) -> Work:
         except SyntaxError as error:
             logger.warning(f"could not parse stdout: {error}")
         except IndexError as error:
-            logger.exception(error)
+            logger.warning(error)
         if isinstance(response, tuple):
             if isinstance(response[0], dict):
                 work.results = response[0]

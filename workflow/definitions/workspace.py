@@ -166,7 +166,7 @@ class WorkspaceDockerDeployer(BaseModel):
     class Config:
         """Pydantic configuration for the WorkspaceDockerDeployer model."""
 
-        allow_population_by_field_name = True
+        populate_by_name = True
         # Allow extra fields in the model.
         extra = "allow"
 
@@ -247,6 +247,6 @@ class Workspace(BaseModel):
     class Config:
         """Pydantic configuration for the Workspace model."""
 
-        allow_population_by_field_name = True
+        populate_by_name = True
         # Allow extra fields in the model.
         extra = "allow"

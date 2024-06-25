@@ -15,8 +15,8 @@ from yaml import safe_load
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
+from workflow.utils import validate
 from workflow.utils.renderers import render_config
-from workflow.utils.validate import validate_deployments
 
 pretty.install()
 console = Console()
@@ -86,7 +86,7 @@ def deploy(filename: click.Path):
     unused_deployments: List[str] = list()
     orphaned_steps: List[str] = list()
     if data.get("deployments", None):
-        unused_deployments, orphaned_steps = validate_deployments(config=data)
+        unused_deployments, orphaned_steps = validate.deployments(config=data)
         if any(unused_deployments):
             answer = console.input(
                 f"The following deployments are not being used: {unused_deployments},"

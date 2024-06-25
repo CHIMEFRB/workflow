@@ -93,18 +93,15 @@ def command(command: str) -> bool:
     except subprocess.CalledProcessError:
         return False
 
-def validate_deployments(config: Dict[str, Any]) -> Tuple[List[str], List[str]]:
-    """Perform checks on config payload with deployments.
 
-    Parameters
-    ----------
-    config : Dict[str, Any]
-        Config payload.
+def deployments(config: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+    """Validate deployments.
 
-    Returns
-    -------
-    bool
-        TODO
+    Args:
+        config (Dict[str, Any]): Config payload.
+
+    Returns:
+        Tuple[List[str], List[str]]: Unused deployments and orphaned steps.
     """
     unused_deployments = []
     orphaned_steps = []
@@ -136,6 +133,7 @@ def validate_deployments(config: Dict[str, Any]) -> Tuple[List[str], List[str]]:
             unused_deployments.append(deployment["name"])
 
     return (unused_deployments, list(set(orphaned_steps)))
+
 
 def outcome(output: Any) -> Tuple[Dict[str, Any], List[str], List[str]]:
     """Parse the output, returning results, products, and plots.

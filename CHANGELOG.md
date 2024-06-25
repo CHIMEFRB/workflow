@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.2.1](https://github.com/CHIMEFRB/workflow/compare/v1.2.0...v1.2.1) (2024-06-25)
+
+
+### Bug Fixes
+
+* **cli:** default options which are none, are no longer passed to cli ([bcb0cbb](https://github.com/CHIMEFRB/workflow/commit/bcb0cbbc77fcc7566db99d62772bf8c5c732d706))
+* **cli:** run command now properly parses click cli argument names. ([26aceaf](https://github.com/CHIMEFRB/workflow/commit/26aceafa5b1fef8d6ee312711311f87b0dc1eceb))
+* **execution:** fixed edge case in work execution due to json serializable error ([cb9ce26](https://github.com/CHIMEFRB/workflow/commit/cb9ce26972c8e1cc6daa41f24b75d5057c2776ef))
+* **execution:** fixed issue when translating single and multiple letter click cli options to to code ([f67b1f7](https://github.com/CHIMEFRB/workflow/commit/f67b1f7f2848f652b237515622711a5ca486692b))
+
 ## [1.2.0](https://github.com/CHIMEFRB/workflow/compare/v1.1.0...v1.2.0) (2024-06-25)
 
 

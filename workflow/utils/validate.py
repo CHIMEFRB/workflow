@@ -94,6 +94,47 @@ def command(command: str) -> bool:
         return False
 
 
+def deployments(config: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+    """Validate deployments.
+
+    Args:
+        config (Dict[str, Any]): Config payload.
+
+    Returns:
+        Tuple[List[str], List[str]]: Unused deployments and orphaned steps.
+    """
+    unused_deployments = []
+    orphaned_steps = []
+    deployments = config.get("deployments", [])
+    steps = config["pipeline"]["steps"]
+
+    for deployment in deployments:
+        n_used = int()
+        top_level = False
+        # ? First case: unused deployments
+        if config["pipeline"].get("runs_on", None):
+            if deployment["name"] in config["pipeline"]["runs_on"]:
+                n_used += 1
+                top_level = True
+        for step in steps:
+            has_runs_on = False
+            if step.get("runs_on", None):
+                used = deployment["name"] in step["runs_on"]
+                has_runs_on = True
+                if used:
+                    n_used += 1
+                # ? Second case: orphaned steps
+                if not used and not has_runs_on:
+                    orphaned_steps.append(step["name"])
+            if not top_level and not has_runs_on:
+                orphaned_steps.append(step["name"])
+
+        if n_used == 0:
+            unused_deployments.append(deployment["name"])
+
+    return (unused_deployments, list(set(orphaned_steps)))
+
+
 def outcome(output: Any) -> Tuple[Dict[str, Any], List[str], List[str]]:
     """Parse the output, returning results, products, and plots.
 

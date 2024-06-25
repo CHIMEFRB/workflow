@@ -1,7 +1,7 @@
 """Manage workflow pipelines."""
 
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import click
 import requests
@@ -15,6 +15,7 @@ from yaml import safe_load
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
+from workflow.utils import validate
 from workflow.utils.renderers import render_config
 
 pretty.install()
@@ -80,6 +81,30 @@ def deploy(filename: click.Path):
     data: Dict[str, Any] = {}
     with open(filepath) as reader:
         data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
+
+    # ? Check unused deployments and orphaned steps
+    unused_deployments: List[str] = list()
+    orphaned_steps: List[str] = list()
+    if data.get("deployments", None):
+        unused_deployments, orphaned_steps = validate.deployments(config=data)
+        if any(unused_deployments):
+            answer = console.input(
+                f"The following deployments are not being used: {unused_deployments},"
+                " do you wish to continue? (Y/n):"
+            )
+            if answer.lower() != "y":
+                console.print("Cancelling", style="red")
+                return
+        if any(orphaned_steps):
+            answer = console.input(
+                f"The following steps {orphaned_steps} does not have a runs_on "
+                "even though you have defined deployments, "
+                "do you wish to continue? (Y/n):",
+            )
+            if answer.lower() != "y":
+                console.print("Cancelling", style="red")
+                return
+
     try:
         deploy_result = http.configs.deploy(data)
     except requests.HTTPError as deploy_error:

@@ -9,7 +9,6 @@ from rich.text import Text
 from yaml import safe_load
 
 from workflow import DEFAULT_WORKSPACE_PATH, MODULE_PATH
-from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.read")
@@ -44,7 +43,7 @@ def workspace(source: Union[str, Path]) -> Dict[str, Any]:
                 raise ValueError(msg)
 
     if isinstance(source, str):
-        if validate.url(source):
+        if is_valid_url(source):
             logger.info(f"workspace @ {source}")
             return url(source)
 

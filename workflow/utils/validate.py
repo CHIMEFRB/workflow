@@ -4,8 +4,10 @@ import platform
 import re
 import subprocess
 from importlib import import_module
-from typing import Any, Callable
+from sys import getsizeof
+from typing import Any, Callable, Dict, List, Tuple
 
+from workflow.definitions.work import Work
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.utils.validate")
@@ -62,7 +64,7 @@ def function(function: str) -> Callable[..., Any]:
         if not callable(function):
             raise TypeError(f"{function} is not callable")
     except Exception as error:
-        logger.exception(error)
+        logger.error(error)
         raise ImportError(f"failed to import: {function}")
     return function
 
@@ -90,3 +92,66 @@ def command(command: str) -> bool:
         return True
     except subprocess.CalledProcessError:
         return False
+
+
+def outcome(output: Any) -> Tuple[Dict[str, Any], List[str], List[str]]:
+    """Parse the output, returning results, products, and plots.
+
+    Args:
+        output (Any): The output from the work execution.
+
+    Returns:
+        Tuple[Dict[str, Any], List[str], List[str]]:
+            Results, products, and plots.
+    """
+    results: Dict[str, Any] = {}
+    products: List[str] = []
+    plots: List[str] = []
+
+    if isinstance(output, dict):
+        results = output
+    elif isinstance(output, tuple):
+        # Assign values based on type and position in the tuple
+        for item in output:
+            if isinstance(item, dict) and not results:
+                results = item
+            elif isinstance(item, list):
+                if not products:
+                    products = item
+                elif not plots:
+                    plots = item
+            else:
+                logger.error(f"unable to parse output item {item}")
+    else:
+        logger.info("unable to parse output from work execution")
+
+    return results, products, plots
+
+
+def size(
+    work: Work,
+    fields: List[str] = ["results", "products", "plots"],
+    size: int = 4_000_000,
+) -> Work:
+    """Check if the data is less than the specified.
+
+    Args:
+        work (Work): Work object.
+        fields (List[str], optional): Fields.
+            Defaults to ["results", "products", "plots"].
+        size (int, optional): Size. Defaults to 4_000_000.
+
+    Returns:
+        Work: Work object.
+    """
+    for field in fields:
+        data = getattr(work, field)
+        fsize: int = getsizeof(data)
+        if fsize > size:
+            logger.error(
+                f"{field} size {fsize/1000000:.2f}MB exceeds max: {size/1000000:.2f}MB"
+            )
+            # Set the field to None
+            logger.warning(f"setting {field} to None")
+            setattr(work, field, None)
+    return work

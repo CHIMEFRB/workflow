@@ -10,12 +10,13 @@ import click
 from mergedeep import merge  # type: ignore
 
 from workflow.definitions.work import Work
+from workflow.lifecycle import configure
 from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
 
-Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]]]
+Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]], Any, None]
 
 
 def function(work: Work) -> Work:
@@ -30,87 +31,52 @@ def function(work: Work) -> Work:
     """
     logger.debug(f"executing func: {work.function}")
     start = time.time()
-    outcome: Optional[Outcome] = None
+    outcome: Outcome = None
     results: Optional[Dict[str, Any]] = None
     products: Optional[List[str]] = None
     plots: Optional[List[str]] = None
     try:
         assert isinstance(work.function, str), "missing function to execute"
         func: Callable[..., Any] = validate.function(work.function)
-        func, parameters = gather(func, work)
-        logger.info(f"func call sig: {func.__name__}(**{parameters})")
-        outcome = func(**parameters)
-        # * If the outcome is a dict, assume it is results
-        logger.debug(f"call outcome: {outcome}")
-        if isinstance(outcome, dict):
-            results = outcome
-        # * If the outcome is tuple of len 3, assume it is results, products, plots
-        elif isinstance(outcome, tuple) and len(outcome) == 3:
-            results, products, plots = outcome
+        arguments: List[str] = []
+        # Configure default values for the function
+        work = configure.defaults(func, work)
+        # Paramters to execute the function with
+        parameters: Dict[str, Any] = work.parameters or {}
+
+        if isinstance(func, click.Command):
+            arguments = configure.arguments(parameters)
+            logger.info(
+                f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
+            )
+            outcome = func.main(args=arguments, standalone_mode=False)
         else:
-            logger.warning(f"could not parse work outcome: {outcome}")
-            logger.warning(f"outcome ignored for work: {work.id}")
+            logger.info(
+                f"executing as python function: {func.__name__}(**{work.parameters})"
+            )
+            outcome = func(**parameters)
+        logger.info(f"func call outcome: {outcome}")
+        results, products, plots = validate.outcome(outcome)
         logger.debug(f"results: {results}")
         logger.debug(f"products: {products}")
         logger.debug(f"plots: {plots}")
-        # * Merge function output with work object
+        # * Merge work object with results, products, and plots
         if results:
-            # * Check if results are less than 4MB
-            if getsizeof(results) > 4_000_000:
-                logger.error(
-                    f"results size {getsizeof(results)/1000000:.2f}MB exceeds 4MB"
-                )
-                logger.error("results not mapped to work object")
-                results = None
             work.results = merge(work.results or {}, results)  # type: ignore
         if products:
             work.products = (work.products or []) + products
         if plots:
             work.plots = (work.plots or []) + plots
+        work = validate.size(work)
         work.status = "success"
     except Exception as error:
         work.status = "failure"
-        logger.exception(error)
+        logger.error(error)
     finally:
         end = time.time()
         work.stop = end
         logger.info(f"execution time: {end - start:.2f}s")
         return work
-
-
-def gather(
-    func: Callable[..., Any], work: Work
-) -> Tuple[Callable[..., Any], Dict[str, Any]]:
-    """Gather the parameters for the user function.
-
-    Args:
-        func (Callable[..., Any]): User function
-        work (Work): Work object
-
-    Returns:
-        Tuple[Callable[..., Any], Dict[str, Any]]:
-            Tuple of user function and parameters
-    """
-    defaults: Dict[Any, Any] = {}
-    known: List[Any] = list(work.parameters.keys()) if work.parameters else []
-    if isinstance(func, click.Command):
-        logger.info("click cli command detected")
-        # Get default options from the click command
-        for parameter in func.params:
-            if parameter.name not in known:  # type: ignore
-                defaults[parameter.name] = parameter.default
-        if defaults:
-            logger.debug(f"click cli defaults: {defaults}")
-        func = func.callback  # type: ignore
-    # If work.parameters is empty, merge an empty dict with the defaults
-    # Otherwise, merge the work.parameters with the defaults
-    parameters: Dict[str, Any] = {}
-    if work.parameters:
-        parameters = {**work.parameters, **defaults}
-    else:
-        parameters = defaults
-    logger.debug(f"parameters: {parameters}")
-    return func, parameters
 
 
 def command(work: Work) -> Work:

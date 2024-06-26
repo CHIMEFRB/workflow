@@ -7,7 +7,6 @@ from sys import getsizeof
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
-from mergedeep import merge  # type: ignore
 
 from workflow.definitions.work import Work
 from workflow.lifecycle import configure
@@ -61,8 +60,10 @@ def function(work: Work) -> Work:
         logger.debug(f"products: {products}")
         logger.debug(f"plots: {plots}")
         # * Merge work object with results, products, and plots
-        if results:
-            work.results = merge(work.results or {}, results)  # type: ignore
+        if results and not work.results:
+            work.results = results
+        if results and work.results:
+            work.results = {**work.results, **results}
         if products:
             work.products = (work.products or []) + products
         if plots:

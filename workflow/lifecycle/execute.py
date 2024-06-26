@@ -1,9 +1,7 @@
 """Execute the work function or command."""
 
-import ast
 import subprocess
 import time
-from sys import getsizeof
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import click
@@ -97,9 +95,8 @@ def command(work: Work) -> Work:
     try:
         assert isinstance(work.command, list), "missing command to execute"
         validate.command(work.command[0])
-        command = work.command
         process = subprocess.run(
-            command,
+            work.command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             timeout=work.timeout,
@@ -110,22 +107,6 @@ def command(work: Work) -> Work:
         stdout = process.stdout.decode("utf-8").splitlines()
         stderr = process.stderr.decode("utf-8").splitlines()
         # Convert last line of stdout to a Tuple
-        response: Any = None
-        try:
-            response = ast.literal_eval(stdout[-1])
-        except SyntaxError as error:
-            logger.warning(f"could not parse stdout: {error}")
-        except IndexError as error:
-            logger.warning(error)
-        if isinstance(response, tuple):
-            if isinstance(response[0], dict):
-                work.results = response[0]
-            if isinstance(response[1], list):
-                work.products = response[1]
-            if isinstance(response[2], list):
-                work.plots = response[2]
-        if isinstance(response, dict):
-            work.results = response
         if not (work.results or work.products or work.plots):
             work.results = {
                 "args": process.args,
@@ -134,11 +115,7 @@ def command(work: Work) -> Work:
                 "returncode": process.returncode,
             }
         # * Check if results are less than 4MB
-        size: int = getsizeof(work.results)  # type: ignore
-        if size > 4_000_000:
-            logger.error(f"results size {size:.2f}MB exceeds 4MB")
-            logger.error("results not mapped to work object")
-            work.results = None
+        validate.size(work)
         work.status = "success"
     except Exception as error:
         work.status = "failure"

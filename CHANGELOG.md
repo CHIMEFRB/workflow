@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/CHIMEFRB/workflow/compare/v1.2.1...v1.2.2) (2024-06-26)
+
+
+### Bug Fixes
+
+* **deps:** removed mergedeep usage when collating results ([3104c80](https://github.com/CHIMEFRB/workflow/commit/3104c807ba4f4cb31b2df0cd005f756d92d857d4))
+
 ## [1.2.1](https://github.com/CHIMEFRB/workflow/compare/v1.2.0...v1.2.1) (2024-06-25)
 
 

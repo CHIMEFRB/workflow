@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/CHIMEFRB/workflow/compare/v1.3.0...v1.3.1) (2024-06-26)
+
+
+### Bug Fixes
+
+* **execute:** executing a command no longer tries to evaluate the stdout to python types ([61e4ca3](https://github.com/CHIMEFRB/workflow/commit/61e4ca3e24573d0858d514554a57bb4493c059fd))
+
 ## [1.3.0](https://github.com/CHIMEFRB/workflow/compare/v1.2.2...v1.3.0) (2024-06-26)
 
 

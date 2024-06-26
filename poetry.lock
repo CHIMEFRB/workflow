@@ -670,17 +670,6 @@ files = [
 ]
 
 [[package]]
-name = "mergedeep"
-version = "1.3.4"
-description = "A deep merge function for 🐍."
-optional = false
-python-versions = ">=3.6"
-files = [
-    {file = "mergedeep-1.3.4-py3-none-any.whl", hash = "sha256:70775750742b25c0d8f36c55aed03d24c3384d17c951b3175d898bd778ef0307"},
-    {file = "mergedeep-1.3.4.tar.gz", hash = "sha256:0096d52e9dad9939c3d975a774666af186eda617e6ca84df4c94dec30004f2a8"},
-]
-
-[[package]]
 name = "minio"
 version = "7.2.7"
 description = "MinIO Python SDK for Amazon S3 Compatible Cloud Storage"
@@ -1573,4 +1562,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "ab55ccb34e1bd8a2415a3c24379adda8a9945dfadea3b975fb3e0e794c9205d8"
+content-hash = "5208f1ed7273259a51e450790acfd1c9041c41201d74cee81907e8eec0dec205"

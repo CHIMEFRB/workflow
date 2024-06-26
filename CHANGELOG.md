@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/CHIMEFRB/workflow/compare/v1.2.2...v1.3.0) (2024-06-26)
+
+
+### Features
+
+* **helpers:** added a new category of workflow functions called helpers to provide common utililites in the pipelines framework ([bb3659b](https://github.com/CHIMEFRB/workflow/commit/bb3659b79ba5a93a43f48bf2b5d87fd0372a56c5))
+
 ## [1.2.2](https://github.com/CHIMEFRB/workflow/compare/v1.2.1...v1.2.2) (2024-06-26)
 
 

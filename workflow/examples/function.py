@@ -69,11 +69,22 @@ def math(
     required=True,
     help="Another number.",
 )
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    help="Print verbose output.",
+    default=False,
+)
 def cli(
-    alpha: Union[float, int], beta: Union[float, int]
+    alpha: Union[float, int], beta: Union[float, int], verbose: bool
 ) -> Tuple[Dict[str, float], List[str], List[str]]:
     """Click command for the math function."""
     results, products, plots = math(alpha, beta)
+    if verbose:
+        click.echo(f"results: {results}")
+        click.echo(f"products: {products}")
+        click.echo(f"plots: {plots}")
     return results, products, plots
 
 

@@ -103,9 +103,11 @@ def arguments(arguments: Optional[Dict[str, Any]]) -> List[str]:
     args: List[str] = []
     if arguments:
         for key, value in arguments.items():
-            if len(key) == 2:
+            if not value:
+                args.append(f"{key}")
+            elif value and len(key) == 2:
                 args.append(f"{key} {value}")
-            else:
+            elif value and len(key) > 2:
                 args.append(f"{key}={value}")
     return args
 
@@ -132,11 +134,18 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
         # Get default options from the click command
         for parameter in func.params:
             if (parameter.name not in known) and parameter.default:
-                options[parameter.opts[-1]] = parameter.default
+                if parameter.is_flag:  # type: ignore
+                    options[parameter.opts[-1]] = None
+                else:
+                    options[parameter.opts[-1]] = parameter.default
             elif parameter.name in known:
-                options[parameter.opts[-1]] = parameters.get(
-                    parameter.name  # type: ignore
-                )
+                if parameter.is_flag:
+                    if parameter.default == parameters.get(parameter.name):
+                        options[parameter.opts[-1]] = None
+                else:
+                    options[parameter.opts[-1]] = parameters.get(
+                        parameter.name  # type: ignore
+                    )
         logger.info(f"click cli options: {options}")
         work.parameters = options
     logger.debug(f"work parameters: {work.parameters}")

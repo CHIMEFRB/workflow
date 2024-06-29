@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/CHIMEFRB/workflow/compare/v1.3.1...v1.3.2) (2024-06-29)
+
+
+### Bug Fixes
+
+* **execute:** properly handle cli options which are flags, i.e. --verbose ([ae3da80](https://github.com/CHIMEFRB/workflow/commit/ae3da8013241a4924fdcc5538e4c886b4e87f2cf))
+
 ## [1.3.1](https://github.com/CHIMEFRB/workflow/compare/v1.3.0...v1.3.1) (2024-06-26)
 
 

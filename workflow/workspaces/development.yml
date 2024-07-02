@@ -3,6 +3,8 @@ workspace: development
 # List the valid sites for this workspace
 sites:
   - local
+  - development
+  - testing
 
 http:
   baseurls:
@@ -15,6 +17,8 @@ http:
 archive:
   mounts:
     local: "/"
+    development: "./"
+    testing: "./testing"
 
 config:
   archive:
@@ -24,7 +28,7 @@ config:
         - "copy"
         - "delete"
         - "move"
-      storage: "s3"
+      storage: "posix"
     products:
       methods:
         - "bypass"
@@ -41,6 +45,12 @@ config:
 
 deployers:
   local:
+    docker:
+      # client_url: npipe:////./pipe/docker_engine
+      client_url: unix:///var/run/docker.sock
+      networks:
+        workflow: # This network maps to the docker-compose.yml network name
+  development:
     docker:
       # client_url: npipe:////./pipe/docker_engine
       client_url: unix:///var/run/docker.sock

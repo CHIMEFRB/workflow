@@ -11,6 +11,25 @@ from workflow.utils import logger
 log = logger.get_logger("workflow.lifecycle.archive")
 
 
+class ArchiveResultsError(Exception):
+    """Exception raised for any error in archiving the results for a Work.
+
+    Attributes:
+        message (str): Explanation for the error.
+    """
+
+    def __init__(
+        self, message="Something went wrong when archiving the results."
+    ) -> None:
+        """Initialize the ArchiveResultsError.
+
+        Args:
+            message (str): Error message to display.
+        """
+        self.message = message
+        super().__init__(self.message)
+
+
 def run(work: Work, workspace: Dict[str, Any]) -> None:
     """Run the archive lifecycle for a work object.
 
@@ -47,7 +66,7 @@ def run(work: Work, workspace: Dict[str, Any]) -> None:
         else:
             raise NameError("Creation date not found in work object.")
         basepath: Path = Path(f"{mounts.get(work.site)}")
-        path: Path = basepath / f"/workflow/{date}/{work.pipeline}/{work.id}"
+        path: Path = basepath / f"workflow/{date}/{work.pipeline}/{work.id}"
 
         if (
             work.config.archive.products

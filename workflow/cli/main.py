@@ -12,6 +12,7 @@ from workflow.cli.results import results
 from workflow.cli.run import run
 from workflow.cli.schedules import schedules
 from workflow.cli.workspace import workspace
+from workflow.daemons.audit import audit
 from workflow.utils.read import get_active_workspace
 
 console = Console()
@@ -41,6 +42,7 @@ cli.add_command(configs)
 cli.add_command(pipelines)
 cli.add_command(schedules)
 cli.add_command(workspace)
+cli.add_command(audit)
 
 if __name__ == "__main__":
     cli()

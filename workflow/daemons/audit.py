@@ -1,11 +1,17 @@
 """Audit Daemon."""
 
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import click
+from click_params import JSON, URL, FirstOf
 
-from workflow.http.buckets import Buckets
+from workflow import DEFAULT_WORKSPACE_PATH
+from workflow.http.context import HTTPContext
+from workflow.lifecycle import configure
+from workflow.utils.logger import get_logger
+
+logger = get_logger("workflow.daemons.audit")
 
 
 @click.command()
@@ -17,18 +23,23 @@ from workflow.http.buckets import Buckets
     help="Number of seconds to sleep between audits.",
 )
 @click.option(
-    "--baseurl",
-    "-b",
-    type=click.STRING,
-    default="http://frb-vsop.chime:8004",
-    help="Buckets backend.",
+    "-w",
+    "--workspace",
+    type=FirstOf(
+        click.Path(exists=True, file_okay=True, dir_okay=False, resolve_path=True),
+        URL,
+        JSON,
+    ),
+    default=(DEFAULT_WORKSPACE_PATH.as_posix()),
+    show_default=True,
+    help="workspace config.",
 )
 @click.option(
     "--token",
     "-t",
     default=None,
     type=click.STRING,
-    help="Authentication token.",
+    help="Authentication Token.",
 )
 @click.option(
     "--test-mode",
@@ -37,27 +48,36 @@ from workflow.http.buckets import Buckets
     type=click.BOOL,
     help="Enable test mode to avoid while True loop",
 )
-def workflow(
-    sleep: int, baseurl: str, token: Optional[str], test_mode: bool
+def audit(
+    sleep: int,
+    workspace: Union[str, Dict[Any, Any]],
+    token: Optional[str],
+    test_mode: bool,
 ) -> Dict[str, Any]:
-    """Audit for Buckets Database to find failed, expired, or stale work.
+    """Audit Buckets Backend.
 
     Args:
         sleep (int): number of seconds to sleep between audits
-        baseurl (str): location of the Buckets backend
+        workspace (Union[str, Dict[Any, Any]]): workspace config
         token (Optional[str]): authentication token
         test_mode (bool): enable test mode to avoid while True loop
 
     Returns:
         Dict[str, Any]: Audit results.
     """
-    buckets: Buckets = Buckets(baseurl=baseurl, token=token)  # type: ignore
+    logger.info("Starting Audit Daemon")
+    logger.info(f"Sleep Time: {sleep}")
+    logger.info(f"Workspace : {workspace}")
+    logger.info(f"Token     : {token}")
+    logger.info(f"Test Mode : {test_mode}")
+    configure.workspace(workspace=workspace)
+
+    http: HTTPContext = HTTPContext(backends=["buckets"])
+    logger.info("HTTP Context Initialized")
+    logger.info(f"HTTP Context: Buckets Backend @ {http.buckets.baseurl}")
     if test_mode:
-        return buckets.audit()
+        return http.buckets.audit()
     while True:
-        print(buckets.audit())
+        response = http.buckets.audit()
+        logger.info(response)
         time.sleep(sleep)
-
-
-if __name__ == "__main__":
-    workflow()

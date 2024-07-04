@@ -3,7 +3,6 @@ workspace: development
 # List the valid sites for this workspace
 sites:
   - local
-  - development
   - testing
 
 http:
@@ -15,10 +14,16 @@ http:
     results: http://localhost:8005
 
 archive:
-  mounts:
+  posix:
     local: "/"
-    development: "./"
-    testing: "./testing"
+    testing: "./testing/workflow"
+  s3:
+    local:
+      url: "https://not-real.com"
+      subpath: "/"
+    testing:
+      url: "https://not-real.com"
+      subpath: "./testing/workflow"
 
 config:
   archive:
@@ -45,12 +50,6 @@ config:
 
 deployers:
   local:
-    docker:
-      # client_url: npipe:////./pipe/docker_engine
-      client_url: unix:///var/run/docker.sock
-      networks:
-        workflow: # This network maps to the docker-compose.yml network name
-  development:
     docker:
       # client_url: npipe:////./pipe/docker_engine
       client_url: unix:///var/run/docker.sock

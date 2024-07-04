@@ -8,10 +8,10 @@ from unittest.mock import patch
 import pytest
 
 from workflow import DEFAULT_WORKSPACE_PATH
-from workflow.utils import read
 from workflow.definitions.work import Work
 from workflow.lifecycle import archive
 from workflow.lifecycle.archive import ArchiveResultsError
+from workflow.utils import read
 
 TEST_WORK = Work(
     pipeline="test-archive-run",
@@ -46,7 +46,6 @@ def directory():
 @pytest.fixture()
 def workspace():
     """Workspace fixture."""
-    # NOTE: This must be set before the tests are run.
     return read.workspace(DEFAULT_WORKSPACE_PATH)
 
 

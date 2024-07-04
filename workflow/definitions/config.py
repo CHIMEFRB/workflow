@@ -47,13 +47,8 @@ class Archive(BaseSettings):
         description="Archive strategy for the plots.",
         examples=["move"],
     )
-    logs: str = Field(
-        default="move",
-        description="Archive strategy for the logs.",
-        examples=["delete"],
-    )
 
-    @field_validator("products", "plots", "logs")
+    @field_validator("products", "plots")
     def validate_archive(cls, value: str) -> str:
         """Validate the archive strategy.
 

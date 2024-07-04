@@ -22,13 +22,30 @@ http:
 
 archive:
   posix:
-    base: "/data/frb-archiver"
-    buckets: "/data/frb-archiver/buckets"
-    results: "/data/frb-archiver/results"
-    pipelines: "/data/frb-archiver/pipelines"
-    loki: "/data/frb-archiver/loki"
-    products: "/data/frb-archiver/products"
+    local: ./workflow
+    chime: /data/chime/baseband/processed/workflow
+    kko: Null
+    gbo: Null
+    hco: Null
+    aro: Null
+    canfar: /arc/projects/chime_frb/data/canfar/processed/workflow
+    cedar: Null
+    calcul-quebec: Null
+  # TODO: Implement s3 Workspace config
+  # currently env var configured
   s3:
+    local:
+      url:
+      bucket:
+      subpath:
+    chime:
+    kko:
+    gbo:
+    hco:
+    aro:
+    canfar:
+    cedar:
+    calcul-quebec:
     minio:
       url: "https://s3.us-west-2.amazonaws.com/frb-archiver"
 

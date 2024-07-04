@@ -51,7 +51,7 @@ jobs:
         with:
           install: true
       -
-        name: Perform Dockerhub Login
+        name: Perform DockerHub Login
         if: ${{ steps.release-please.outputs.release_created }}
         uses: docker/login-action@v3
         with:
@@ -83,3 +83,26 @@ jobs:
           push: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      -
+        name: Install Poetry
+        if: ${{ steps.release-please.outputs.release_created }}
+        run: |
+          pipx install poetry
+      -
+        name: Setup Python
+        if: ${{ steps.release-please.outputs.release_created }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+          cache: poetry
+      -
+        name: Push to PyPI
+        if: ${{ steps.release-please.outputs.release_created }}
+        env:
+          WORKFLOW_PYPI_TOKEN: ${{ secrets.WORKFLOW_CORE_PYPI_TOKEN }}
+        run: |
+          poetry config virtualenvs.create true
+          poetry config virtualenvs.in-project false
+          poetry install
+          poetry config pypi-token.pypi $WORKFLOW_PYPI_TOKEN
+          poetry publish --build --verbose

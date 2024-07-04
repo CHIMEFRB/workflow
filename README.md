@@ -8,12 +8,18 @@ For more information, please refer to the [Workflow documentation](https://chime
 
 ## Getting Started
 
-To get started with the Workflow project, you need to have Python 3.8.1 or later installed. You can then install the project's dependencies using Poetry:
+To get started with the Workflow, you need to have Python 3.8.1 or later installed. You can then install the project's dependencies using Poetry:
+
+### Install from PyPI
 
 ```bash
-git clone https://github.com/chimefrb/workflow.git
-cd workflow
-poetry install
+pip install workflow.core
+```
+
+### Install from Source
+
+```bash
+pip install git+https://github.com/chimefrb/workflow.git
 ```
 
 Alternatively, you can add the Workflow project as a dependency to your own project using Poetry:

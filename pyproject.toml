@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "work.flow"
+name = "workflow.core"
 version = "1.4.0"
 description = "Workflow Core"
 authors = ["Shiny Brar <charanjotbrar@gmail.com>"]

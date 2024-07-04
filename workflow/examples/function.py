@@ -1,10 +1,15 @@
 """Sample CHIME/FRB Workflow Compatible Function."""
 
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import click
 from click_params import FirstOf
+
+from workflow.definitions.work import Work
+from workflow.utils.logger import get_logger
+
+logger = get_logger("workflow.examples.function")
 
 
 def math(
@@ -24,6 +29,7 @@ def math(
             The results, products, and plots
     """
     try:
+        logger.info(f"Running math with alpha:{alpha}, beta:{beta}")
         assert isinstance(alpha, (float, int)), "alpha must be a number"
         assert isinstance(beta, (float, int)), "beta must be a number"
         results: Dict[str, float] = {
@@ -50,6 +56,23 @@ def math(
         return results, products, plots
     except AssertionError as error:
         raise error
+
+
+def worker(work: Work) -> Work:
+    """Sample CHIME/FRB Workflow Compatible Function.
+
+    Args:
+        work (Work): A work object
+
+    Returns:
+        Work: The work object
+    """
+    logger.info("Processing math with work object...")
+    parameters: Dict[str, Any] = work.parameters or {}
+    alpha: float = float(parameters.get("alpha", 1.14))
+    beta: float = float(parameters.get("beta", 3.14))
+    work.results, work.products, work.plots = math(alpha, beta)
+    return work
 
 
 @click.command("math", help="Sample CHIME/FRB Workflow Compatible Function.")

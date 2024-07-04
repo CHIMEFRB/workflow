@@ -69,3 +69,15 @@ def test_cli_with_partials():
     assert work.results == results
     assert work.products == products
     assert work.plots == plots
+
+
+def test_function_work_object():
+    """Test the function with a work object."""
+    work = Work(pipeline="workflow-tests", site="local", user="tester")
+    work.function = "workflow.examples.function.worker"
+    work.parameters = {"alpha": 5, "beta": 2}
+    work = execute.function_with_work(work)
+    results, products, plots = math(alpha=5, beta=2)
+    assert work.results == results
+    assert work.products == products
+    assert work.plots == plots

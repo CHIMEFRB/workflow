@@ -144,7 +144,7 @@ def function_with_work(work: Work) -> Work:
         # Check the type hints of the function,
         # check if the input/output is a Work object
         hints = get_type_hints(func)
-        logger.info(f"function hints: {hints}")
+        logger.info(f"executing function with work object: {func.__name__}({work})")
         assert hints.get("work") == Work, "function must have a Work object as input"
         assert hints.get("return") == Work, "function must return a Work object"
         work = func(work)

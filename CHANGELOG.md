@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/CHIMEFRB/workflow/compare/v1.5.0...v1.6.0) (2024-07-04)
+
+
+### Features
+
+* **argsource:** added a new runtime cli parameter to perform function based work, by passing the work obj itself to the func ([11adc37](https://github.com/CHIMEFRB/workflow/commit/11adc374151dfb9949b4215e471e60c14fb3a907))
+
 ## [1.5.0](https://github.com/CHIMEFRB/workflow/compare/v1.4.0...v1.5.0) (2024-07-04)
 
 

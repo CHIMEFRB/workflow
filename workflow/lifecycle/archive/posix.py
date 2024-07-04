@@ -55,23 +55,25 @@ def check_basepath(path: Path):
         return True
 
 
-def bypass(path: Path, payload: Optional[List[str]]) -> bool:
+def bypass(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Bypass the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of files to copy.
+        site (str): Site work was performed at.
     """
     log.info("Bypassing archive.")
     return True
 
 
-def copy(path: Path, payload: Optional[List[str]]) -> bool:
+def copy(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Copy the work products to the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of files to copy.
+        site (str): Site work was performed at.
     """
     try:
         check_basepath(path)
@@ -94,12 +96,13 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
         return False
 
 
-def move(path: Path, payload: Optional[List[str]]) -> bool:
+def move(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Move the work products to the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of products to move.
+        site (str): Site work was performed at.
     """
     status: bool = False
     try:
@@ -119,12 +122,13 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
         return status
 
 
-def delete(path: Path, payload: Optional[List[str]]) -> bool:
+def delete(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Delete the work products from the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of products to delete.
+        site (str): Site work was performed at.
     """
     status: bool = False
     try:

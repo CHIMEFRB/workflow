@@ -97,8 +97,7 @@ def test_storage_unset_run_archive(caplog, work, workspace=WORKSPACE):
     workspace["config"]["archive"]["plots"]["storage"] = None
     with caplog.at_level(logging.WARNING):
         run(work, workspace)
-    assert "storage has not been set for products in workspace." in caplog.text
-    assert "storage has not been set for plots in workspace." in caplog.text
+    assert "Storage must be given." in caplog.text
 
 
 class TestS3:
@@ -106,25 +105,25 @@ class TestS3:
 
     def test_s3_bypass(self):
         """Test the bypass method."""
-        assert s3.bypass(Path("none"), []) is True
+        assert s3.bypass(Path("none"), [], "testing") is True
 
     def test_s3_copy(self, work):
         """Test the copy method."""
         file = work.plots[0]
         path = Path("workflow/testing/s3/method/copy")
-        result = s3.copy(path, [file])
+        result = s3.copy(path, [file], "testing")
         assert result is True
 
     def test_s3_delete(self):
         """Test the delete method."""
         with pytest.raises(NotImplementedError):
-            s3.delete(Path("none"), [])
+            s3.delete(Path("none"), [], "testing")
 
     def test_s3_move(self, work):
         """Test the move method."""
         file = work.plots[0]
         path = Path("workflow/testing/s3/method/move")
-        result = s3.move(path, [file])
+        result = s3.move(path, [file], "testing")
         assert result is True
 
     def test_s3_permissions(self):
@@ -138,13 +137,13 @@ class TestPosix:
 
     def test_posix_bypass(self):
         """Test the bypass method."""
-        assert posix.bypass(Path("none"), []) is True
+        assert posix.bypass(Path("none"), [], "testing") is True
 
     def test_posix_copy(self, work, directory):
         """Test the copy method."""
         file = work.plots[0]
         path = directory / "workflow/20240501" / "posix" / "method" / "copy"
-        result = posix.copy(path, [file])
+        result = posix.copy(path, [file], "testing")
         assert result is True
         assert (path / file).exists()
 
@@ -152,7 +151,7 @@ class TestPosix:
         """Test the delete method."""
         file = work.plots[0]
         path = directory / "workflow/20240501" / "posix" / "method" / "delete"
-        result = posix.delete(path, work.plots)
+        result = posix.delete(path, work.plots, "testing")
         assert result is True
         assert not Path(file).exists()
         assert len(work.plots) == 0
@@ -161,7 +160,7 @@ class TestPosix:
         """Test the move method."""
         file = work.plots[0]
         path = directory / "workflow/20240501" / "posix" / "method" / "move"
-        result = posix.move(path, [file])
+        result = posix.move(path, [file], "testing")
         assert result is True
         assert (path / file).exists()
         assert not Path(file).exists()

@@ -19,11 +19,13 @@ archive:
     testing: "./testing/workflow"
   s3:
     local:
-      url: "https://not-real.com"
-      subpath: "/"
+      url: not-real.com
+      bucket: local
+      subpath: /workflow
     testing:
-      url: "https://not-real.com"
-      subpath: "./testing/workflow"
+      url: play.min.io
+      bucket: testing
+      subpath: /workflow
 
 config:
   archive:

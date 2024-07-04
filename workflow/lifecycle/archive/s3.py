@@ -6,50 +6,56 @@ from typing import List, Optional
 
 from minio import Minio
 
-from workflow.utils import logger
+from workflow import DEFAULT_WORKSPACE_PATH
+from workflow.utils import logger, read
 
 log = logger.get_logger("workflow.lifecycle.archive.s3")
 
-WORKFLOW_S3_ENDPOINT = os.getenv("WORKFLOW_S3_ENDPOINT")
+workspace = read.workspace(DEFAULT_WORKSPACE_PATH)
+
 WORKFLOW_S3_ACCESS_KEY = os.getenv("WORKFLOW_S3_ACCESS_KEY")
 WORKFLOW_S3_SECRET_KEY = os.getenv("WORKFLOW_S3_SECRET_KEY")
-WORKFLOW_S3_BUCKET = os.getenv("WORKFLOW_S3_BUCKET", "workflow")
+WORKFLOW_S3_ARCHIVE_CONFIG = workspace.get("archive", {}).get("s3", {})
 
 
-def bypass(path: Path, payload: Optional[List[str]]) -> bool:
+def bypass(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Bypass the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of files to copy.
+        site (str): Site work was performed at.
     """
     log.info("Bypassing archive.")
     return True
 
 
-def copy(path: Path, payload: Optional[List[str]]) -> bool:
+def copy(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Copy the work products to the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of files to copy.
+        site (str): Site work was performed at.
     """
     try:
+        workflow_s3_endpoint = WORKFLOW_S3_ARCHIVE_CONFIG.get(site, {}).get("url", "")
+        workflow_s3_bucket = WORKFLOW_S3_ARCHIVE_CONFIG.get(site, {}).get("bucket", "")
         # Initialise minio client
         log.info("Connecting to S3 storage to copy files")
-        log.debug(f"Endpoint: {WORKFLOW_S3_ENDPOINT}")
+        log.debug(f"Endpoint: {workflow_s3_endpoint}")
         log.debug(f"Access Key: {WORKFLOW_S3_ACCESS_KEY}")
         log.debug(f"Secret Key: {WORKFLOW_S3_SECRET_KEY}")
         client = Minio(
-            endpoint=WORKFLOW_S3_ENDPOINT,
+            endpoint=workflow_s3_endpoint,
             access_key=WORKFLOW_S3_ACCESS_KEY,
             secret_key=WORKFLOW_S3_SECRET_KEY,
         )
         log.info("Connected ✅")
         # Check bucket exists and if not, create it
-        if not client.bucket_exists(WORKFLOW_S3_BUCKET):
-            log.info(f"Bucket {WORKFLOW_S3_BUCKET} does not exist. Creating it.")
-            client.make_bucket(WORKFLOW_S3_BUCKET)
+        if not client.bucket_exists(workflow_s3_bucket):
+            log.info(f"Bucket {workflow_s3_bucket} does not exist. Creating it.")
+            client.make_bucket(workflow_s3_bucket)
         # Check there are files to copy
         if not payload:
             log.info("No files in payload.")
@@ -63,7 +69,7 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
                 continue
             # Upload file to S3
             client.fput_object(
-                bucket_name=WORKFLOW_S3_BUCKET,
+                bucket_name=workflow_s3_bucket,
                 object_name="/".join([object_paths, item.split("/")[-1]]),
                 file_path=item,
             )
@@ -79,29 +85,32 @@ def copy(path: Path, payload: Optional[List[str]]) -> bool:
         return False
 
 
-def move(path: Path, payload: Optional[List[str]]) -> bool:
+def move(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Move the work products to the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of products to move.
+        site (str): Site work was performed at.
     """
     try:
+        workflow_s3_endpoint = WORKFLOW_S3_ARCHIVE_CONFIG.get(site, {}).get("url", "")
+        workflow_s3_bucket = WORKFLOW_S3_ARCHIVE_CONFIG.get(site, {}).get("bucket", "")
         # Initialise minio client
         log.info("Connecting to S3 storage to move files")
-        log.debug(f"Endpoint: {WORKFLOW_S3_ENDPOINT}")
+        log.debug(f"Endpoint: {workflow_s3_endpoint}")
         log.debug(f"Access Key: {WORKFLOW_S3_ACCESS_KEY}")
         log.debug(f"Secret Key: {WORKFLOW_S3_SECRET_KEY}")
         client = Minio(
-            endpoint=WORKFLOW_S3_ENDPOINT,
+            endpoint=workflow_s3_endpoint,
             access_key=WORKFLOW_S3_ACCESS_KEY,
             secret_key=WORKFLOW_S3_SECRET_KEY,
         )
         log.info("Connected ✅")
         # Check bucket exists and if not, create it
-        if not client.bucket_exists(WORKFLOW_S3_BUCKET):
-            log.info(f"Bucket {WORKFLOW_S3_BUCKET} does not exist. Creating it.")
-            client.make_bucket(WORKFLOW_S3_BUCKET)
+        if not client.bucket_exists(workflow_s3_bucket):
+            log.info(f"Bucket {workflow_s3_bucket} does not exist. Creating it.")
+            client.make_bucket(workflow_s3_bucket)
         # Check there are files to copy
         if not payload:
             log.info("No files in payload.")
@@ -115,7 +124,7 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
                 continue
             # Upload file to S3
             client.fput_object(
-                bucket_name=WORKFLOW_S3_BUCKET,
+                bucket_name=workflow_s3_bucket,
                 object_name="/".join([object_paths, item.split("/")[-1]]),
                 file_path=item,
             )
@@ -133,12 +142,13 @@ def move(path: Path, payload: Optional[List[str]]) -> bool:
         return False
 
 
-def delete(path: Path, payload: Optional[List[str]]) -> bool:
+def delete(path: Path, payload: Optional[List[str]], site: str) -> bool:
     """Delete the work products from the archive.
 
     Args:
         path (Path): Destination path.
         payload (List[str]): List of products to delete.
+        site (str): Site work was performed at.
     """
     # TODO: Implement delete for S3
     # NOTE: Do we need a specific delete function for S3?

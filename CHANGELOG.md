@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.5.0](https://github.com/CHIMEFRB/workflow/compare/v1.4.0...v1.5.0) (2024-07-04)
+
+
+### Features
+
+* **audit:** added an audit daemon to the workflow cli ([b73287a](https://github.com/CHIMEFRB/workflow/commit/b73287a9a8d23c07472b933731463ce887e1b954))
+* **audit:** added tests ([e2f0be0](https://github.com/CHIMEFRB/workflow/commit/e2f0be084f832cb56cc70fc08995be2e13433b64))
+* **execute:** added functionality to execute work with the work object as arguments ([b9927f5](https://github.com/CHIMEFRB/workflow/commit/b9927f5e9f921d0f95de50f4a88ab7bc0aa1c49f))
+* **pypi:** added functionality to push to pypi as workflow.core ([fc811d5](https://github.com/CHIMEFRB/workflow/commit/fc811d575d69c4edcc63519491d8a17dee6de8c1))
+
 ## [1.4.0](https://github.com/CHIMEFRB/workflow/compare/v1.3.2...v1.4.0) (2024-06-29)
 
 

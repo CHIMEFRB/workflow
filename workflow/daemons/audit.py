@@ -1,7 +1,7 @@
 """Audit Daemon."""
 
 import time
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Union
 
 import click
 from click_params import JSON, URL, FirstOf
@@ -35,13 +35,6 @@ logger = get_logger("workflow.daemons.audit")
     help="workspace config.",
 )
 @click.option(
-    "--token",
-    "-t",
-    default=None,
-    type=click.STRING,
-    help="Authentication Token.",
-)
-@click.option(
     "--test-mode",
     default=False,
     is_flag=True,
@@ -51,7 +44,6 @@ logger = get_logger("workflow.daemons.audit")
 def audit(
     sleep: int,
     workspace: Union[str, Dict[Any, Any]],
-    token: Optional[str],
     test_mode: bool,
 ) -> Dict[str, Any]:
     """Audit Buckets Backend.
@@ -68,7 +60,6 @@ def audit(
     logger.info("Starting Audit Daemon")
     logger.info(f"Sleep Time: {sleep}")
     logger.info(f"Workspace : {workspace}")
-    logger.info(f"Token     : {token}")
     logger.info(f"Test Mode : {test_mode}")
     configure.workspace(workspace=workspace)
 

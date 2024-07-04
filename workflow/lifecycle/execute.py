@@ -127,7 +127,7 @@ def command(work: Work) -> Work:
         return work
 
 
-def with_work(work: Work) -> Work:
+def function_with_work(work: Work) -> Work:
     """Execute a work function with work object.
 
     Args:
@@ -148,6 +148,7 @@ def with_work(work: Work) -> Work:
         assert hints.get("work") == Work, "function must have a Work object as input"
         assert hints.get("return") == Work, "function must return a Work object"
         work = func(work)
+        validate.size(work)
         work.status = "success"
     except Exception as error:
         work.status = "failure"

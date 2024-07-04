@@ -16,6 +16,7 @@ def work(
     buckets: List[str],
     function: Optional[str],
     command: Optional[str],
+    argsource: str,
     site: str,
     tags: List[str],
     parents: List[str],
@@ -28,6 +29,8 @@ def work(
     Args:
         buckets (List[str]): Name of the buckets to perform work from.
         function (Optional[str]): Static function to perform work.
+        command (Optional[str]): Static command to perform work.
+        argsource (str): Source of arguments for the function.
         site (str): Site to filter work by.
         tags (List[str]): Tags to filter work by.
         parents (List[str]): Parent pipeline to filter work by.
@@ -82,9 +85,12 @@ def work(
             assert work.command or work.function, "neither function or command provided"
 
             # Get the user function from the work object dynamically
-            if work.function:
+            if work.function and argsource == "parameters":
                 logger.debug(f"executing function: {work.function}")
                 work = execute.function(work)
+            elif work.function and argsource == "work":
+                logger.debug(f"executing function with work object: {work.function}")
+                work = execute.function_with_work(work)
 
             # If we have a valid command, execute it
             if work.command:

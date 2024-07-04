@@ -108,6 +108,13 @@ localspaces = Path(DEFAULT_WORKSPACE_PATH).parent
     help="workspace config.",
 )
 @click.option(
+    "--argsource",
+    type=click.Choice(["parameters", "work"]),
+    default="parameters",
+    show_default=True,
+    help="run function with parameters or work object.",
+)
+@click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     default="INFO",
@@ -125,6 +132,7 @@ def run(
     lives: int,
     sleep: int,
     workspace: Union[str, Dict[Any, Any]],
+    argsource: str,
     log_level: str,
 ):
     """Fetch and perform work."""
@@ -153,6 +161,7 @@ def run(
     )
     logger.info(f"Buckets  : {buckets}")
     logger.info(f"Function : {function}")
+    logger.info(f"Argsource: {argsource}")
     logger.info(f"Command  : {command}")
     logger.info(f"Mode     : {'Static' if (function or command) else 'Dynamic'}")
     logger.info(f"Lives    : {'infinite' if lives == -1 else lives}")
@@ -212,17 +221,18 @@ def run(
             refresh_per_second=10 if tty else 1,
         ):
             lifecycle(
-                buckets,
-                function,
-                command,
-                lives,
-                sleep,
-                site,
-                tags,
-                parents,
-                events,
-                config,
-                http,
+                buckets=buckets,
+                function=function,
+                command=command,
+                argsource=argsource,
+                lives=lives,
+                sleep=sleep,
+                site=site,
+                tags=tags,
+                parents=parents,
+                events=events,
+                config=config,
+                http=http,
             )
     except Exception as error:
         logger.exception(error)
@@ -237,6 +247,7 @@ def lifecycle(
     buckets: List[str],
     function: Optional[str],
     command: Optional[str],
+    argsource: str,
     lives: int,
     sleep: int,
     site: str,
@@ -266,6 +277,7 @@ def lifecycle(
             buckets=buckets,
             function=function,
             command=command,
+            argsource=argsource,
             site=site,
             tags=tags,
             parents=parents,

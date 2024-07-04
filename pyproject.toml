@@ -1,10 +1,15 @@
 [tool.poetry]
-name = "workflow"
+name = "work.flow"
 version = "1.4.0"
 description = "Workflow Core"
 authors = ["Shiny Brar <charanjotbrar@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+repository = "https://github.com/chimefrb/workflow"
+documentation = "https://chimefrb.github.io/workflow-docs/"
+packages = [
+    { include = "workflow", from = "." }
+]
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"

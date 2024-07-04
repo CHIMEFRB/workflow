@@ -2,7 +2,7 @@
 
 import subprocess
 import time
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_type_hints
 
 import click
 
@@ -120,6 +120,38 @@ def command(work: Work) -> Work:
     except Exception as error:
         work.status = "failure"
         logger.exception(error)
+    finally:
+        end = time.time()
+        work.stop = end
+        logger.info(f"execution time: {end - start:.2f}s")
+        return work
+
+
+def with_work(work: Work) -> Work:
+    """Execute a work function with work object.
+
+    Args:
+        work (Work): Work object
+
+    Returns:
+        Work: Work object
+    """
+    logger.debug(f"executing with work: {work.function}")
+    start = time.time()
+    try:
+        assert isinstance(work.function, str), "missing function to execute"
+        func: Callable[..., Any] = validate.function(work.function)
+        # Check the type hints of the function,
+        # check if the input/output is a Work object
+        hints = get_type_hints(func)
+        logger.info(f"function hints: {hints}")
+        assert hints.get("work") == Work, "function must have a Work object as input"
+        assert hints.get("return") == Work, "function must return a Work object"
+        work = func(work)
+        work.status = "success"
+    except Exception as error:
+        work.status = "failure"
+        logger.error(error)
     finally:
         end = time.time()
         work.stop = end

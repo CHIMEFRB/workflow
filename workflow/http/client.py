@@ -31,7 +31,7 @@ class Client(BaseSettings):
         BaseModel (BaseModel): Pydantic base model.
 
     Attributes:
-        baseurl (str): Base URLs for the server.
+        baseurl (Union[str, List[str]): Base URLs to for the server.
         token (Optional[SecretStr]): Authentication token.
         timeout (float): Request timeout in seconds.
         session (requests.Session): HTTP request session.

@@ -37,7 +37,7 @@ logger = get_logger("workflow.daemons.transfer")
     "--test-mode", default=False, help="Enable test mode to avoid while True loop"
 )
 @click.option("--log-level", default="INFO", help="logging level.")
-def daemon(
+def transfer(
     workspace: Union[str, Dict[Any, Any]],
     limit: int,
     cutoff: int,
@@ -45,7 +45,7 @@ def daemon(
     test_mode: bool,
     log_level: str,
 ) -> Dict[str, int]:
-    """Transfer work from Buckets to Results backend.
+    """Transfer Work.
 
     Args:
         sleep (int): seconds to sleep between transfers.
@@ -62,25 +62,25 @@ def daemon(
     logger.info(f"Test Mode : {test_mode}")
     logger.info(f"Sleep Time: {sleep}")
     if test_mode:
-        outcome = tranfer(workspace, limit, cutoff)
+        outcome = perform(workspace, limit, cutoff)
         logger.info(f"Transfer Outcome: {outcome}")
         return outcome
     else:
         while True:
             try:
-                outcome = tranfer(workspace, limit, cutoff)
+                outcome = perform(workspace, limit, cutoff)
             except Exception as error:
                 logger.error(f"Transfer Error: {error}")
             finally:
                 time.sleep(sleep)
 
 
-def tranfer(
+def perform(
     workspace: Union[str, Dict[Any, Any]],
     limit: int,
     cutoff: int,
 ) -> Dict[str, int]:
-    """Transfer work from Buckets to Results backend.
+    """Perform transfer of work from Buckets to Results backend.
 
     Args:
         workspace (Union[str, Dict[Any, Any]]): workspace config.
@@ -204,4 +204,4 @@ def tranfer(
 
 
 if __name__ == "__main__":
-    daemon(test_mode=True, log_level="DEBUG")
+    transfer(test_mode=True, log_level="DEBUG")

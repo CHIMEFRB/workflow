@@ -46,7 +46,7 @@ def audit(
     workspace: Union[str, Dict[Any, Any]],
     test_mode: bool,
 ) -> Dict[str, Any]:
-    """Audit Buckets Backend.
+    """Audit Buckets.
 
     Args:
         sleep (int): number of seconds to sleep between audits

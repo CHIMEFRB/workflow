@@ -61,14 +61,38 @@ def transfer(
     logger.info("Starting Transfer Daemon")
     logger.info(f"Test Mode : {test_mode}")
     logger.info(f"Sleep Time: {sleep}")
+    logger.info(f"Workspace : {workspace}")
+    logger.info(f"Limit/Tx  : {limit}")
+    logger.info(f"Cutoff    : {cutoff} days")
+    try:
+        configure.workspace(workspace=workspace)
+        archive: bool = (
+            read.workspace(DEFAULT_WORKSPACE_PATH)
+            .get("config", {})
+            .get("archive", {})
+            .get("results", True)
+        )
+        logger.info(f"Archive   : {'Enabled' if archive else 'Disabled'}")
+        http: HTTPContext = HTTPContext(backends=["buckets", "results"])
+        logger.info("HTTP Context Initialized")
+        logger.info(f"HTTP Context: Buckets Backend @ {http.buckets.baseurl}")
+        logger.info(f"HTTP Context: Results Backend @ {http.results.baseurl}")
+
+        # Check if Buckets and Results backends are available
+        assert http.buckets.info(), "Buckets backend not available, exiting."
+        assert http.results.info(), "Results backend not available, exiting."
+    except Exception as error:
+        logger.error(f"Transfer Initialization Error: {error}")
+        exit(1)
+
     if test_mode:
-        outcome = perform(workspace, limit, cutoff)
+        outcome = perform(archive, limit, cutoff, http)
         logger.info(f"Transfer Outcome: {outcome}")
         return outcome
     else:
         while True:
             try:
-                outcome = perform(workspace, limit, cutoff)
+                outcome = perform(archive, limit, cutoff, http)
             except Exception as error:
                 logger.error(f"Transfer Error: {error}")
             finally:
@@ -76,9 +100,10 @@ def transfer(
 
 
 def perform(
-    workspace: Union[str, Dict[Any, Any]],
+    archive: bool,
     limit: int,
     cutoff: int,
+    http: HTTPContext,
 ) -> Dict[str, int]:
     """Perform transfer of work from Buckets to Results backend.
 
@@ -90,26 +115,6 @@ def perform(
     Returns:
         Dict[str, int]: transfer outcome.
     """
-    logger.info(f"Workspace : {workspace}")
-    logger.info(f"Limit/Tx  : {limit}")
-    logger.info(f"Cutoff    : {cutoff} days")
-    configure.workspace(workspace=workspace)
-    archive: bool = (
-        read.workspace(DEFAULT_WORKSPACE_PATH.as_posix())
-        .get("config", {})
-        .get("archive", {})
-        .get("results", True)
-    )
-    logger.info(f"Archive   : {'Enabled' if archive else 'Disabled'}")
-    http: HTTPContext = HTTPContext(backends=["buckets", "results"])
-    logger.info("HTTP Context Initialized")
-    logger.info(f"HTTP Context: Buckets Backend @ {http.buckets.baseurl}")
-    logger.info(f"HTTP Context: Results Backend @ {http.results.baseurl}")
-
-    # Check if Buckets and Results backends are available
-    assert http.buckets.info(), "Buckets backend not available, exiting."
-    assert http.results.info(), "Results backend not available, exiting."
-
     delete: List[str] = []
     transfer: List[str] = []
     payload: List[Dict[str, Any]] = []
@@ -170,7 +175,7 @@ def perform(
     try:
         logger.debug(f"transferring {len(payload)} works to results")
         response = http.results.deposit(payload)
-        logger.info(f"transferred {len(payload)} works to results")
+        logger.debug(f"transferred {len(payload)} works to results")
         logger.debug(f"response: {response}")
         delete = delete + transfer
         transfered = len(payload)
@@ -194,9 +199,7 @@ def perform(
         if delete:
             logger.info(f"deleting {len(delete)} works from buckets")
             http.buckets.delete_ids(delete)
-        logger.info(
-            f"Transferred {transfered}, deleted {len(delete)} works from buckets"
-        )
+        logger.info(f"Transferred {transfered}, deleted {len(delete)} works")
         return {
             "transfered": transfered,
             "deleted": len(delete),

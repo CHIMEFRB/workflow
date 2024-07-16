@@ -66,4 +66,5 @@ RUN set -ex \
 FROM base as production
 COPY --from=builder $VENV_PATH $VENV_PATH
 COPY --from=builder $PYSETUP_PATH $PYSETUP_PATH
+ENTRYPOINT [ "/opt/workflow/entrypoint.sh" ]
 CMD ["workflow"]

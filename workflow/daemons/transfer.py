@@ -109,6 +109,22 @@ def transfer(
                 time.sleep(sleep)
 
 
+def check(payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Check payload for existing work in results backend.
+
+    Args:
+        payload (List[Dict[str, Any]]): list of work to check.
+
+    Returns:
+        List[Dict[str, Any]]: list of work that does not exist in results.
+    """
+    for data in payload:
+        for key in ["products", "plots", "logs"]:
+            if data["config"]["archive"][key] == "pass":
+                data["config"]["archive"][key] = "bypass"
+    return payload
+
+
 def perform(
     archive: bool,
     limit: int,
@@ -190,6 +206,7 @@ def perform(
     payload = http.buckets.view(
         query={"id": {"$in": transfer}}, projection={}, skip=0, limit=limit * 3
     )
+    payload = check(payload)
     try:
         logger.debug(f"tx {len(payload)} works to results")
         response = http.results.deposit(payload)

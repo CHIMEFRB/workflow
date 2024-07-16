@@ -1,6 +1,6 @@
 """Work Object Configuration."""
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -116,4 +116,10 @@ class Config(BaseSettings):
         this must be a subset of the authenticated user's teams.
         """,
         examples=[["developers", "admins"]],
+    )
+    strategy: Literal["strict", "relaxed"] = Field(
+        default="strict",
+        description="Validation strategy for the work.",
+        examples=["strict"],
+        exclude=True,
     )

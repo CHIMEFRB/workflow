@@ -78,6 +78,7 @@ def command(command: str) -> bool:
     Returns:
         bool: True if the command exists, False otherwise.
     """
+    command = command.split(" ")[0]
     try:
         if platform.system() == "Windows":
             response = subprocess.check_output(  # nosec

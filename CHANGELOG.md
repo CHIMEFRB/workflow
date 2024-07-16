@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/CHIMEFRB/workflow/compare/v1.9.0...v1.9.1) (2024-07-16)
+
+
+### Bug Fixes
+
+* **entrypoint:** added it to Dockerfile ([8faf57c](https://github.com/CHIMEFRB/workflow/commit/8faf57c1e8c08fa75a22719806e804dbf13c0f97))
+
 ## [1.9.0](https://github.com/CHIMEFRB/workflow/compare/v1.8.1...v1.9.0) (2024-07-16)
 
 

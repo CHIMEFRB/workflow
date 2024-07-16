@@ -95,11 +95,16 @@ def command(work: Work) -> Work:
     try:
         assert isinstance(work.command, list), "missing command to execute"
         validate.command(work.command[0])
+        to_run: Union[str, List[str]] = work.command
+        if len(to_run) == 1:
+            to_run = to_run[0]
+        is_shell = isinstance(to_run, str)
         process = subprocess.run(
-            work.command,
+            to_run,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             timeout=work.timeout,
+            shell=is_shell,  # nosec
         )
         # Check return code
         process.check_returncode()

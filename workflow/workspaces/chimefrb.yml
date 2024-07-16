@@ -13,12 +13,18 @@ sites:
 
 http:
   baseurls:
-    buckets: "https://frb.chimenet.ca/buckets"
-    results: "https://frb.chimenet.ca/results"
-    pipelines: "https://frb.chimenet.ca/pipelines"
-    loki: "https://frb.chimenet.ca/loki/loki/api/v1/push"
+    buckets:
+      - http://frb-vsop.chime:8004
+      - https://frb.chimenet.ca/buckets
+    results:
+      - http://frb-vsop.chime:8005
+      - https://frb.chimenet.ca/results
+    pipelines:
+      - http://frb-vsop.chime:8007
+      - https://frb.chimenet.ca/pipelines
+    loki: https://frb.chimenet.ca/loki/loki/api/v1/push
     # This is the prefix url to make a output data plot or product accessible to the user
-    products: "https://frb.chimenet.ca/frb-master/v1/events/query-file?filename="
+    products: https://frb.chimenet.ca/frb-master/v1/events/query-file?filename=
 
 archive:
   posix:

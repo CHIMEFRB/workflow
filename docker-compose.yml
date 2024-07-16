@@ -60,7 +60,7 @@ services:
   buckets:
     image: chimefrb/buckets:latest
     container_name: buckets
-    command: [ "/bin/bash", "-c", "workflow workspace set development && python -m buckets.server" ]
+    command: [ "/bin/bash", "-c", "python -m buckets.server" ]
     expose:
       - 8004
     ports:
@@ -74,13 +74,14 @@ services:
       - SANIC_MONGODB_HOSTNAME=mongo
       - SANIC_MONGODB_PORT=27017
       - SANIC_CORS_ORIGINS=*
+      - SANIC_WORKSPACE=development
     networks:
       - workflow
 
   results:
     image: chimefrb/results:latest
     container_name: results
-    command: [ "/bin/bash", "-c", "workflow workspace set development && python -m results.server" ]
+    command: [ "/bin/bash", "-c", "python -m results.server" ]
     expose:
       - 8005
     ports:
@@ -94,6 +95,7 @@ services:
       - SANIC_MONGODB_HOSTNAME=mongo
       - SANIC_MONGODB_PORT=27017
       - SANIC_CORS_ORIGINS=*
+      - SANIC_WORKSPACE=development
     networks:
       - workflow
 

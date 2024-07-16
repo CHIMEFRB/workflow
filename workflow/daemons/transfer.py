@@ -34,7 +34,10 @@ logger = get_logger("workflow.daemons.transfer")
     "--cutoff", default=60 * 60 * 24 * 7, help="cutoff time in seconds for stale work."
 )
 @click.option(
-    "--test-mode", default=False, help="Enable test mode to avoid while True loop"
+    "--test-mode",
+    is_flag=True,
+    default=False,
+    help="Enable test mode to avoid while True loop",
 )
 @click.option("--log-level", default="INFO", help="logging level.")
 def transfer(
@@ -57,6 +60,8 @@ def transfer(
     Returns:
         Dict[str, Any]: _description_
     """
+    if test_mode:
+        log_level = "DEBUG"
     logger.setLevel(log_level)
     logger.info("Starting Transfer Daemon")
     logger.info(f"Test Mode : {test_mode}")
@@ -86,13 +91,18 @@ def transfer(
         exit(1)
 
     if test_mode:
+        logger.debug("Running in Test Mode")
         outcome = perform(archive, limit, cutoff, http)
         logger.info(f"Transfer Outcome: {outcome}")
         return outcome
     else:
+        iteration: int = 0
         while True:
             try:
+                iteration += 1
+                logger.debug(f"Transfer Iteration: {iteration}")
                 outcome = perform(archive, limit, cutoff, http)
+                logger.info(f"Transfer Outcome: {outcome}")
             except Exception as error:
                 logger.error(f"Transfer Error: {error}")
             finally:
@@ -122,6 +132,7 @@ def perform(
     transfered: int = 0
 
     # Find successful work in buckets
+    logger.debug("checking successful work in buckets")
     for work in http.buckets.view(
         query={"status": "success"},
         projection={"id": True, "config": True},
@@ -134,8 +145,12 @@ def perform(
             transfer.append(work["id"])
         else:
             delete.append(work["id"])
+    logger.debug(
+        f"discovered {len(transfer)} transfer and {len(delete)} works to delete"
+    )
 
     # Find failed work in buckets that is not retryable
+    logger.debug("checking failed work in buckets")
     for work in http.buckets.view(
         query={
             "status": "failure",
@@ -152,8 +167,12 @@ def perform(
             transfer.append(work["id"])
         else:
             delete.append(work["id"])
+    logger.debug(
+        f"discovered {len(transfer)} transfer and {len(delete)} works to delete"
+    )
 
     # Find work in buckets that is too old and stale
+    logger.debug("checking stale work in buckets")
     for work in http.buckets.view(
         query={
             "creation": {"$lt": time.time() - cutoff},
@@ -163,20 +182,19 @@ def perform(
         limit=limit,
     ):
         delete.append(work["id"])
-
     logger.debug(
         f"discovered {len(transfer)} transfer and {len(delete)} works to delete"
     )
 
     # Transfer work to results
     payload = http.buckets.view(
-        query={"id": {"$in": transfer}}, projection={}, skip=0, limit=limit * 2
+        query={"id": {"$in": transfer}}, projection={}, skip=0, limit=limit * 3
     )
     try:
-        logger.debug(f"transferring {len(payload)} works to results")
+        logger.debug(f"tx {len(payload)} works to results")
         response = http.results.deposit(payload)
-        logger.debug(f"transferred {len(payload)} works to results")
-        logger.debug(f"response: {response}")
+        logger.debug(f"tx {len(payload)} works to results successfully")
+        logger.debug(f"tx response: {response}")
         delete = delete + transfer
         transfered = len(payload)
     except Exception as error:
@@ -187,7 +205,7 @@ def perform(
                 delete.append(work["id"])
                 logger.debug(f"work {work['id']} already exists in results")
                 payload.pop(index)
-        logger.debug(f"transferring {len(payload)} works to results")
+        logger.debug(f"retrying transfer of {len(payload)} works to results")
         response = http.results.deposit(payload)
         logger.info(
             f"transferred {len(payload)} works to results after duplicate check"
@@ -195,16 +213,16 @@ def perform(
         logger.debug(f"response: {response}")
         delete = delete + [work["id"] for work in payload]
         transfered = len(payload)
-    finally:
-        if delete:
-            logger.info(f"deleting {len(delete)} works from buckets")
-            http.buckets.delete_ids(delete)
-        logger.info(f"Transferred {transfered}, deleted {len(delete)} works")
-        return {
-            "transfered": transfered,
-            "deleted": len(delete),
-        }
+
+    if delete:
+        logger.info(f"deleting {len(delete)} works from buckets")
+        http.buckets.delete_ids(delete)
+    logger.info(f"transferred {transfered}, deleted {len(delete)} works")
+    return {
+        "transfered": transfered,
+        "deleted": len(delete),
+    }
 
 
 if __name__ == "__main__":
-    transfer(test_mode=True, log_level="DEBUG")
+    transfer.main(args=["--test-mode=True", "--log-level=DEBUG"], standalone_mode=False)

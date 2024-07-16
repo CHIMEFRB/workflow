@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/CHIMEFRB/workflow/compare/v1.8.0...v1.8.1) (2024-07-16)
+
+
+### Bug Fixes
+
+* **daemon:** improved transfer daemon to handle config.archive updates ([0d4b4d6](https://github.com/CHIMEFRB/workflow/commit/0d4b4d6bd8c22a4bbec0f501fc3c6fa424c44414))
+
 ## [1.8.0](https://github.com/CHIMEFRB/workflow/compare/v1.7.0...v1.8.0) (2024-07-16)
 
 

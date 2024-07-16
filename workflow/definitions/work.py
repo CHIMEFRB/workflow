@@ -360,13 +360,12 @@ class Work(BaseSettings):
             Work: The current work object.
         """
         # Validate if the site provided is allowed in the workspace.
-        config: Dict[str, Any] = read.workspace(self.workspace)
-        sites: List[str] = config.get("sites", [])
-        if self.site not in sites:
-            error = (
-                f"site: {self.site} not in workspace: {self.workspace} sites: {sites}."
-            )
-            raise ValueError(error)
+        if self.config.strategy == "strict":
+            config: Dict[str, Any] = read.workspace(self.workspace)
+            sites: List[str] = config.get("sites", [])
+            if self.site not in sites:
+                error = f"site {self.site} not in workspace: {sites}."
+                raise ValueError(error)
         return self
 
     ###########################################################################

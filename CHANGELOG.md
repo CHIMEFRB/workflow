@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/CHIMEFRB/workflow/compare/v1.8.1...v1.9.0) (2024-07-16)
+
+
+### Features
+
+* **docker:** added entrypoint to optionally run workspace set ([1d89e82](https://github.com/CHIMEFRB/workflow/commit/1d89e82858284809bce67e92b22501d0e78c8b24))
+
 ## [1.8.1](https://github.com/CHIMEFRB/workflow/compare/v1.8.0...v1.8.1) (2024-07-16)
 
 

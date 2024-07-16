@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/CHIMEFRB/workflow/compare/v1.6.0...v1.7.0) (2024-07-16)
+
+
+### Features
+
+* **daemon:** added reworked transfer daemon ([8528f45](https://github.com/CHIMEFRB/workflow/commit/8528f45ecb0c67594067d1941dd9f3010485a646))
+
+
+### Bug Fixes
+
+* **tx:** fixed startup errors ([07e3d67](https://github.com/CHIMEFRB/workflow/commit/07e3d67b4ea22b7c72d18bae6dcf1fd67adb7e8f))
+
 ## [1.6.0](https://github.com/CHIMEFRB/workflow/compare/v1.5.0...v1.6.0) (2024-07-04)
 
 

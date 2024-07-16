@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.8.0](https://github.com/CHIMEFRB/workflow/compare/v1.7.0...v1.8.0) (2024-07-16)
+
+
+### Features
+
+* **validation-strategy:** added strict and relaxed validation modes ([3302b4c](https://github.com/CHIMEFRB/workflow/commit/3302b4caa4e28ce057d1678169884906d7b69e95))
+
+
+### Bug Fixes
+
+* **execute.py:** fixing command execution ([#84](https://github.com/CHIMEFRB/workflow/issues/84)) ([f226528](https://github.com/CHIMEFRB/workflow/commit/f2265289238ae50e507a0e7c0e0c4742654bd738))
+
 ## [1.7.0](https://github.com/CHIMEFRB/workflow/compare/v1.6.0...v1.7.0) (2024-07-16)
 
 

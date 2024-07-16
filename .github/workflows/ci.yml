@@ -69,6 +69,7 @@ jobs:
       name: Run workflow tests
       run: |
         poetry install --no-cache
+        poetry run workflow workspace set development
         poetry run pytest --cov workflow/ --cov-report=lcov -s -v
     -
       name: Upload coverage report

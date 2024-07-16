@@ -186,3 +186,26 @@ def test_good_slack_notify():
         notify={"slack": {"channel_id": "test"}},
     )
     assert work.notify.slack.channel_id == "test"
+
+
+def test_strict_validation_strategy():
+    """Checks if validation strategy is working."""
+    with pytest.raises(ValidationError):
+        Work(
+            pipeline="test",
+            user="test",
+            site="wrong",
+            config={"strategy": "strict"},
+        )
+
+
+def test_relaxed_validation_strategy():
+    """Checks if validation strategy is working."""
+    work = Work(
+        pipeline="test",
+        user="test",
+        site="wrong",
+        config={"strategy": "relaxed"},
+    )
+    assert work.config.strategy == "relaxed"
+    assert work.site == "wrong"

@@ -24,7 +24,7 @@ minio = "^7.2"
 pydantic-settings = "^2.0"
 python-logging-loki = "^0.3"
 click-params = "^0.5"
-docker = "^7.1"
+docker = ">=6.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"

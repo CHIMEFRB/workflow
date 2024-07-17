@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.3](https://github.com/CHIMEFRB/workflow/compare/v1.9.2...v1.9.3) (2024-07-17)
+
+
+### Bug Fixes
+
+* **example:** added an example autocomplete function ([df7fa2c](https://github.com/CHIMEFRB/workflow/commit/df7fa2cceec82a0f7189bd1417d2e676c86b38bf))
+
 ## [1.9.2](https://github.com/CHIMEFRB/workflow/compare/v1.9.1...v1.9.2) (2024-07-17)
 
 

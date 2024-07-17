@@ -217,11 +217,15 @@ def perform(
     except Exception as error:
         logger.warning(f"bulk transfer to results failed: {error}")
         logger.warning("checking for existing works in results")
-        for index, work in enumerate(payload):
+        index: int = 0
+        while index < len(payload):
+            work = payload[index]
             if http.results.count(pipeline=work["pipeline"], query={"id": work["id"]}):
                 delete.append(work["id"])
-                logger.debug(f"work {work['id']} already exists in results")
+                logger.info(f"work {work['id']} already exists in results")
                 payload.pop(index)
+            else:
+                index += 1
         logger.debug(f"retrying transfer of {len(payload)} works to results")
         response = http.results.deposit(payload)
         logger.info(

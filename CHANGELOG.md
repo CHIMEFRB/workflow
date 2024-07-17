@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.4](https://github.com/CHIMEFRB/workflow/compare/v1.9.3...v1.9.4) (2024-07-17)
+
+
+### Bug Fixes
+
+* **deps:** docker fixed to &gt;=6.1 ([d454651](https://github.com/CHIMEFRB/workflow/commit/d45465102a718457123b004279927519e5ed777d))
+
 ## [1.9.3](https://github.com/CHIMEFRB/workflow/compare/v1.9.2...v1.9.3) (2024-07-17)
 
 

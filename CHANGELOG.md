@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.2](https://github.com/CHIMEFRB/workflow/compare/v1.9.1...v1.9.2) (2024-07-17)
+
+
+### Bug Fixes
+
+* **daemon:** fixed transfer daemon duplication check error ([a4ed3f6](https://github.com/CHIMEFRB/workflow/commit/a4ed3f623c2c561b6d4424271f3af169e85e208f))
+
 ## [1.9.1](https://github.com/CHIMEFRB/workflow/compare/v1.9.0...v1.9.1) (2024-07-16)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.5](https://github.com/CHIMEFRB/workflow/compare/v1.9.4...v1.9.5) (2024-07-18)
+
+
+### Bug Fixes
+
+* **chimefrb-workspace:** add http baseurl for schedule and configs ([f774846](https://github.com/CHIMEFRB/workflow/commit/f77484651330c0f81e267d816e78397f81748d71))
+* **workspace:** workspace.read now converts a str to pathlib.Path if the source exisits ([3f71f57](https://github.com/CHIMEFRB/workflow/commit/3f71f5707c96540442f3db331dac98e78717ecaa))
+
 ## [1.9.4](https://github.com/CHIMEFRB/workflow/compare/v1.9.3...v1.9.4) (2024-07-17)
 
 

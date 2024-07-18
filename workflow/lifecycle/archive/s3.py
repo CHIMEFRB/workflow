@@ -11,11 +11,17 @@ from workflow.utils import logger, read
 
 log = logger.get_logger("workflow.lifecycle.archive.s3")
 
-workspace = read.workspace(DEFAULT_WORKSPACE_PATH)
 
+try:
+    workspace = read.workspace(DEFAULT_WORKSPACE_PATH)
+except Exception as error:
+    log.debug(f"Failed to import s3 archive configuration, {error}")
+    log.debug("Using empty workspace configuration.")
+    workspace = {}
+
+WORKFLOW_S3_ARCHIVE_CONFIG = workspace.get("archive", {}).get("s3", {})
 WORKFLOW_S3_ACCESS_KEY = os.getenv("WORKFLOW_S3_ACCESS_KEY")
 WORKFLOW_S3_SECRET_KEY = os.getenv("WORKFLOW_S3_SECRET_KEY")
-WORKFLOW_S3_ARCHIVE_CONFIG = workspace.get("archive", {}).get("s3", {})
 
 
 def bypass(path: Path, payload: Optional[List[str]], site: str) -> bool:

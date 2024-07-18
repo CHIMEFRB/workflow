@@ -32,6 +32,9 @@ def workspace(source: Union[str, Path]) -> Dict[str, Any]:
     Returns:
         Dict[str, Any]: Workspace Configuration
     """
+    if isinstance(source, str) and Path(source).exists():
+        source = Path(source)
+
     if isinstance(source, Path):
         if source.exists():
             if source.suffix in [".yaml", ".yml"]:

@@ -3,6 +3,7 @@ workspace: development
 # List the valid sites for this workspace
 sites:
   - local
+  - testing
 
 http:
   baseurls:
@@ -13,8 +14,18 @@ http:
     results: http://localhost:8005
 
 archive:
-  mounts:
+  posix:
     local: "/"
+    testing: "./testing/workflow"
+  s3:
+    local:
+      url: not-real.com
+      bucket: local
+      subpath: /workflow
+    testing:
+      url: play.min.io
+      bucket: testing
+      subpath: /workflow
 
 config:
   archive:
@@ -24,7 +35,7 @@ config:
         - "copy"
         - "delete"
         - "move"
-      storage: "s3"
+      storage: "posix"
     products:
       methods:
         - "bypass"

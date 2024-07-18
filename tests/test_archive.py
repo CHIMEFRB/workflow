@@ -1,199 +1,275 @@
-"""Test the archive module."""
+"""Test archive."""
 
-import logging
-import os
-import shutil
+from copy import deepcopy
 from pathlib import Path
+from shutil import rmtree
+from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError
 
+from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.definitions.work import Work
-from workflow.lifecycle.archive import http, posix, run, s3
+from workflow.lifecycle import archive
+from workflow.lifecycle.archive import ArchiveResultsError
 from workflow.utils import read
 
-workspace_path = (
-    Path(__file__).parent.parent / "workflow" / "workspaces" / "development.yml"
+TEST_WORK = Work(
+    pipeline="test-archive-run",
+    user="test",
+    plots=["testing/some_plot.png"],
+    products=["testing/some_product.dat"],
+    site="testing",
+    creation=1676399549.2184331,
+    id="4r4nd0mlyg3n3r4t3dstr1ngb33pb00p",
+    config={
+        "archive": {
+            "results": True,
+            "products": "bypass",
+            "plots": "bypass",
+            "logs": "bypass",
+        },
+    },
 )
-WORKSPACE = read.workspace(workspace_path)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture()
 def directory():
-    """Create a temporary directory.
-
-    Yields:
-        directory (Path): Path to temporary directory.
-    """
-    directory = Path("tmp_test")
+    """Directory fixture."""
+    directory = Path("testing")
     directory.mkdir(exist_ok=True)
+    (directory / "some_plot.png").touch()
+    (directory / "some_product.dat").touch()
     yield directory
-    shutil.rmtree(directory)
+    rmtree(directory.as_posix())
 
 
-@pytest.fixture
-def work():
-    """Return a Work instance."""
-    test_plot = Path("test_plot.txt")
-    test_product = Path("test_product.txt")
-    test_plot.touch()
-    test_product.touch()
-    yield Work(
-        user="tester",
-        site="local",
-        pipeline="test-pipeline",
-        id="pytest",
-        plots=[test_plot.as_posix()],
-        products=[test_product.as_posix()],
-    )
-    test_plot.unlink(missing_ok=True)
-    test_product.unlink(missing_ok=True)
+@pytest.fixture()
+def workspace():
+    """Workspace fixture."""
+    return read.workspace(DEFAULT_WORKSPACE_PATH)
 
 
-def test_s3_env_vars_set():
-    """Test the environment for S3 vars."""
-    assert os.getenv("WORKFLOW_S3_ENDPOINT") == "play.min.io"
-    assert os.getenv("WORKFLOW_S3_ACCESS_KEY") == "Q3AM3UQ867SPQQA43P2F"
-    assert (
-        os.getenv("WORKFLOW_S3_SECRET_KEY")
-        == "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG"
-    )
+@pytest.mark.parametrize("archive_action", ["copy", "move", "delete"])
+def test_exception_during_archive(archive_action, directory, workspace):
+    """Test for exception raised during archive.run()."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = archive_action
+    work.config.archive.plots = archive_action
+    if archive_action in ["copy", "move"]:
+        with patch(
+            f"shutil.{archive_action}",
+            side_effect=ArchiveResultsError(
+                f"mocked archive error in {archive_action}"
+            ),
+        ):
+            archive.run(work, workspace=workspace)
+    if archive_action == "delete":
+        with patch(
+            "os.remove",
+            side_effect=ArchiveResultsError(f"mocked archive error: {archive_action}"),
+        ):
+            archive.run(work, workspace=workspace)
+    # test archive.permission()
+    with patch(
+        "subprocess.run",
+        side_effect=ArchiveResultsError("mocked archive error: permission"),
+    ):
+        archive.run(work, workspace=workspace)
 
 
-def test_successful_run_archive(work):
-    """Test the run function."""
-    run(work, WORKSPACE)
+def test_copy_work_products_and_plots(directory, workspace):
+    """Test for copy.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = "copy"
+    work.config.archive.plots = "copy"
+    archive.run(work, workspace=workspace)
+
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ).exists()
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ).exists()
+
+    assert work.products == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ]
+    assert work.plots == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ]
 
 
-def test_bad_method_run_archive(caplog, work, workspace=WORKSPACE):
-    """Test the run function."""
-    with pytest.raises(ValidationError):
-        work.config.archive.products = "bad_method"
-        work.config.archive.plots = "bad_method"
-        run(work, workspace)
+def test_copy_work_products_only(directory, workspace):
+    """Test for copy.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = "copy"
+    archive.run(work, workspace=workspace)
+
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ).exists()
+    assert not Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ).exists()
+
+    assert work.products == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ]
+    assert work.plots == ["testing/some_plot.png"]
 
 
-def test_excluded_method_run_archive(caplog, work, workspace=WORKSPACE):
-    """Test the run function."""
-    work.config.archive.products = "bypass"
-    work.config.archive.plots = "bypass"
-    workspace["config"]["archive"]["products"]["methods"] = ["copy"]
-    workspace["config"]["archive"]["plots"]["methods"] = ["copy"]
-    with caplog.at_level(logging.WARNING):
-        run(work, workspace)
-    assert (
-        f"Archive method {work.config.archive.products} not allowed for products by workspace."  # noqa: E501
-        in caplog.text
-    )
-    assert (
-        f"Archive method {work.config.archive.plots} not allowed for plots by workspace."  # noqa: E501
-        in caplog.text
-    )
+def test_copy_work_plots_only(directory, workspace):
+    """Test for copy.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.plots = "copy"
+    archive.run(work, workspace=workspace)
+
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+
+    assert not Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ).exists()
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ).exists()
+
+    assert work.products == ["testing/some_product.dat"]
+    assert work.plots == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ]
 
 
-def test_storage_unset_run_archive(caplog, work, workspace=WORKSPACE):
-    """Test the run function."""
-    workspace["config"]["archive"]["products"]["storage"] = None
-    workspace["config"]["archive"]["plots"]["storage"] = None
-    with caplog.at_level(logging.WARNING):
-        run(work, workspace)
-    assert "storage has not been set for products in workspace." in caplog.text
-    assert "storage has not been set for plots in workspace." in caplog.text
+def test_move_work_products_and_plots(directory, workspace):
+    """Test for move.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = "move"
+    work.config.archive.plots = "move"
+    archive.run(work, workspace=workspace)
+
+    assert not Path("testing/some_product.dat").exists()
+    assert not Path("testing/some_plot.png").exists()
+
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ).exists()
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ).exists()
+
+    assert work.products == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ]
+    assert work.plots == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ]
 
 
-class TestS3:
-    """Test S3 archive methods."""
+def test_move_work_products_only(directory, workspace):
+    """Test for move.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = "move"
+    archive.run(work, workspace=workspace)
 
-    def test_s3_bypass(self):
-        """Test the bypass method."""
-        assert s3.bypass(Path("none"), []) is True
+    assert not Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
 
-    def test_s3_copy(self, work):
-        """Test the copy method."""
-        file = work.plots[0]
-        path = Path("workflow/testing/s3/method/copy")
-        result = s3.copy(path, [file])
-        assert result is True
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ).exists()
+    assert not Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ).exists()
 
-    def test_s3_delete(self):
-        """Test the delete method."""
-        with pytest.raises(NotImplementedError):
-            s3.delete(Path("none"), [])
-
-    def test_s3_move(self, work):
-        """Test the move method."""
-        file = work.plots[0]
-        path = Path("workflow/testing/s3/method/move")
-        result = s3.move(path, [file])
-        assert result is True
-
-    def test_s3_permissions(self):
-        """Test the permissions method."""
-        with pytest.raises(NotImplementedError):
-            s3.permissions(Path("none"), [])
+    assert work.products == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ]
+    assert work.plots == ["testing/some_plot.png"]
 
 
-class TestPosix:
-    """Test POSIX archive methods."""
+def test_move_work_plots_only(directory, workspace):
+    """Test for move.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.plots = "move"
+    archive.run(work, workspace=workspace)
 
-    def test_posix_bypass(self):
-        """Test the bypass method."""
-        assert posix.bypass(Path("none"), []) is True
+    assert Path("testing/some_product.dat").exists()
+    assert not Path("testing/some_plot.png").exists()
 
-    def test_posix_copy(self, work, directory):
-        """Test the copy method."""
-        file = work.plots[0]
-        path = directory / "workflow/20240501" / "posix" / "method" / "copy"
-        result = posix.copy(path, [file])
-        assert result is True
-        assert (path / file).exists()
+    assert not Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_product.dat"  # noqa: E501
+    ).exists()
+    assert Path(
+        "./testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ).exists()
 
-    def test_posix_delete(self, work, directory):
-        """Test the delete method."""
-        file = work.plots[0]
-        path = directory / "workflow/20240501" / "posix" / "method" / "delete"
-        result = posix.delete(path, work.plots)
-        assert result is True
-        assert not Path(file).exists()
-        assert len(work.plots) == 0
-
-    def test_posix_move(self, work, directory):
-        """Test the move method."""
-        file = work.plots[0]
-        path = directory / "workflow/20240501" / "posix" / "method" / "move"
-        result = posix.move(path, [file])
-        assert result is True
-        assert (path / file).exists()
-        assert not Path(file).exists()
-
-    def test_posix_permissions(self):
-        """Test the permissions method."""
-        pass
+    assert work.products == ["testing/some_product.dat"]
+    assert work.plots == [
+        "testing/workflow/20230214/test-archive-run/4r4nd0mlyg3n3r4t3dstr1ngb33pb00p/some_plot.png"  # noqa: E501
+    ]
 
 
-class TestHttp:
-    """Test HTTP archive methods."""
+def test_delete_work_products_and_plots(directory, workspace):
+    """Test for copy.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = "delete"
+    work.config.archive.plots = "delete"
+    archive.run(work, workspace=workspace)
 
-    def test_http_bypass(self):
-        """Test the bypass method."""
-        assert http.bypass(Path("none"), []) is True
+    assert not Path("testing/some_product.dat").exists()
+    assert not Path("testing/some_plot.png").exists()
 
-    def test_http_copy(self):
-        """Test the copy method."""
-        with pytest.raises(NotImplementedError):
-            http.copy(Path("none"), [])
+    assert work.products == []
+    assert work.plots == []
 
-    def test_http_delete(self):
-        """Test the delete method."""
-        with pytest.raises(NotImplementedError):
-            http.delete(Path("none"), [])
 
-    def test_http_move(self):
-        """Test the move method."""
-        with pytest.raises(NotImplementedError):
-            http.move(Path("none"), [])
+def test_delete_work_products_only(directory, workspace):
+    """Test for copy.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.products = "delete"
+    archive.run(work, workspace=workspace)
 
-    def test_http_permissions(self):
-        """Test the permissions method."""
-        with pytest.raises(NotImplementedError):
-            http.permissions(Path("none"), [])
+    assert not Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+
+    assert work.products == []
+    assert work.plots == ["testing/some_plot.png"]
+
+
+def test_delete_work_plots_only(directory, workspace):
+    """Test for copy.work_products."""
+    assert Path("testing/some_product.dat").exists()
+    assert Path("testing/some_plot.png").exists()
+    work = deepcopy(TEST_WORK)
+    work.config.archive.plots = "delete"
+    archive.run(work, workspace=workspace)
+
+    assert Path("testing/some_product.dat").exists()
+    assert not Path("testing/some_plot.png").exists()
+
+    assert work.products == ["testing/some_product.dat"]
+    assert work.plots == []

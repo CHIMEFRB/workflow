@@ -34,15 +34,52 @@ http:
 
 archive:
   posix:
-    base: "/data/frb-archiver"
-    buckets: "/data/frb-archiver/buckets"
-    results: "/data/frb-archiver/results"
-    pipelines: "/data/frb-archiver/pipelines"
-    loki: "/data/frb-archiver/loki"
-    products: "/data/frb-archiver/products"
+    local: ./workflow
+    chime: /data/chime/baseband/processed/workflow
+    kko: Null
+    gbo: Null
+    hco: Null
+    aro: Null
+    canfar: /arc/projects/chime_frb/data/canfar/processed/workflow
+    cedar: Null
+    calcul-quebec: Null
   s3:
-    minio:
-      url: "https://s3.us-west-2.amazonaws.com/frb-archiver"
+    local:
+      url: Null
+      bucket: workflow
+      subpath: /workflow
+    chime:
+      url: Null
+      bucket: chime
+      subpath: /workflow
+    kko:
+      url: Null
+      bucket: kko
+      subpath: /workflow
+    gbo:
+      url: Null
+      bucket: gbo
+      subpath: /workflow
+    hco:
+      url: Null
+      bucket: hco
+      subpath: /workflow
+    aro:
+      url: Null
+      bucket: aro
+      subpath: /workflow
+    canfar:
+      url: Null
+      bucket: canfar
+      subpath: /workflow
+    cedar:
+      url: Null
+      bucket: cedar
+      subpath: /workflow
+    calcul-quebec:
+      url: Null
+      bucket: calcul-quebec
+      subpath: /workflow
 
 config:
   archive:
@@ -54,7 +91,8 @@ config:
     products:
       methods: ["move", "delete"] # Can also be copy or delete
       storage: "posix"
-  logging:
-    loki:
-      site: "local"
-      pipeline: "temp"
+    permissions:
+      posix:
+        user: "user"
+        group: "chime-frb-ro"
+        command: "setfacl -R -m g:{group}:r {path}"

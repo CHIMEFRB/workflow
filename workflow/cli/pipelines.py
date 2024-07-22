@@ -92,9 +92,9 @@ def count():
 
 
 @pipelines.command("ps", help="Get pipeline details.")
-@click.argument("pipeline", type=str, required=True)
+# @click.argument("pipeline", type=str, required=True)
 @click.argument("id", type=str, required=True)
-def ps(pipeline: str, id: str):
+def ps(id: str):
     """List a pipeline configuration in detail."""
     http = HTTPContext()
     query: str = json.dumps({"id": id})
@@ -102,9 +102,21 @@ def ps(pipeline: str, id: str):
     console_content = None
     column_max_width = 300
     column_min_width = 40
+    # ? Get Config name, needed for querying the pipeline
+    try:
+        config_name = http.configs.get_configs(
+            query=json.dumps({"pipelines": id}), projection=json.dumps({"name": 1})
+        )[0]["name"]
+    except Exception:
+        error_text = Text(
+            f"Could not found any Config parent for Pipeline {id}.", style="red"
+        )
+        console.print(error_text)
+        return
+    # ? Get the pipeline
     try:
         payload = http.pipelines.get_pipelines(
-            name=pipeline, query=query, projection=projection
+            name=config_name, query=query, projection=projection
         )[
             0  # type: ignore
         ]
@@ -114,7 +126,7 @@ def ps(pipeline: str, id: str):
     else:
         text = Text()
         table.add_column(
-            f"Pipeline: {pipeline}",
+            f"Pipeline: {config_name}",
             min_width=column_min_width,
             max_width=column_max_width,
             justify="left",

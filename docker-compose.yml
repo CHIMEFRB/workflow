@@ -23,7 +23,11 @@ services:
       - SANIC_HEALTH_MANAGERS_CHECK_TIMES=10
       - SANIC_HEALTH_MANAGERS_CHECK_INTERVAL_SECONDS=30
       - SANIC_LISTENERS_THRESHOLD_SECONDS=120
+      - SANIC_WORKSPACE_FILEPATH=/etc/workspace.yml
       - TZ=Etc/UTC
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workflow/workspaces/development.yml:/etc/workspace.yml
     networks:
       - workflow
 

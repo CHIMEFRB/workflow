@@ -96,3 +96,11 @@ config:
         user: "user"
         group: "chime-frb-ro"
         command: "setfacl -R -m g:{group}:r {path}"
+
+deployers:
+  local:
+    docker:
+      client_url: tcp://frb-vsop.chime:2375
+  chime:
+    docker:
+      client_url: tcp://frb-vsop.chime:2375

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.6](https://github.com/CHIMEFRB/workflow/compare/v1.9.5...v1.9.6) (2024-07-23)
+
+
+### Bug Fixes
+
+* Trigger ([4520b48](https://github.com/CHIMEFRB/workflow/commit/4520b48438285fecc0d31313573fddc49ab5d0f6))
+
 ## [1.9.5](https://github.com/CHIMEFRB/workflow/compare/v1.9.4...v1.9.5) (2024-07-18)
 
 

@@ -257,12 +257,12 @@ class Work(BaseSettings):
     timeout: int = Field(
         default=3600,
         ge=1,
-        le=86400,
+        le=86400 * 3,
         description="""
         Timeout in seconds for the work to finish.
         After the timeout, the work is marked as failed and retried
         if the number of attempts is less than the maximum number of retries.
-        Defaults 3600s (1 hr) with range of [1, 86400] (1s-24hrs).
+        Defaults 3600s (1 hr) with range of [1, 259200] (1s-72hrs).
         """,
         examples=[7200],
     )

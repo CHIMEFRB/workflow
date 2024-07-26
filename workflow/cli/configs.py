@@ -8,7 +8,7 @@ import requests
 import yaml
 from rich import pretty
 from rich.console import Console
-from rich.json import JSON
+from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 from yaml import safe_load
@@ -110,8 +110,10 @@ def deploy(filename: click.Path):
     except requests.HTTPError as deploy_error:
         console.print(deploy_error.response.json()["error_description"][0]["msg"])
         return
+    header_text = Text("Config deployed: ")
+    header_text.append(data["name"], style="blink underline bright_blue")
     table.add_column(
-        "Deploy Result",
+        header=header_text,
         min_width=35,
         max_width=50,
         justify="left",
@@ -192,7 +194,7 @@ def ps(name: str, id: str, details: bool):
     projection: str = json.dumps({})
     console_content = None
     column_max_width = 300
-    column_min_width = 40
+    column_min_width = 50
     try:
         payload = http.configs.get_configs(
             name=name, query=query, projection=projection
@@ -210,20 +212,20 @@ def ps(name: str, id: str, details: bool):
         )
         text.append(render_config(http, payload))
         if details:
-            table.add_column("Details", max_width=column_max_width, justify="left")
-            _details = safe_load(payload["yaml"])
-            _details = {
-                k: v
-                for k, v in _details.items()
-                if k not in ["name", "version", "deployments"]
-            }
-            table.add_row(text, JSON(json.dumps(_details), indent=2))
+            table.add_column(
+                "Details",
+                max_width=column_max_width,
+                min_width=column_min_width,
+                justify="left",
+            )
+            _details = payload["yaml"]
+            table.add_row(text, Syntax(_details, "yaml"))
         else:
             table.add_row(text)
         table.add_section()
         table.add_row(
             Text("Explore pipelines in detail: \n", style="magenta i").append(
-                "workflow pipelines ps <config_name> <pipeline_id>",
+                "workflow pipelines ps <pipeline_id>",
                 style="dark_blue on cyan",
             )
         )

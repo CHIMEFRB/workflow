@@ -78,16 +78,25 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
         key_value_text = Text()
         if k == "pipelines":
             key_value_text.append(f"{k}: \n", style="bright_blue")
-            for child in pipelines_statuses:
+            for status in pipelines_statuses:
                 key_value_text.append(
-                    f"\t{child['id']}: ",  # type: ignore
-                    style=status_colors[child["status"]],  # type: ignore
+                    f"\t{status['id']}: ",  # type: ignore
+                    style=f"{status_colors[status['status']]}",  # type: ignore
                 )
                 key_value_text.append(
-                    f"{status_symbols[child['status']]}\n",  # type: ignore
-                    style=status_colors[child["status"]],  # type: ignore
+                    f"{status_symbols[status['status']]}\n",  # type: ignore
+                    style=status_colors[status["status"]],  # type: ignore
                 )
             text.append_text(key_value_text)
+            continue
+        if k == "deployments":
+            key_value_text.append(f"{k}: \n", style="bright_blue")
+            if v:
+                for deployment in v:
+                    key_value_text.append_text(render_dict(deployment))
+                    key_value_text.append("\n")
+                text.append_text(key_value_text)
+                continue
             continue
         key_value_text.append(f"{k}: ", style="bright_blue")
         key_value_text.append(f"{v}\n", style="white")
@@ -95,6 +104,18 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
 
     return text
 
+
+def render_dict(payload: Dict[str, Any], listing: bool = True) -> Text:
+    text = Text(" - " if listing else "")
+    for i_k, i_v in payload.items():
+        if isinstance(i_v, dict):
+            text.append(render_dict(i_v, listing=False))
+            continue
+        text.append(
+            f"\t{i_k}: ", style="bright_green"
+        )
+        text.append(f"{i_v}\n")
+    return text
 
 def clean_output(message: str) -> str:
     """Cleans strings from Click.command output.

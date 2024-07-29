@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.7](https://github.com/CHIMEFRB/workflow/compare/v1.9.6...v1.9.7) (2024-07-29)
+
+
+### Bug Fixes
+
+* **work:** increase max timeout from 1 day to 3 days ([#102](https://github.com/CHIMEFRB/workflow/issues/102)) ([2e1453e](https://github.com/CHIMEFRB/workflow/commit/2e1453e03662b96b2cb9949e4a31545c0037a9e6))
+* **workspace:** update chimefrb http urls ([bc13da7](https://github.com/CHIMEFRB/workflow/commit/bc13da73eb0e455ce631139a90191b3fe6de1f58))
+
 ## [1.9.6](https://github.com/CHIMEFRB/workflow/compare/v1.9.5...v1.9.6) (2024-07-23)
 
 

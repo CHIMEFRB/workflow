@@ -106,16 +106,24 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
 
 
 def render_dict(payload: Dict[str, Any], listing: bool = True) -> Text:
+    """TODO: Missing docstring.
+
+    Args:
+        payload: [TODO:description]
+        listing: [TODO:description]
+
+    Returns:
+        [TODO:return]
+    """
     text = Text(" - " if listing else "")
     for i_k, i_v in payload.items():
         if isinstance(i_v, dict):
             text.append(render_dict(i_v, listing=False))
             continue
-        text.append(
-            f"\t{i_k}: ", style="bright_green"
-        )
+        text.append(f"\t{i_k}: ", style="bright_green")
         text.append(f"{i_v}\n")
     return text
+
 
 def clean_output(message: str) -> str:
     """Cleans strings from Click.command output.

@@ -11,7 +11,6 @@ from rich.console import Console
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
-from yaml import safe_load
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext

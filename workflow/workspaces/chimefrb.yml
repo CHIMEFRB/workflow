@@ -15,19 +15,19 @@ http:
   baseurls:
     buckets:
       - http://frb-vsop.chime:8004
-      - https://frb.chimenet.ca/buckets
+      - https://frb.chimenet.ca/workflow/buckets
     results:
       - http://frb-vsop.chime:8005
-      - https://frb.chimenet.ca/results
+      - https://frb.chimenet.ca/workflow/results
     pipelines:
       - http://frb-vsop.chime:8007
-      - https://frb.chimenet.ca/pipelines
+      - https://frb.chimenet.ca/workflow/pipelines
     configs:
       - http://frb-vsop.chime:8007
-      - https://frb.chimenet.ca/pipelines
+      - https://frb.chimenet.ca/workflow/pipelines
     schedules:
       - http://frb-vsop.chime:8007
-      - https://frb.chimenet.ca/pipelines
+      - https://frb.chimenet.ca/workflow/pipelines
     loki: https://frb.chimenet.ca/loki/loki/api/v1/push
     # This is the prefix url to make a output data plot or product accessible to the user
     products: https://frb.chimenet.ca/frb-master/v1/events/query-file?filename=

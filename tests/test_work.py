@@ -108,9 +108,9 @@ def test_validation_after_instantiation():
 
 
 def test_timeout_exceeds_maximum():
-    """Checks if validation works when timeout field is greater than 86400."""
+    """Checks if validation works when timeout field is greater than 259200."""
     with pytest.raises(ValidationError):
-        Work(pipeline="test", site="local", user="test", timeout=86401)
+        Work(pipeline="test", site="local", user="test", timeout=259201)
 
 
 def test_retries_exceeds_maximum():

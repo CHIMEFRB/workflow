@@ -4,8 +4,8 @@
       "extra-files": [
         "workflow/__init__.py"
       ],
-      "package-name": "workflow",
-      "release-type": "python"
+      "package-name": "workflow"
     }
-  }
+  },
+  "release-type": "python"
 }

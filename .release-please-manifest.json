@@ -1,10 +1,10 @@
 {
   ".": "1.9.7",
+  "extra-files": [
+    "workflow/__init__.py"
+  ],
   "packages": {
     ".": {
-      "extra-files": [
-        "workflow/__init__.py"
-      ],
       "package-name": "workflow",
       "release-type": "python"
     }

@@ -1,5 +1,5 @@
 {
-  ".": "1.9.7",
+  ".": "1.9.8",
   "extra-files": [
     "workflow/__init__.py"
   ],

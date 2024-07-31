@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.8](https://github.com/CHIMEFRB/workflow/compare/v1.9.7...v1.9.8) (2024-07-31)
+
+
+### Bug Fixes
+
+* **workspace-chimefrb:** pipelines configs and schedules missing /v2 ([ece1ad7](https://github.com/CHIMEFRB/workflow/commit/ece1ad739584bf9bb4d5d5493fbf5d7270e99d55))
+
 ## [1.9.7](https://github.com/CHIMEFRB/workflow/compare/v1.9.6...v1.9.7) (2024-07-29)
 
 

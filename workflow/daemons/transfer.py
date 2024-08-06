@@ -120,6 +120,8 @@ def check(payload: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     for data in payload:
         for key in ["products", "plots", "logs"]:
+            if key not in data["config"]["archive"].keys():
+                continue
             if data["config"]["archive"][key] == "pass":
                 data["config"]["archive"][key] = "bypass"
     return payload

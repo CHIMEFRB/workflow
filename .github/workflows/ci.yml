@@ -81,4 +81,4 @@ jobs:
       name: Kill services
       if: always()
       run: |
-        docker-compose -f docker-compose.yml down -v
+        docker compose -f docker-compose.yml down -v

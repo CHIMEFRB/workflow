@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.9](https://github.com/CHIMEFRB/workflow/compare/v1.9.8...v1.9.9) (2024-08-06)
+
+
+### Bug Fixes
+
+* **ci/cd:** update ci.yml ([3c6b70b](https://github.com/CHIMEFRB/workflow/commit/3c6b70b52bd4469fb7ce4226d6432dc3ca5c68b9))
+* **transfer.py:** fixed transfer daemon key error ([#106](https://github.com/CHIMEFRB/workflow/issues/106)) ([b4e6f54](https://github.com/CHIMEFRB/workflow/commit/b4e6f54f1b9a859b4cd21b7cada81787c26c5544))
+
 ## [1.9.8](https://github.com/CHIMEFRB/workflow/compare/v1.9.7...v1.9.8) (2024-07-31)
 
 

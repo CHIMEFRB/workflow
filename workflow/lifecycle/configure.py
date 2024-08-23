@@ -133,19 +133,16 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
         logger.info(f"click cli detected for func {work.function}")
         # Get default options from the click command
         for parameter in func.params:
-            if (parameter.name not in known) and parameter.default:
-                if parameter.is_flag:  # type: ignore
-                    options[parameter.opts[-1]] = None
+            name_in_cli = parameter.opts[-1]
+            name_in_function = parameter.name
+
+            if name_in_function not in known:
+                if hasattr(parameter, "default"):
+                    options[name_in_cli] = parameter.default
                 else:
-                    options[parameter.opts[-1]] = parameter.default
-            elif parameter.name in known:
-                if parameter.is_flag:
-                    if parameter.default == parameters.get(parameter.name):
-                        options[parameter.opts[-1]] = None
-                else:
-                    options[parameter.opts[-1]] = parameters.get(
-                        parameter.name  # type: ignore
-                    )
+                    options[name_in_cli] = None
+            elif name_in_function in known:
+                options[name_in_cli] = parameters.get(name_in_function)  # type: ignore
         logger.info(f"click cli options: {options}")
         work.parameters = options
     logger.debug(f"work parameters: {work.parameters}")

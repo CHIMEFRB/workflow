@@ -139,8 +139,6 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
             if name_in_function not in known:
                 if hasattr(parameter, "default"):
                     options[name_in_cli] = parameter.default
-                else:
-                    options[name_in_cli] = None
             elif name_in_function in known:
                 options[name_in_cli] = parameters.get(name_in_function)  # type: ignore
         logger.info(f"click cli options: {options}")

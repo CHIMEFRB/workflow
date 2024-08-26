@@ -101,7 +101,7 @@ def work(
             # * in the execute module. We don't need to set it here.
 
             archive.run(work, config)
-            work.update()
+            # work.update()
             status = True
     except Exception as error:
         logger.error(error)

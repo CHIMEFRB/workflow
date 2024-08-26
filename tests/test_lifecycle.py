@@ -32,13 +32,13 @@ def test_execute_function_with_click_cli_flags():
     """Test the execute function with a click CLI and parameters."""
     work = Work(pipeline="workflow-tests", site="local", user="tester")
     work.function = "workflow.examples.function.cli"
-    work.parameters = {"alpha": 5, "beta": 2, "verbose": True}
+    work.parameters = {"alpha": 5, "beta": 2, "verbose": None}
     work = execute.function(work)
     results, products, plots = math(alpha=5, beta=2)
     assert work.results == results
     assert work.products == products
     assert work.plots == plots
-    work.parameters = {"alpha": 5, "beta": 2, "verbose": False}
+    work.parameters = {"alpha": 5, "beta": 2}
     work = execute.function(work)
     assert work.results == results
     assert work.products != products

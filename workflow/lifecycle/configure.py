@@ -137,10 +137,24 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
             name_in_function = parameter.name
 
             if name_in_function not in known:
-                if hasattr(parameter, "default"):
-                    options[name_in_cli] = parameter.default
-            elif name_in_function in known:
-                options[name_in_cli] = parameters.get(name_in_function)  # type: ignore
+                if hasattr(parameter, "default") and parameter.default:
+                    parameter_default_value = parameter.default
+
+                    if hasattr(parameter, "is_flag") and parameter.is_flag:
+                        if parameter_default_value is True:
+                            # Flags aren't assigned values, its CLI name is just included or not included
+                            options[name_in_cli] = None
+                    else:
+                        options[name_in_cli] = parameter_default_value
+            else:
+                parameter_given_value = parameters.get(name_in_function)  # type: ignore
+
+                if hasattr(parameter, "is_flag") and parameter.is_flag:
+                    if parameter_given_value is True:
+                        # Flags aren't assigned values, its CLI name is just included or not included
+                        options[name_in_cli] = None
+                else:
+                    options[name_in_cli] = parameter_given_value
         logger.info(f"click cli options: {options}")
         work.parameters = options
     logger.debug(f"work parameters: {work.parameters}")

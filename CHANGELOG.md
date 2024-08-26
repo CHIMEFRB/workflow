@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.9.10](https://github.com/CHIMEFRB/workflow/compare/v1.9.9...v1.9.10) (2024-08-26)
+
+
+### Bug Fixes
+
+* **attempt.py:** removing duplicated call to update() function ([#112](https://github.com/CHIMEFRB/workflow/issues/112)) ([3466f90](https://github.com/CHIMEFRB/workflow/commit/3466f9070ee8964c1e51cd156726a27d7f23eec5))
+* **configure.py:** remove assigning of "None" to parameters not given in Work, causing TypeError ([2fc7a28](https://github.com/CHIMEFRB/workflow/commit/2fc7a2803ba6185a359debdacef1103d126c2854))
+* **configure.py:** Remove is_flag check ([65041e1](https://github.com/CHIMEFRB/workflow/commit/65041e16f19517bad3bb08b2d7d83a315f23ab09))
+* **test_lifecycle.py:** fixing tests ([#114](https://github.com/CHIMEFRB/workflow/issues/114)) ([7863735](https://github.com/CHIMEFRB/workflow/commit/78637351acc88cc248c62c63782183f8a965a2e6))
+
 ## [1.9.9](https://github.com/CHIMEFRB/workflow/compare/v1.9.8...v1.9.9) (2024-08-06)
 
 

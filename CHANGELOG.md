@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.11](https://github.com/CHIMEFRB/workflow/compare/v1.9.10...v1.9.11) (2024-09-06)
+
+
+### Bug Fixes
+
+* loki logs in workflow web ([#117](https://github.com/CHIMEFRB/workflow/issues/117)) ([8ea12d9](https://github.com/CHIMEFRB/workflow/commit/8ea12d9b33bb12132fb1d814049ee8f5a05d4ba1))
+
 ## [1.9.10](https://github.com/CHIMEFRB/workflow/compare/v1.9.9...v1.9.10) (2024-08-26)
 
 

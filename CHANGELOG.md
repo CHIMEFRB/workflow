@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/CHIMEFRB/workflow/compare/v1.9.11...v1.10.0) (2024-09-11)
+
+
+### Features
+
+* **buckets.py:** added limit option to remove command ([#121](https://github.com/CHIMEFRB/workflow/issues/121)) ([01a5fc8](https://github.com/CHIMEFRB/workflow/commit/01a5fc8a4d68019fdeccf2aee4e85f735b8dc962))
+
 ## [1.9.11](https://github.com/CHIMEFRB/workflow/compare/v1.9.10...v1.9.11) (2024-09-06)
 
 

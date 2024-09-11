@@ -11,7 +11,13 @@ from workflow.http.context import HTTPContext
 from workflow.utils.variables import status_colors, status_symbols
 
 
-def render_pipeline(payload: Dict[str, Any]) -> Text:
+def render_timestamp(timestamp: float):
+    timestamp = dt.datetime.fromtimestamp(timestamp)
+    timestamp = dt.datetime.strftime(timestamp, "%m-%d-%Y, %H:%M:%S")
+    return timestamp
+
+
+def render_pipeline(payload: Dict[str, Any], history: bool = False) -> Text:
     """Renders a pipeline to rich.Text().
 
     Parameters
@@ -25,19 +31,30 @@ def render_pipeline(payload: Dict[str, Any]) -> Text:
         Rendered text.
     """
     steps_field = "steps"
+    history_field = "history"
     time_fields = ["creation", "start", "stop"]
     text = Text()
     for k, v in payload.items():
-        key_value_text = Text()
+        if k == "history" and not history:
+            continue
         if not v:
             continue
+        key_value_text = Text()
         if k in time_fields and v:
-            v = dt.datetime.fromtimestamp(v)
+            v = render_timestamp(v)
         if k == steps_field:
             key_value_text = Text(f"{k}: \n", style="bright_blue")
             for step in v:
                 key_value_text.append(f"  {step['name']}:")
                 key_value_text.append(f"{status_symbols[step['status']]}\n")
+        elif k == history_field:
+            key_value_text = Text(f"{k}: \n", style="bright_blue")
+            for timestamp in v.keys():
+                key_value_text.append(f"  {timestamp}:\n", style="bright_green")
+                for execution in v[timestamp].keys():
+                    key_value_text.append(f"{' ' * 4}{execution}:\n")
+                    for work in v[timestamp][execution]:
+                        key_value_text.append(f"{' ' * 6}{work}\n", style="white")
         else:
             key_value_text = Text(f"{k}: ", style="bright_blue")
             key_value_text.append(
@@ -64,6 +81,7 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
     """
     text = Text()
     hidden_keys = ["yaml", "services", "name"]
+    time_fields = ["creation", "start", "stop"]
     query = json_dumps({"id": {"$in": payload["pipelines"]}})
     projection = json_dumps({"id": 1, "status": 1})
     pipelines_statuses = http.pipelines.get_pipelines(
@@ -76,6 +94,8 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
         if k in hidden_keys:
             continue
         key_value_text = Text()
+        if k in time_fields and v:
+            v = render_timestamp(v)
         if k == "pipelines":
             key_value_text.append(f"{k}: \n", style="bright_blue")
             for status in pipelines_statuses:

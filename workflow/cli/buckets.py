@@ -38,6 +38,9 @@ def buckets():
 )
 @click.option("-p", "--parent", type=str, required=False, help="Filter by parent.")
 @click.option("-f", "--force", is_flag=True, help="Do not prompt for confirmation")
+@click.option(
+    "-l", "--limit", type=int, required=False, help="Limit of Work objects to remove."
+)
 def remove(
     bucket: str,
     status: Optional[str] = None,
@@ -45,6 +48,7 @@ def remove(
     tag: Optional[Tuple[str]] = None,
     parent: Optional[str] = None,
     force: bool = False,
+    limit: Optional[int] = 100,
 ):
     """Remove work[s] from the buckets.
 
@@ -55,8 +59,9 @@ def remove(
         tag (Optional[Tuple[str]], optional): Filter by tag. Defaults to None.
         parent (Optional[str], optional): Filter by parent. Defaults to None.
         force (bool, optional): Do not prompt for confirmation. Defaults to False.
+        limit (int, optional): Limit of Work objects to remove. Defaults to False.
     """
-    http = HTTPContext()
+    http = HTTPContext(backends=["buckets"])
     events: Optional[List[int]] = None
     tags: Optional[List[str]] = None
     if event:
@@ -70,6 +75,7 @@ def remove(
         tags=tags,
         parent=parent,
         force=force,
+        limit=limit,
     )
 
 

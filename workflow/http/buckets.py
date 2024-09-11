@@ -148,6 +148,7 @@ class Buckets(Client):
         tags: Optional[List[str]] = None,
         parent: Optional[str] = None,
         force: bool = False,
+        limit: Optional[int] = 100
     ) -> bool:
         """Delete works belonging to a pipeline from the buckets backend.
 
@@ -161,6 +162,7 @@ class Buckets(Client):
             event (Optional[List[int]]): The event to delete works with.
             force (bool, optional): Whether to force the deletion without requiring
                 user confirmation. Defaults to False.
+            limit (int, optional): Limit of Work objects to remove. Defaults to False.
 
         Returns:
             bool: Whether any works were deleted.
@@ -171,7 +173,7 @@ class Buckets(Client):
         query.update({"tags": {"$in": tags}} if tags else {})
         query.update({"config.parent": parent} if parent else {})
         projection = {"id": True}
-        result = self.view(query, projection)
+        result = self.view(query, projection, limit=limit)
         ids: List[str] = []
         if result:
             ids = [work["id"] for work in result]

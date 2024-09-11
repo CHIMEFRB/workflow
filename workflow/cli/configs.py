@@ -48,7 +48,7 @@ def version():
 @configs.command("count", help="Count objects per collection.")
 def count():
     """Count objects in a database."""
-    http = HTTPContext()
+    http = HTTPContext(backends=["configs"])
     counts = http.configs.count()
     table.add_column("Name", max_width=50, justify="left", style="blue")
     table.add_column("Count", max_width=50, justify="left")
@@ -75,7 +75,7 @@ def deploy(filename: click.Path):
     filename : click.Path
         File path.
     """
-    http = HTTPContext()
+    http = HTTPContext(backends=["configs"])
     filepath: str = str(filename)
     data: Dict[str, Any] = {}
     with open(filepath) as reader:
@@ -148,7 +148,7 @@ def ls(name: Optional[str] = None, quiet: bool = False):
     projection = {"yaml": 0, "deployments": 0}
     if quiet:
         projection = {"id": 1}
-    http = HTTPContext()
+    http = HTTPContext(backends=["configs"])
     objects = http.configs.get_configs(name=name, projection=json.dumps(projection))
 
     # ? Add columns for each key
@@ -188,7 +188,7 @@ def ls(name: Optional[str] = None, quiet: bool = False):
 )
 def ps(name: str, id: str, details: bool):
     """Show details for an object."""
-    http = HTTPContext()
+    http = HTTPContext(backends=["configs", "pipelines"])
     query: str = json.dumps({"id": id})
     projection: str = json.dumps({})
     console_content = None
@@ -233,12 +233,12 @@ def ps(name: str, id: str, details: bool):
         console.print(console_content)
 
 
-@configs.command("stop", help="Stop managers for a Config.")
+@configs.command("stop", help="Stop Pipelines related to a Config.")
 @click.argument("config", type=str, required=True)
 @click.argument("id", type=str, required=True)
 def stop(config: str, id: str):
     """Stop managers for a Config."""
-    http = HTTPContext()
+    http = HTTPContext(backends=["configs"])
     stop_result = http.configs.stop(config, id)
     if not any(stop_result):
         text = Text("No configurations were stopped.", style="red")
@@ -258,12 +258,12 @@ def stop(config: str, id: str):
     console.print(table)
 
 
-@configs.command("rm", help="Remove a config.")
+@configs.command("rm", help="Removes a config.")
 @click.argument("config", type=str, required=True)
 @click.argument("id", type=str, required=True)
 def rm(config: str, id: str):
     """Remove a config."""
-    http = HTTPContext()
+    http = HTTPContext(backends=["configs"])
     content = None
     try:
         delete_result = http.configs.remove(config, id)
@@ -276,5 +276,33 @@ def rm(config: str, id: str):
     else:
         table.add_column("Deleted IDs", max_width=50, justify="left", style="red")
         table.add_row(id)
+        content = table
+    console.print(content)
+
+
+@configs.command("retry", help="Retry all Pipeline related to a Config.")
+@click.argument("name", type=str, required=True)
+@click.argument("id", type=str, required=True)
+def retry(name: str, id: str):
+    """Retry all Pipeline related to a Config.
+
+    Parameters
+    ----------
+    name : str
+        Config name.
+    id : str
+        Config ID.
+    """
+    http = HTTPContext(backends=["configs"])
+    content = None
+    try:
+        retry_result = http.configs._retry(name, id)
+    except Exception as e:
+        text = Text(f"No configurations were retried.\nError: {e}", style="red")
+        content = text
+    else:
+        table.add_column(
+            retry_result["message"], max_width=50, justify="left", style="red"
+        )
         content = table
     console.print(content)

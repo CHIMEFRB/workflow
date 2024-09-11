@@ -163,3 +163,30 @@ class Configs(Client):
             response.raise_for_status()
         server_info = response.json()
         return {"client": client_info, "server": server_info}
+
+
+    @retry(
+        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
+    )
+    def _retry(self, name: str, id: str) -> Dict[str, Any]:
+        """Makes POST request to /retry endpoint.
+
+        Parameters
+        ----------
+        name : str
+            Config name.
+        id : str
+            Config ID.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Response payload.
+        """
+        with self.session as session:
+            body = {"id": id, "name": name}
+            response: Response = session.post(
+                url=f"{self.baseurl}/configs/retry", json=body
+            )
+            response.raise_for_status()
+        return response.json()

@@ -50,7 +50,8 @@ def render_pipeline(payload: Dict[str, Any], history: bool = False) -> Text:
         elif k == history_field:
             key_value_text = Text(f"{k}: \n", style="bright_blue")
             for timestamp in v.keys():
-                key_value_text.append(f"  {timestamp}:\n", style="bright_green")
+                rendered = render_timestamp(int(timestamp))
+                key_value_text.append(f"  {rendered}:\n", style="bright_green")
                 for execution in v[timestamp].keys():
                     key_value_text.append(f"{' ' * 4}{execution}:\n")
                     for work in v[timestamp][execution]:

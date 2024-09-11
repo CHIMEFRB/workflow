@@ -94,7 +94,15 @@ def count():
 @pipelines.command("ps", help="Get pipeline details.")
 # @click.argument("pipeline", type=str, required=True)
 @click.argument("id", type=str, required=True)
-def ps(id: str):
+@click.option(
+    "-h",
+    "--history",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Show the execution history for the Pipeline.",
+)
+def ps(id: str, history: bool = False):
     """List a pipeline configuration in detail."""
     http = HTTPContext()
     query: str = json.dumps({"id": id})
@@ -131,7 +139,7 @@ def ps(id: str):
             max_width=column_max_width,
             justify="left",
         )
-        text.append(render_pipeline(payload))
+        text.append(render_pipeline(payload, history=history))
         table.add_row(text)
         console_content = table
     finally:

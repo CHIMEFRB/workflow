@@ -7,9 +7,9 @@ on:
   pull_request:
     branches:
       - "**"
-    types:
-      - ready_for_review
-      - synchronize
+    # types:
+    #   - ready_for_review
+    #   - synchronize
 
 jobs:
   pre-commit:

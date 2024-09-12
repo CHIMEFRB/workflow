@@ -148,7 +148,7 @@ class Buckets(Client):
         tags: Optional[List[str]] = None,
         parent: Optional[str] = None,
         force: bool = False,
-        limit: Optional[int] = 100
+        limit: Optional[int] = 100,
     ) -> bool:
         """Delete works belonging to a pipeline from the buckets backend.
 

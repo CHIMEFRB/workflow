@@ -208,17 +208,19 @@ def run(
         )
     else:
         # Missing Logging config in Workspace
-        config.update({
-            "logging": {
-                "loki": {
-                    "tags": {
-                        # Assumes that there is only one bucket
-                        "pipeline": buckets[0],
-                        "site": site,
+        config.update(
+            {
+                "logging": {
+                    "loki": {
+                        "tags": {
+                            # Assumes that there is only one bucket
+                            "pipeline": buckets[0],
+                            "site": site,
+                        }
                     }
                 }
             }
-        })
+        )
     loki_status: bool = configure.loki(logger=logger, config=config)
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
     http: HTTPContext = HTTPContext(backends=["buckets"])

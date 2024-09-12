@@ -11,10 +11,22 @@ from workflow.http.context import HTTPContext
 from workflow.utils.variables import status_colors, status_symbols
 
 
-def render_timestamp(timestamp: float):
-    timestamp = dt.datetime.fromtimestamp(timestamp)
-    timestamp = dt.datetime.strftime(timestamp, "%m-%d-%Y, %H:%M:%S")
-    return timestamp
+def render_timestamp(timestamp: float) -> str:
+    """Converts a timestamp into a readable string.
+
+    Parameters
+    ----------
+    timestamp : float
+        Timestamp.
+
+    Returns
+    -------
+    str
+        Formatted timestamp.
+    """
+    from_dt: dt.datetime = dt.datetime.fromtimestamp(timestamp)
+    formatted_dt: str = dt.datetime.strftime(from_dt, "%m-%d-%Y, %H:%M:%S")
+    return formatted_dt
 
 
 def render_pipeline(payload: Dict[str, Any], history: bool = False) -> Text:
@@ -24,6 +36,8 @@ def render_pipeline(payload: Dict[str, Any], history: bool = False) -> Text:
     ----------
     payload : Dict[str, Any]
         Pipeline payload.
+    history : bool
+        If history field needs to be rendered.
 
     Returns
     -------
@@ -41,7 +55,7 @@ def render_pipeline(payload: Dict[str, Any], history: bool = False) -> Text:
             continue
         key_value_text = Text()
         if k in time_fields and v:
-            v = render_timestamp(v)
+            v = render_timestamp(float(v))
         if k == steps_field:
             key_value_text = Text(f"{k}: \n", style="bright_blue")
             for step in v:
@@ -50,7 +64,7 @@ def render_pipeline(payload: Dict[str, Any], history: bool = False) -> Text:
         elif k == history_field:
             key_value_text = Text(f"{k}: \n", style="bright_blue")
             for timestamp in v.keys():
-                rendered = render_timestamp(int(timestamp))
+                rendered = render_timestamp(float(timestamp))
                 key_value_text.append(f"  {rendered}:\n", style="bright_green")
                 for execution in v[timestamp].keys():
                     key_value_text.append(f"{' ' * 4}{execution}:\n")
@@ -96,7 +110,7 @@ def render_config(http: HTTPContext, payload: Dict[str, Any]) -> Text:
             continue
         key_value_text = Text()
         if k in time_fields and v:
-            v = render_timestamp(v)
+            v = render_timestamp(float(v))
         if k == "pipelines":
             key_value_text.append(f"{k}: \n", style="bright_blue")
             for status in pipelines_statuses:

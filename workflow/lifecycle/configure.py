@@ -142,7 +142,8 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
 
                     if hasattr(parameter, "is_flag") and parameter.is_flag:
                         if parameter_default_value is True:
-                            # Flags aren't assigned values, its CLI name is just included or not included
+                            # Flags aren't assigned values
+                            # its CLI name is just included or not included
                             options[name_in_cli] = None
                     else:
                         options[name_in_cli] = parameter_default_value
@@ -151,7 +152,8 @@ def defaults(func: Callable[..., Any], work: Work) -> Work:
 
                 if hasattr(parameter, "is_flag") and parameter.is_flag:
                     if parameter_given_value is True:
-                        # Flags aren't assigned values, its CLI name is just included or not included
+                        # Flags aren't assigned values
+                        # its CLI name is just included or not included
                         options[name_in_cli] = None
                 else:
                     options[name_in_cli] = parameter_given_value

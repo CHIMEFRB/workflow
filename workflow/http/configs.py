@@ -164,7 +164,6 @@ class Configs(Client):
         server_info = response.json()
         return {"client": client_info, "server": server_info}
 
-
     @retry(
         reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
     )

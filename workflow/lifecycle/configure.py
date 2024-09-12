@@ -101,12 +101,16 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
         List[str]: List of CLI arguments
     """
     args: List[str] = []
+
     for parameter in func.params:
         parameter_name_in_cli = parameter.opts[-1]
         paraneter_name_in_function = parameter.name
         parameter_value_in_work = work.parameters.get(paraneter_name_in_function, None)
 
         if parameter_value_in_work:
+            if isinstance(parameter_value_in_work, list):
+                parameter_value_in_work = " ".join(parameter_value_in_work)
+
             if isinstance(parameter, click.Argument):
                 # If argument, then the parameter is purely positional without a key
                 args.append(f"{parameter_value_in_work}")

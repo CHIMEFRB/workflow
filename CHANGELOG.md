@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.11.0](https://github.com/CHIMEFRB/workflow/compare/v1.10.0...v1.11.0) (2024-09-11)
+
+
+### Features
+
+* **cli/configs.py:** added new command ([9af0d44](https://github.com/CHIMEFRB/workflow/commit/9af0d44fa2820201529fe35ecf405db2aaa95c60))
+* **cli/pipelines.py:** added format to history timestamp ([43753b6](https://github.com/CHIMEFRB/workflow/commit/43753b6277b620b78b446fbe4a9f0fbad332a7a2))
+* **cli/pipelines.py:** improving pipelines output ([1edb6e3](https://github.com/CHIMEFRB/workflow/commit/1edb6e36bbc1d7e3347cb693e07f77a02583b03b))
+
 ## [1.10.0](https://github.com/CHIMEFRB/workflow/compare/v1.9.11...v1.10.0) (2024-09-11)
 
 

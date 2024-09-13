@@ -36,13 +36,10 @@ def function(work: Work) -> Work:
         assert isinstance(work.function, str), "missing function to execute"
         func: Callable[..., Any] = validate.function(work.function)
         arguments: List[str] = []
-        # Configure default values for the function
-        work = configure.defaults(func, work)
-        # Paramters to execute the function with
         parameters: Dict[str, Any] = work.parameters or {}
 
         if isinstance(func, click.Command):
-            arguments = configure.arguments(parameters)
+            arguments = configure.arguments(func, work)
             logger.info(
                 f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
             )

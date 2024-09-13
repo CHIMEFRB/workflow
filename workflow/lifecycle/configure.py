@@ -91,7 +91,7 @@ def loki(logger: Logger, config: Dict[str, Any]) -> bool:
     return status
 
 
-def arguments(arguments: Optional[Dict[str, Any]]) -> List[str]:
+def arguments(func: Callable[..., Any], work: Work) -> List[str]:
     """Return a list of CLI arguments.
 
     Args:
@@ -101,14 +101,37 @@ def arguments(arguments: Optional[Dict[str, Any]]) -> List[str]:
         List[str]: List of CLI arguments
     """
     args: List[str] = []
-    if arguments:
-        for key, value in arguments.items():
-            if not value:
-                args.append(f"{key}")
-            elif value and len(key) == 2:
-                args.append(f"{key} {value}")
-            elif value and len(key) > 2:
-                args.append(f"{key}={value}")
+
+    for parameter in func.params:
+        parameter_name_in_cli = parameter.opts[-1]
+        paraneter_name_in_function = parameter.name
+        parameter_value_in_work = work.parameters.get(paraneter_name_in_function, None)
+
+        if parameter_value_in_work:
+            if isinstance(parameter_value_in_work, list):
+                parameter_value_in_work = " ".join(parameter_value_in_work)
+
+            if isinstance(parameter, click.Argument):
+                # If argument, then the parameter is purely positional without a key
+                args.append(f"{parameter_value_in_work}")
+            elif isinstance(parameter, click.Option):
+                if hasattr(parameter, "is_flag") and parameter.is_flag:
+                    # If is_flag=True, then the parameter is a flag and doesn't have a value
+                    args.append(f"{parameter_name_in_cli}")
+                else:
+                    if len(parameter_name_in_cli) == 2:
+                        # Short options (often denoted by a single hyphen and a single letter like -r)
+                        # are commonly written with a space between the option and its value
+                        args.append(
+                            f"{parameter_name_in_cli} {parameter_value_in_work}"
+                        )
+                    elif len(parameter_name_in_cli) > 2:
+                        # Long options (often denoted by two hyphens and a word like --recursive)
+                        # are commonly written with an equals sign between the option and its value
+                        args.append(
+                            f"{parameter_name_in_cli}={parameter_value_in_work}"
+                        )
+
     return args
 
 

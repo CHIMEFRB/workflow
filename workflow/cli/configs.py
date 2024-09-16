@@ -14,7 +14,7 @@ from rich.text import Text
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
-from workflow.utils import validate
+from workflow.utils import format, validate
 from workflow.utils.renderers import render_config
 
 pretty.install()
@@ -306,3 +306,42 @@ def retry(name: str, id: str):
         )
         content = table
     console.print(content)
+
+
+@configs.command("reformat", help="Reformat V1 YAML files to V2.")
+@click.argument(
+    "filename",
+    type=click.Path(exists=True, dir_okay=False, readable=True),
+    required=True,
+)
+def reformat(filename: click.Path):
+    """Reformat YAML file to V2.
+
+    Parameters
+    ----------
+    filename : click.Path
+        Filename.
+    """
+    filepath: str = str(filename)
+    data: Dict[str, Any] = {}
+    with open(filepath) as reader:
+        data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
+
+    steps, matrix, version = format.needs_reformat(data)
+    if any([steps, matrix, version]):
+        console.print(Text("Version 1 YAML, reformatting...", style="red"))
+        data = format.reformat(
+            data=data,
+            r_steps=steps,
+            r_matrix=matrix,
+            r_version=version,
+            console=console,
+        )
+    else:
+        console.print(Text("Reformat not needed.", style="red"))
+        return
+
+    with open(filepath, "w") as file:
+        new_data: str = yaml.dump(data)
+        file.write(new_data)
+    console.print(f"Reformatted file {filename}", style="green")

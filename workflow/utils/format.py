@@ -26,7 +26,7 @@ def needs_reformat(data: Dict[str, Any]) -> Tuple[bool, bool, bool]:
             steps = True
     if "matrix" in data.keys():
         matrix = True
-    if data["version"] == "1":
+    if data["version"] == "1" or isinstance(data["version"], int):
         version = True
     return steps, matrix, version
 

@@ -102,10 +102,12 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
     """
     args: List[str] = []
 
-    for parameter in func.params:
+    for parameter in func.params:  # type: ignore
         parameter_name_in_cli = parameter.opts[-1]
         paraneter_name_in_function = parameter.name
-        parameter_value_in_work = work.parameters.get(paraneter_name_in_function, None)
+        parameter_value_in_work = work.parameters.get(  # type: ignore
+            paraneter_name_in_function, None
+        )
 
         if parameter_value_in_work:
             if isinstance(parameter_value_in_work, list):
@@ -116,18 +118,23 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
                 args.append(f"{parameter_value_in_work}")
             elif isinstance(parameter, click.Option):
                 if hasattr(parameter, "is_flag") and parameter.is_flag:
-                    # If is_flag=True, then the parameter is a flag and doesn't have a value
+                    # If is_flag=True,
+                    # then the parameter is a flag and doesn't have a value
                     args.append(f"{parameter_name_in_cli}")
                 else:
                     if len(parameter_name_in_cli) == 2:
-                        # Short options (often denoted by a single hyphen and a single letter like -r)
-                        # are commonly written with a space between the option and its value
+                        # Short options
+                        # (often denoted by a single hyphen and a single letter like -r)
+                        # are commonly written with a space
+                        # between the option and its value
                         args.append(
                             f"{parameter_name_in_cli} {parameter_value_in_work}"
                         )
                     elif len(parameter_name_in_cli) > 2:
-                        # Long options (often denoted by two hyphens and a word like --recursive)
-                        # are commonly written with an equals sign between the option and its value
+                        # Long options
+                        # (often denoted by two hyphens and a word like --recursive)
+                        # are commonly written with an equals sign
+                        # between the option and its value
                         args.append(
                             f"{parameter_name_in_cli}={parameter_value_in_work}"
                         )

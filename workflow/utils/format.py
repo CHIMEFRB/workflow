@@ -36,7 +36,7 @@ def reformat(
     r_steps: bool,
     r_matrix: bool,
     r_version: bool,
-    console: Console,
+    console: Optional[Console] = None,
 ) -> Dict[str, Any]:
     """Reformats data to work on Pipeline V2 backend.
 
@@ -60,7 +60,8 @@ def reformat(
     """
     # ? Reformat steps
     if r_steps:
-        console.print("Reformatting steps.", style="green")
+        if console:
+            console.print("Reformatting steps.", style="green")
         steps: List[Dict[str, Any]] = []
         for step_name in data["pipeline"].keys():
             step = data["pipeline"][step_name]
@@ -71,7 +72,8 @@ def reformat(
 
     # ? Check top level matrix
     if r_matrix:
-        console.print("Reformatting top level matrix.", style="green")
+        if console:
+            console.print("Reformatting top level matrix.", style="green")
         matrix: Optional[Dict[str, Any]] = None
         if data.get("matrix", None):
             matrix = data["matrix"]
@@ -80,7 +82,8 @@ def reformat(
 
     # ? Fix version
     if r_version:
-        console.print("Fixing version.", style="green")
+        if console:
+            console.print("Fixing version.", style="green")
         data["version"] = "2"
 
     return data

@@ -2,19 +2,21 @@
 
 import json
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlencode
 
 import click
 import requests
 import yaml
 from rich import pretty
 from rich.console import Console
+from rich.progress import BarColumn, Progress, TextColumn
 from rich.syntax import Syntax
-from rich.table import Table
+from rich.table import Column, Table
 from rich.text import Text
 from yaml.loader import SafeLoader
 
 from workflow.http.context import HTTPContext
-from workflow.utils import validate
+from workflow.utils import format, validate
 from workflow.utils.renderers import render_config
 
 pretty.install()
@@ -306,3 +308,132 @@ def retry(name: str, id: str):
         )
         content = table
     console.print(content)
+
+
+@configs.command("reformat", help="Reformat V1 YAML files to V2.")
+@click.argument(
+    "filename",
+    type=click.Path(exists=True, dir_okay=False, readable=True),
+    required=True,
+)
+def reformat(filename: click.Path):
+    """Reformat YAML file to V2.
+
+    Parameters
+    ----------
+    filename : click.Path
+        Filename.
+    """
+    filepath: str = str(filename)
+    data: Dict[str, Any] = {}
+    with open(filepath) as reader:
+        data = yaml.load(reader, Loader=SafeLoader)  # type: ignore
+
+    steps, matrix, version = format.needs_reformat(data)
+    if any([steps, matrix, version]):
+        console.print(Text("Version 1 YAML, reformatting...", style="red"))
+        data = format.reformat(
+            data=data,
+            r_steps=steps,
+            r_matrix=matrix,
+            r_version=version,
+            console=console,
+        )
+    else:
+        console.print(Text("Reformat not needed.", style="red"))
+        return
+
+    with open(filepath, "w") as file:
+        new_data: str = yaml.dump(data)
+        file.write(new_data)
+    console.print(f"Reformatted file {filename}", style="green")
+
+
+@configs.command("migrate", help="Sends running Config to Pipelines V2.")
+@click.argument("name", type=str, required=True)
+@click.argument("base_url", type=str, required=True)
+@click.option(
+    "status",
+    "-s",
+    "--status",
+    type=click.Choice(["success", "failure", "running", "queued", "cancelled"]),
+    default="running",
+)
+@click.option("delete", "-d", "--delete", is_flag=True, default=False)
+def migrate(name: str, base_url: str, status: str, delete: bool):
+    """Migrates V1 Configs to V2.
+
+    Parameters
+    ----------
+    name : str
+        Configuration name.
+    base_url : str
+        Pipelines V1 backend URL.
+    status : str
+        Status filter.
+    delete : bool
+        WIP.
+    """
+    http = HTTPContext(backends=["configs"])
+    params = {
+        "skip": 0,
+        "length": 100,
+        "projection": json.dumps({}),
+        "query": json.dumps({"status": {"$in": status.split(",")}}),
+        "name": name,
+    }
+    url = f"{base_url}?{urlencode(params)}"
+    response = requests.get(url)
+    pipelines = response.json()
+    text_column = TextColumn("{task.description}", table_column=Column(ratio=1))
+    bar_column = BarColumn(bar_width=None, table_column=Column(ratio=2))
+    progress = Progress(text_column, bar_column, expand=True)
+
+    if not pipelines:
+        console.print(f"No Config objects were found under the name {name}")
+        return
+
+    console.print(
+        f"Migrating {len(pipelines)} Pipeline objects from {name} collection to V2.",
+        style="bright_green",
+    )
+    with progress:
+        for obj in pipelines:
+            task = progress.add_task(f"[cyan]Migrating {obj['id']}", total=1)
+            # ? Reformat
+            reformatted_obj = format.reformat(
+                data=obj,
+                r_steps=False,
+                r_matrix=False,
+                r_version=True,
+            )
+            yaml_url = (
+                f"{base_url}/inspect?"
+                f"{urlencode({'name': name, 'id': reformatted_obj['id']})}"
+            )
+            yaml_response = requests.get(yaml_url)
+            old_yaml = yaml_response.json()["yaml"]
+            new_yaml = format.reformat(
+                data=yaml.safe_load(old_yaml),
+                r_steps=True,
+                r_matrix=True,
+                r_version=True,
+            )
+            progress.update(task, advance=0.3)
+            reformatted_obj["yaml"] = yaml.dump(new_yaml)
+            # ? Stop monitoring on V1
+            stopped = False
+            if obj["status"] == "running":
+                stop_params = urlencode(
+                    {"name": obj["name"], "query": json.dumps({"id": obj["id"]})}
+                )
+                stop_url = f"{base_url}/cancel?" f"{stop_params}"
+                stop_response = requests.put(stop_url)
+                if stop_response.ok:
+                    stopped = True
+                    progress.update(task, advance=0.3)
+            # ? Migrate
+            migration_response = http.configs.migrate(reformatted_obj)
+            if migration_response.ok:
+                progress.update(task, advance=0.4 if stopped else 0.7)
+        console.print("Migration completed", style="bright_green")

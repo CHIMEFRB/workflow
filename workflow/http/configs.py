@@ -44,6 +44,28 @@ class Configs(Client):
             response.raise_for_status()
         return response.json()
 
+    @retry(
+        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
+    )
+    def migrate(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Migrates V1 objects to V2.
+
+        Parameters
+        ----------
+        data : Dict[str, Any]
+            Object payload.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Backend JSON response.
+        """
+        with self.session as session:
+            url = f"{self.baseurl}/configs/migrate"
+            response: Response = session.post(url, json=data)
+            response.raise_for_status()
+        return response.json()
+
     def count(self) -> Dict[str, Any]:
         """Count all documents in a collection.
 

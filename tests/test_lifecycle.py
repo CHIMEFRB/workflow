@@ -21,6 +21,7 @@ def test_execute_function_with_click_cli():
     """Test the execute function with a click CLI."""
     work = Work(pipeline="workflow-tests", site="local", user="tester")
     work.function = "workflow.examples.function.cli"
+    work.parameters = {"alpha": 1, "beta": 2}
     work = execute.function(work)
     results, products, plots = math(alpha=1, beta=2)
     assert work.results == results

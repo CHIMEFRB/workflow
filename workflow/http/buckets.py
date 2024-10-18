@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from requests.models import Response
 from tenacity import retry
 from tenacity.stop import stop_after_delay
-from tenacity.wait import wait_random
+from tenacity.wait import wait_fixed, wait_random
 
 from workflow.http.client import Client
 from workflow.utils.logger import get_logger
@@ -123,7 +123,7 @@ class Buckets(Client):
             response.raise_for_status()
         return response.json()
 
-    @retry(wait=wait_random(min=0.1, max=2), stop=(stop_after_delay(30)))
+    @retry(wait=wait_fixed(30), stop=(stop_after_delay(30)))
     def delete_ids(self, ids: List[str]) -> bool:
         """Delete works from the buckets backend with the given ids.
 

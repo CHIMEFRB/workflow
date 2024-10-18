@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.2](https://github.com/CHIMEFRB/workflow/compare/v1.11.1...v1.11.2) (2024-10-18)
+
+
+### Bug Fixes
+
+* **daemons/transfer.py:** fixed ids deletion ([#135](https://github.com/CHIMEFRB/workflow/issues/135)) ([c28f41e](https://github.com/CHIMEFRB/workflow/commit/c28f41efc6f4f6760de2613b467f122a84829922))
+
 ## [1.11.1](https://github.com/CHIMEFRB/workflow/compare/v1.11.0...v1.11.1) (2024-10-18)
 
 

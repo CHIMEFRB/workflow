@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.1](https://github.com/CHIMEFRB/workflow/compare/v1.11.0...v1.11.1) (2024-10-18)
+
+
+### Bug Fixes
+
+* **configure.py:** lifecycle/configure.py's defaults/arguments functions, does not work for [@click](https://github.com/click).argument types ([196d8fe](https://github.com/CHIMEFRB/workflow/commit/196d8fe926d426410551ae4c0b270bcfccc811b1))
+* **http/buckets.py:** increasing retry time on delete_ids ([#133](https://github.com/CHIMEFRB/workflow/issues/133)) ([cdb1644](https://github.com/CHIMEFRB/workflow/commit/cdb16444f5fad309cfe889992fb6b50b10546f50))
+
 ## [1.11.0](https://github.com/CHIMEFRB/workflow/compare/v1.10.0...v1.11.0) (2024-09-11)
 
 

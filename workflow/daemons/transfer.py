@@ -239,7 +239,11 @@ def perform(
 
     if delete:
         logger.info(f"deleting {len(delete)} works from buckets")
-        http.buckets.delete_ids(delete)
+        if len(delete) > 100:
+            for batch in range(0, len(delete), 100):
+                http.buckets.delete_ids(delete[batch : batch + 100])
+        else:
+            http.buckets.delete_ids(delete)
     logger.info(f"transferred {transfered}, deleted {len(delete)} works")
     return {
         "transfered": transfered,

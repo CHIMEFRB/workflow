@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.3](https://github.com/CHIMEFRB/workflow/compare/v1.11.2...v1.11.3) (2024-10-21)
+
+
+### Bug Fixes
+
+* **transfer daemon:** `None` values in `delete` list causing HTTP request failures ([#138](https://github.com/CHIMEFRB/workflow/issues/138)) ([31376aa](https://github.com/CHIMEFRB/workflow/commit/31376aaa24aa3724342b6b1faa4f9ff985ae2a91))
+
 ## [1.11.2](https://github.com/CHIMEFRB/workflow/compare/v1.11.1...v1.11.2) (2024-10-18)
 
 

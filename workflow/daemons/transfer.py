@@ -237,6 +237,8 @@ def perform(
         delete = delete + [work["id"] for work in payload]
         transfered = len(payload)
 
+    delete = [item for item in delete if item is not None]
+
     if delete:
         logger.info(f"deleting {len(delete)} works from buckets")
         if len(delete) > 100:

@@ -237,6 +237,8 @@ def perform(
         delete = delete + [work["id"] for work in payload]
         transfered = len(payload)
 
+    delete = [item for item in delete if item is not None]
+
     if delete:
         logger.info(f"deleting {len(delete)} works from buckets")
         if len(delete) > 100:
@@ -249,7 +251,6 @@ def perform(
         "transfered": transfered,
         "deleted": len(delete),
     }
-
 
 if __name__ == "__main__":
     transfer.main(args=["--test-mode=True", "--log-level=DEBUG"], standalone_mode=False)

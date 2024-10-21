@@ -137,6 +137,7 @@ class Buckets(Client):
             response: Response = session.delete(
                 url=f"{self.baseurl}/work", params={"ids": ids}
             )
+            logger.info(f"Response from Buckets: {response.text}")
             response.raise_for_status()
         return response.json()
 

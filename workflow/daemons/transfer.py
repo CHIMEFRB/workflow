@@ -252,5 +252,6 @@ def perform(
         "deleted": len(delete),
     }
 
+
 if __name__ == "__main__":
     transfer.main(args=["--test-mode=True", "--log-level=DEBUG"], standalone_mode=False)

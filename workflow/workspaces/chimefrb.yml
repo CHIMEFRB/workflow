@@ -85,11 +85,10 @@ config:
   archive:
     results: true
     plots:
-      methods: ["move", "delete"] # Defines the methods enabled by the workspace admin
-      storage: "s3"
-      permissions: List[Linux Groups]?
+      methods: ["bypass", "copy", "move", "delete"]
+      storage: "posix"
     products:
-      methods: ["move", "delete"] # Can also be copy or delete
+      methods: ["bypass", "copy", "move", "delete"]
       storage: "posix"
     permissions:
       posix:

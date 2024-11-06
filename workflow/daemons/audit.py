@@ -5,6 +5,7 @@ from typing import Any, Dict, Union
 
 import click
 from click_params import JSON, URL, FirstOf
+from requests import HTTPError
 
 from workflow import DEFAULT_WORKSPACE_PATH
 from workflow.http.context import HTTPContext
@@ -69,6 +70,10 @@ def audit(
     if test_mode:
         return http.buckets.audit()
     while True:
-        response = http.buckets.audit()
+        try:
+            response = http.buckets.audit()
+        except HTTPError as error:
+            logger.error(error)
+            response = {}
         logger.info(response)
         time.sleep(sleep)

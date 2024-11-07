@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.4](https://github.com/CHIMEFRB/workflow/compare/v1.11.3...v1.11.4) (2024-11-06)
+
+
+### Bug Fixes
+
+* **daemons/audit.py:** adding error handling on audit function ([#144](https://github.com/CHIMEFRB/workflow/issues/144)) ([82398c8](https://github.com/CHIMEFRB/workflow/commit/82398c8cd2bf99628397b2baa953ef7b06ca8570))
+* **workspace:** change allowed archive methods for chimefrb ([#131](https://github.com/CHIMEFRB/workflow/issues/131)) ([3270adf](https://github.com/CHIMEFRB/workflow/commit/3270adfdaa10494e635d598584cd4068fd76d48f))
+
 ## [1.11.3](https://github.com/CHIMEFRB/workflow/compare/v1.11.2...v1.11.3) (2024-10-21)
 
 

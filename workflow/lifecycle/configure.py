@@ -123,16 +123,33 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
                     # then the parameter is a flag and doesn't have a value
                     args.append(f"{parameter_name_in_cli}")
                 else:
+                    space_or_equals = ""
+
+                    if len(parameter_name_in_cli) <= 2:
+                        # Short options
+                        # (often denoted by a single hyphen and a single letter like -r)
+                        # are commonly written with a space
+                        # between the option and its value
+                        space_or_equals = " "
+                    else:
+                        # Long options
+                        # (often denoted by two hyphens and a word like --recursive)
+                        # are commonly written with an equals sign
+                        # between the option and its value
+                        space_or_equals = "="
+
                     if isinstance(parameter_value_in_work, list):
                         if hasattr(parameter, "multiple") and parameter.multiple:
                             for value in parameter_value_in_work:
-                                args.append(f"{parameter_name_in_cli} {value}")
+                                args.append(
+                                    f"{parameter_name_in_cli}{space_or_equals}{value}"
+                                )
                         elif hasattr(parameter, "nargs") and parameter.nargs:
                             values = " ".join(parameter_value_in_work)
                             args.append(f"{parameter_name_in_cli} {values}")
                     else:
                         args.append(
-                            f"{parameter_name_in_cli} {parameter_value_in_work}"
+                            f"{parameter_name_in_cli}{space_or_equals}{parameter_value_in_work}"  # noqa
                         )
 
     return args

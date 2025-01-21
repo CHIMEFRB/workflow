@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.5](https://github.com/CHIMEFRB/workflow/compare/v1.11.4...v1.11.5) (2025-01-21)
+
+
+### Bug Fixes
+
+* **configure.py:** Add suppport for lists in functions that use Click CLI ([03d14f1](https://github.com/CHIMEFRB/workflow/commit/03d14f129b44eba255c2080de3c3da1522023d5b))
+* **configure.py:** Fix previous bug introduced because of no longer using equals sign between argument and value for long options ([9f403b9](https://github.com/CHIMEFRB/workflow/commit/9f403b901fb7aa1ec9e1930fcf89ad21450ea7db))
+
 ## [1.11.4](https://github.com/CHIMEFRB/workflow/compare/v1.11.3...v1.11.4) (2024-11-06)
 
 

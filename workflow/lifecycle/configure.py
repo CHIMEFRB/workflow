@@ -110,33 +110,29 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
         )
 
         if parameter_value_in_work:
-            if isinstance(parameter_value_in_work, list):
-                parameter_value_in_work = " ".join(parameter_value_in_work)
-
             if isinstance(parameter, click.Argument):
                 # If argument, then the parameter is purely positional without a key
-                args.append(f"{parameter_value_in_work}")
+                if isinstance(parameter_value_in_work, list):
+                    for value in parameter_value_in_work:
+                        args.append(f"{value}")
+                else:
+                    args.append(f"{parameter_value_in_work}")
             elif isinstance(parameter, click.Option):
                 if hasattr(parameter, "is_flag") and parameter.is_flag:
                     # If is_flag=True,
                     # then the parameter is a flag and doesn't have a value
                     args.append(f"{parameter_name_in_cli}")
                 else:
-                    if len(parameter_name_in_cli) == 2:
-                        # Short options
-                        # (often denoted by a single hyphen and a single letter like -r)
-                        # are commonly written with a space
-                        # between the option and its value
+                    if isinstance(parameter_value_in_work, list):
+                        if hasattr(parameter, "multiple") and parameter.multiple:
+                            for value in parameter_value_in_work:
+                                args.append(f"{parameter_name_in_cli} {value}")
+                        elif hasattr(parameter, "nargs") and parameter.nargs:
+                            values = " ".join(parameter_value_in_work)
+                            args.append(f"{parameter_name_in_cli} {values}")
+                    else:
                         args.append(
                             f"{parameter_name_in_cli} {parameter_value_in_work}"
-                        )
-                    elif len(parameter_name_in_cli) > 2:
-                        # Long options
-                        # (often denoted by two hyphens and a word like --recursive)
-                        # are commonly written with an equals sign
-                        # between the option and its value
-                        args.append(
-                            f"{parameter_name_in_cli}={parameter_value_in_work}"
                         )
 
     return args

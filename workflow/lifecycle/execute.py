@@ -39,11 +39,13 @@ def function(work: Work) -> Work:
         parameters: Dict[str, Any] = work.parameters or {}
 
         if isinstance(func, click.Command):
-            arguments = configure.arguments(func, work)
-            logger.info(
-                f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
-            )
-            outcome = func.main(args=arguments, standalone_mode=False)
+            # arguments = configure.arguments(func, work)
+            # logger.info(
+            #     f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
+            # )
+            # outcome = func.main(args=arguments, standalone_mode=False)
+            # This will send the parameters as keyword arguments
+            outcome = func.callback(**parameters)  # type: ignore
         else:
             logger.info(
                 f"executing as python function: {func.__name__}(**{work.parameters})"

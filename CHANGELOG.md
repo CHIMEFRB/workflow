@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/CHIMEFRB/workflow/compare/v1.11.6...v1.12.0) (2026-04-20)
+
+
+### Features
+
+* **configs.py:** adding ssl certificate lookup ([#153](https://github.com/CHIMEFRB/workflow/issues/153)) ([3d81453](https://github.com/CHIMEFRB/workflow/commit/3d8145385029b0a1821930e68947bf310075e6d2))
+
 ## [1.11.6](https://github.com/CHIMEFRB/workflow/compare/v1.11.5...v1.11.6) (2025-08-22)
 
 

@@ -1,6 +1,8 @@
 """Manage workflow pipelines."""
 
 import json
+import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlencode
 
@@ -69,13 +71,23 @@ def count():
     type=click.Path(exists=True, dir_okay=False, readable=True),
     required=True,
 )
-def deploy(filename: click.Path):
+@click.option(
+    "usecanfar",
+    "--use-canfar",
+    "-uc",
+    is_flag=True,
+    default=False,
+    help="Looks for CANFAR certificate in the machine and sents it in the request.",
+)
+def deploy(filename: click.Path, usecanfar: bool = False):
     """Deploy a workflow config.
 
     Parameters
     ----------
     filename : click.Path
         File path.
+    usecanfar : bool
+        Whether to look for CANFAR certificate and send it in the request.
     """
     http = HTTPContext(backends=["configs"])
     filepath: str = str(filename)
@@ -106,10 +118,24 @@ def deploy(filename: click.Path):
                 console.print("Cancelling", style="red")
                 return
 
+    if usecanfar:
+        console.print("Looking for CANFAR certificate...", style="bright_green")
+        cert_path = Path.home() / ".ssl" / "cadcproxy.pem"
+        cert_text = None
+        if os.path.exists(cert_path):
+            cert_text = open(cert_path).read()
+            data["canfar_cert"] = cert_text
+            console.print("CANFAR certificate found and added.", style="bright_green")
+        else:
+            console.print(
+                "CANFAR certificate not found, proceeding without it.", style="red"
+            )
+            return
+
     try:
         deploy_result = http.configs.deploy(data)
     except requests.HTTPError as deploy_error:
-        console.print(deploy_error.response.json()["error_description"][0]["msg"])
+        console.print(deploy_error.response.json(), style="red")
         return
     header_text = Text("Config deployed: ")
     header_text.append(data["name"], style="blink underline bright_blue")

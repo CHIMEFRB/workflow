@@ -22,9 +22,9 @@ class Configs(Client):
         Configs: A client for interacting with workflow-pipelines.
     """
 
-    @retry(
-        reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
-    )
+    # @retry(
+    #     reraise=True, wait=wait_random(min=0.3, max=1.8), stop=(stop_after_delay(15))
+    # )
     def deploy(self, data: Dict[str, Any]):
         """Deploys a Config from payload data.
 

@@ -7,7 +7,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_type_h
 import click
 
 from workflow.definitions.work import Work
-from workflow.lifecycle import configure
 from workflow.utils import validate
 from workflow.utils.logger import get_logger
 
@@ -35,15 +34,17 @@ def function(work: Work) -> Work:
     try:
         assert isinstance(work.function, str), "missing function to execute"
         func: Callable[..., Any] = validate.function(work.function)
-        arguments: List[str] = []
+        # arguments: List[str] = []
         parameters: Dict[str, Any] = work.parameters or {}
 
         if isinstance(func, click.Command):
-            arguments = configure.arguments(func, work)
-            logger.info(
-                f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
-            )
-            outcome = func.main(args=arguments, standalone_mode=False)
+            # arguments = configure.arguments(func, work)
+            # logger.info(
+            #     f"executing: {func.name}.main(args={arguments}, standalone_mode=False)"
+            # )
+            # outcome = func.main(args=arguments, standalone_mode=False)
+            # This will send the parameters as keyword arguments
+            outcome = func.callback(**parameters)  # type: ignore
         else:
             logger.info(
                 f"executing as python function: {func.__name__}(**{work.parameters})"

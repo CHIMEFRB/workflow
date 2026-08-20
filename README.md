@@ -25,7 +25,7 @@ pip install git+https://github.com/chimefrb/workflow.git
 Alternatively, you can add the Workflow project as a dependency to your own project using Poetry:
 
 ```bash
-poetry add git+https://github.chime/chimefrb/workflow.git
+poetry add git+https://github.com/chimefrb/workflow.git
 ```
 
 ## Contributing

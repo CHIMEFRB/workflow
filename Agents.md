@@ -252,6 +252,15 @@ Secrets also read from `/run/secrets/` (Docker secrets).
 
 Production deployment is via Docker Swarm stacks in `frb-devops/stacks/core/workflow/`.
 
+## Documentation
+
+| Document | Content |
+|----------|---------|
+| [README.md](README.md) | Install, dev setup, testing, contributing |
+| [CHANGELOG.md](CHANGELOG.md) | Release history |
+| [workflow/definitions/jsonschema.md](workflow/definitions/jsonschema.md) | How to generate/use JSON Schema from Pydantic Work model |
+| [Workflow Docs](https://chimefrb.github.io/workflow-docs/) | Full documentation site (external) |
+
 ## Notes
 
 - `Work` is a `BaseSettings` — instantiation reads env vars automatically. Always check

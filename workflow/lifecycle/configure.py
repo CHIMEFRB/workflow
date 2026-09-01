@@ -61,6 +61,9 @@ def loki(logger: Logger, config: Dict[str, Any]) -> bool:
     urls: List[str] = []
     loki_urls: Optional[Any] = config.get("http", {}).get("baseurls", {}).get("loki")
     loki_tags: Optional[Any] = config.get("logging", {}).get("loki", {}).get("tags", {})
+    loki_headers: Optional[Any] = (
+        config.get("logging", {}).get("loki", {}).get("headers", {})
+    )
     if not loki_urls:
         return status
     elif isinstance(loki_urls, str):
@@ -74,10 +77,13 @@ def loki(logger: Logger, config: Dict[str, Any]) -> bool:
     for url in urls:
         try:
             status_code: int = requests.get(
-                url.replace("loki/api/v1/push", "ready"), timeout=1
+                url.replace("loki/api/v1/push", "loki/api/v1/status/buildinfo"),
+                timeout=1,
             ).status_code
             if status_code == 200:
-                loki_handler = LokiHandler(url=url, tags=loki_tags, version="1")
+                loki_handler = LokiHandler(
+                    url=url, tags=loki_tags, headers=loki_headers, version="1"
+                )
                 loki_handler.setFormatter(
                     Formatter("%(levelname)s %(tag)s %(name)s %(message)s")
                 )

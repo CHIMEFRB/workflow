@@ -196,31 +196,21 @@ def run(
         "[bold red]Backend Checks [/bold red]",
         extra=dict(markup=True, color="green"),
     )
-    # Add pipeline and site to loki tags
-    if config.get("logging", {}).get("loki", {}).get("tags", {}):
-        # Loki tags exist, add pipeline and site
-        config["logging"]["loki"]["tags"].update(
-            {
-                # Assumes that there is only one bucket
-                "pipeline": buckets[0],
-                "site": site,
-            }
-        )
-    else:
-        # Missing Logging config in Workspace
-        config.update(
-            {
-                "logging": {
-                    "loki": {
-                        "tags": {
-                            # Assumes that there is only one bucket
-                            "pipeline": buckets[0],
-                            "site": site,
-                        }
-                    }
-                }
-            }
-        )
+    # Add pipeline and site to loki tags, without clobbering the rest of the
+    # logging config in the workspace (e.g. loki headers).
+    logging_config: Dict[str, Any] = config.get("logging") or {}
+    loki_config: Dict[str, Any] = logging_config.get("loki") or {}
+    loki_tags: Dict[str, Any] = loki_config.get("tags") or {}
+    loki_tags.update(
+        {
+            # Assumes that there is only one bucket
+            "pipeline": buckets[0],
+            "site": site,
+        }
+    )
+    loki_config["tags"] = loki_tags
+    logging_config["loki"] = loki_config
+    config["logging"] = logging_config
     loki_status: bool = configure.loki(logger=logger, config=config)
     logger.info(f"Loki Logs: {'✅' if loki_status else '❌'}")
     http: HTTPContext = HTTPContext(backends=["buckets"])

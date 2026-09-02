@@ -14,8 +14,8 @@ interacting with the workflow system from the command line. Pipelines deposit `W
 objects into `buckets`; worker processes withdraw and execute them; results are
 archived to `results`.
 
-GitHub: https://github.com/CHIMEFRB/workflow  
-Docs: https://chimefrb.github.io/workflow-docs/  
+GitHub: https://github.com/CHIMEFRB/workflow
+Docs: https://chimefrb.github.io/workflow-docs/
 PyPI: `workflow.core`
 
 ## System Connections
@@ -144,7 +144,7 @@ Slack notification config. `WORKFLOW_NOTIFY_SLACK_*` env prefix.
 ```python
 # Deposit (create) work in the queue
 work = Work(pipeline="my-pipeline", site="chime", user="shinybrar")
-work.deposit(return_ids=True)   # → List[str] of MongoDB IDs
+work.deposit(return_ids=True)  # → List[str] of MongoDB IDs
 
 # Withdraw (claim) work for execution
 work = Work.withdraw(pipeline="my-pipeline", site="chime")

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1](https://github.com/CHIMEFRB/workflow/compare/v1.12.0...v1.12.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **loki:** send the logs to the arbutus loki instance ([#158](https://github.com/CHIMEFRB/workflow/issues/158)) ([e51744a](https://github.com/CHIMEFRB/workflow/commit/e51744a3f614edbb11e162aadad92f1a1a64d641))
+
 ## [1.12.0](https://github.com/CHIMEFRB/workflow/compare/v1.11.6...v1.12.0) (2026-04-20)
 
 

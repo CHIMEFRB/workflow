@@ -22,7 +22,7 @@ minio = "^7.2"
 pydantic-settings = "^2.0"
 click-params = "^0.5"
 docker = ">=6.1"
-python-logging-loki-v2 = {git = "https://github.com/tjzegmott/python-logging-loki", rev = "54a0fda7e600a3c02cb84d1688042f5b3f2e45f1"}
+tjzegmott-python-logging-loki = "^0.0.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"

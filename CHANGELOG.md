@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.2](https://github.com/CHIMEFRB/workflow/compare/v1.12.1...v1.12.2) (2026-09-03)
+
+
+### Bug Fixes
+
+* **build:** pypi release does not allow direct dependancy ([5536a1b](https://github.com/CHIMEFRB/workflow/commit/5536a1bee46106c71582e5da1fc8a53ce3ca876d))
+
 ## [1.12.1](https://github.com/CHIMEFRB/workflow/compare/v1.12.0...v1.12.1) (2026-09-02)
 
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.3](https://github.com/CHIMEFRB/workflow/compare/v1.12.2...v1.12.3) (2026-09-29)
+
+
+### Bug Fixes
+
+* **loki:** suppress logging errors ([30f3bc0](https://github.com/CHIMEFRB/workflow/commit/30f3bc0c5b6a1493f81015ce944be8212b3615e6))
+
 ## [1.12.2](https://github.com/CHIMEFRB/workflow/compare/v1.12.1...v1.12.2) (2026-09-03)
 
 

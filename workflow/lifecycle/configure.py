@@ -82,7 +82,11 @@ def loki(logger: Logger, config: Dict[str, Any]) -> bool:
             ).status_code
             if status_code == 200:
                 loki_handler = LokiHandler(
-                    url=url, tags=loki_tags, headers=loki_headers, version="1"
+                    url=url,
+                    tags=loki_tags,
+                    headers=loki_headers,
+                    version="1",
+                    suppress_errors=True,
                 )
                 loki_handler.setFormatter(
                     Formatter("%(levelname)s %(tag)s %(name)s %(message)s")

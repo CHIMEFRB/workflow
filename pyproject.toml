@@ -22,7 +22,7 @@ minio = "^7.2"
 pydantic-settings = "^2.0"
 click-params = "^0.5"
 docker = ">=6.1"
-tjzegmott-python-logging-loki = "^0.0.1"
+tjzegmott-python-logging-loki = "^0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"

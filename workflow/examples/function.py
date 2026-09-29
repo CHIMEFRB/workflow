@@ -79,7 +79,6 @@ def worker(work: Work) -> Work:
 @click.option(
     "--alpha",
     "-a",
-    default=1.0,
     type=FirstOf(click.FLOAT, click.INT),
     required=True,
     help="A number.",
@@ -87,9 +86,9 @@ def worker(work: Work) -> Work:
 @click.option(
     "--beta",
     "-b",
-    default=2.0,
+    default=1,
     type=FirstOf(click.FLOAT, click.INT),
-    required=True,
+    required=False,
     help="Another number.",
 )
 @click.option(
@@ -100,7 +99,7 @@ def worker(work: Work) -> Work:
     default=False,
 )
 def cli(
-    alpha: Union[float, int], beta: Union[float, int], verbose: bool
+    alpha: Union[float, int], beta: Union[float, int] = 1.0, verbose: bool = False
 ) -> Tuple[Dict[str, float], List[str], List[str]]:
     """Click command for the math function."""
     results, products, plots = math(alpha, beta)

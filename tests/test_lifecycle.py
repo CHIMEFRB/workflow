@@ -66,7 +66,7 @@ def test_cli_with_partials():
     work.function = "workflow.examples.function.cli"
     work.parameters = {"alpha": 5}
     work = execute.function(work)
-    results, products, plots = math(alpha=5, beta=2)
+    results, products, plots = math(alpha=5)
     assert work.results == results
     assert work.products == products
     assert work.plots == plots

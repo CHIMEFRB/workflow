@@ -143,3 +143,10 @@ def test_execute_command_keeps_output_when_it_times_out():
     assert work.status == "failure"
     assert work.results["stdout"] == ["started"]
     assert work.results["returncode"] is None
+
+
+def test_execute_command_keeps_the_end_of_stdout():
+    script = "seq 1 3000; seq 1 3000 >&2"
+    work = execute.command(_command_work(script))
+    assert work.results["stdout"] == [str(i) for i in range(1977, 3001)]
+    assert len(work.results["stderr"]) == 3000

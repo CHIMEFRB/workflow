@@ -13,6 +13,8 @@ from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
 
+STDOUT_LINES = 1024
+
 Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]], Any, None]
 
 
@@ -95,7 +97,10 @@ def output(
         return
     work.results = {
         "args": args,
-        "stdout": (stdout or b"").decode("utf-8", errors="replace").splitlines(),
+        # Only the end of stdout is kept; stderr is kept whole
+        "stdout": (stdout or b"")
+        .decode("utf-8", errors="replace")
+        .splitlines()[-STDOUT_LINES:],
         "stderr": (stderr or b"").decode("utf-8", errors="replace").splitlines(),
         "returncode": returncode,
     }

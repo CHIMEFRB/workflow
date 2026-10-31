@@ -115,3 +115,31 @@ def test_arguments_pass_false_and_zero_values():
     outcome = cli.main(args=configure.arguments(cli, work), standalone_mode=False)
     assert outcome == {"trace": False, "verbose": False, "retries": 0, "label": "x"}
 
+
+def _command_work(script, timeout=30):
+    work = Work(pipeline="workflow-tests", site="local", user="tester", timeout=timeout)
+    work.command = ["bash", "-c", script]
+    return work
+
+
+def test_execute_command_keeps_output():
+    work = execute.command(_command_work("echo out; echo err >&2"))
+    assert work.status == "success"
+    assert work.results["stdout"] == ["out"]
+    assert work.results["stderr"] == ["err"]
+    assert work.results["returncode"] == 0
+
+
+def test_execute_command_keeps_output_when_it_fails():
+    work = execute.command(_command_work("echo out; echo boom >&2; exit 3"))
+    assert work.status == "failure"
+    assert work.results["stdout"] == ["out"]
+    assert work.results["stderr"] == ["boom"]
+    assert work.results["returncode"] == 3
+
+
+def test_execute_command_keeps_output_when_it_times_out():
+    work = execute.command(_command_work("echo started; sleep 10", timeout=1))
+    assert work.status == "failure"
+    assert work.results["stdout"] == ["started"]
+    assert work.results["returncode"] is None

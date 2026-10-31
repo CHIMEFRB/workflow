@@ -1,8 +1,10 @@
 """Test lifecycle functions."""
 
+import click
+
 from workflow.definitions.work import Work
 from workflow.examples.function import math
-from workflow.lifecycle import execute
+from workflow.lifecycle import configure, execute
 
 
 def test_execute_function():
@@ -82,3 +84,34 @@ def test_function_work_object():
     assert work.results == results
     assert work.products == products
     assert work.plots == plots
+
+
+def test_arguments_pass_false_and_zero_values():
+    """False, 0 and "" are passed; only missing parameters use the defaults."""
+
+    @click.command()
+    @click.option("--trace/--no-trace", default=True)
+    @click.option("--verbose", is_flag=True, default=False)
+    @click.option("--retries", type=int, default=3)
+    @click.option("--label", default="x")
+    def cli(trace, verbose, retries, label):
+        return {"trace": trace, "verbose": verbose, "retries": retries, "label": label}
+
+    def args(parameters):
+        work = Work(pipeline="workflow-tests", site="local", user="tester")
+        work.parameters = parameters
+        return configure.arguments(cli, work)
+
+    assert args({"trace": False}) == ["--no-trace"]
+    assert args({"trace": True}) == ["--trace"]
+    assert args({"verbose": False}) == []
+    assert args({"verbose": True}) == ["--verbose"]
+    assert args({"retries": 0, "label": ""}) == ["--retries=0", "--label="]
+    assert args({"trace": None, "retries": None}) == []
+
+    work = Work(pipeline="workflow-tests", site="local", user="tester")
+    work.parameters = {"trace": False, "retries": 0}
+    # click parses them back to the values given
+    outcome = cli.main(args=configure.arguments(cli, work), standalone_mode=False)
+    assert outcome == {"trace": False, "verbose": False, "retries": 0, "label": "x"}
+

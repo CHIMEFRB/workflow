@@ -13,7 +13,9 @@ from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
 
-STDOUT_LINES = 1024
+# The lines of a command's stdout and stderr kept in its results (the last ones),
+# so a verbose command doesn't fill the database
+OUTPUT_LINES = 1024
 
 Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]], Any, None]
 
@@ -77,6 +79,20 @@ def function(work: Work) -> Work:
         return work
 
 
+def last_lines(stream: Optional[bytes]) -> List[str]:
+    """The last OUTPUT_LINES lines of a command's output.
+
+    Args:
+        stream (Optional[bytes]): Its stdout or stderr
+
+    Returns:
+        List[str]: Its last lines
+    """
+    return (
+        (stream or b"").decode("utf-8", errors="replace").splitlines()[-OUTPUT_LINES:]
+    )
+
+
 def output(
     work: Work,
     args: Any,
@@ -97,11 +113,8 @@ def output(
         return
     work.results = {
         "args": args,
-        # Only the end of stdout is kept; stderr is kept whole
-        "stdout": (stdout or b"")
-        .decode("utf-8", errors="replace")
-        .splitlines()[-STDOUT_LINES:],
-        "stderr": (stderr or b"").decode("utf-8", errors="replace").splitlines(),
+        "stdout": last_lines(stdout),
+        "stderr": last_lines(stderr),
         "returncode": returncode,
     }
 

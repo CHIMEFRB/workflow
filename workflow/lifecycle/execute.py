@@ -13,6 +13,10 @@ from workflow.utils.logger import get_logger
 
 logger = get_logger("workflow.lifecycle.execute")
 
+# The lines of a command's stdout and stderr kept in its results (the last ones),
+# so a verbose command doesn't fill the database
+OUTPUT_LINES = 1024
+
 Outcome = Union[Dict[str, Any], Tuple[Dict[str, Any], List[str], List[str]], Any, None]
 
 
@@ -75,6 +79,46 @@ def function(work: Work) -> Work:
         return work
 
 
+def last_lines(stream: Optional[bytes]) -> List[str]:
+    """The last OUTPUT_LINES lines of a command's output.
+
+    Args:
+        stream (Optional[bytes]): Its stdout or stderr
+
+    Returns:
+        List[str]: Its last lines
+    """
+    return (
+        (stream or b"").decode("utf-8", errors="replace").splitlines()[-OUTPUT_LINES:]
+    )
+
+
+def output(
+    work: Work,
+    args: Any,
+    stdout: Optional[bytes],
+    stderr: Optional[bytes],
+    returncode: Optional[int],
+) -> None:
+    """Keep a command's output in the work's results, unless it has results.
+
+    Args:
+        work (Work): Work object
+        args (Any): The command run
+        stdout (Optional[bytes]): Its standard output
+        stderr (Optional[bytes]): Its standard error
+        returncode (Optional[int]): Its exit code, None if it was stopped
+    """
+    if work.results or work.products or work.plots:
+        return
+    work.results = {
+        "args": args,
+        "stdout": last_lines(stdout),
+        "stderr": last_lines(stderr),
+        "returncode": returncode,
+    }
+
+
 def command(work: Work) -> Work:
     """Execute a command.
 
@@ -103,22 +147,20 @@ def command(work: Work) -> Work:
             timeout=work.timeout,
             shell=is_shell,  # nosec
         )
-        # Check return code
-        process.check_returncode()
-        # Convert stdout and stderr to strings
-        stdout = process.stdout.decode("utf-8").splitlines()
-        stderr = process.stderr.decode("utf-8").splitlines()
-        # Convert last line of stdout to a Tuple
-        if not (work.results or work.products or work.plots):
-            work.results = {
-                "args": process.args,
-                "stdout": stdout,
-                "stderr": stderr,
-                "returncode": process.returncode,
-            }
+        # Keep the output before checking the return code: a failed command's
+        # output is the most useful
+        output(work, process.args, process.stdout, process.stderr, process.returncode)
         # * Check if results are less than 4MB
         validate.size(work)
+        # Check return code
+        process.check_returncode()
         work.status = "success"
+    except subprocess.TimeoutExpired as error:
+        # Keep what it printed before it was stopped
+        output(work, error.cmd, error.stdout, error.stderr, None)
+        validate.size(work)
+        work.status = "failure"
+        logger.exception(error)
     except Exception as error:
         work.status = "failure"
         logger.exception(error)

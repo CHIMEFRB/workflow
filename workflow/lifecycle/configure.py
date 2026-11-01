@@ -119,7 +119,9 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
             paraneter_name_in_function, None
         )
 
-        if parameter_value_in_work:
+        # Only missing parameters are left to their defaults: False, 0 and ""
+        # are values too
+        if parameter_value_in_work is not None:
             if isinstance(parameter, click.Argument):
                 # If argument, then the parameter is purely positional without a key
                 if isinstance(parameter_value_in_work, list):
@@ -131,7 +133,12 @@ def arguments(func: Callable[..., Any], work: Work) -> List[str]:
                 if hasattr(parameter, "is_flag") and parameter.is_flag:
                     # If is_flag=True,
                     # then the parameter is a flag and doesn't have a value
-                    args.append(f"{parameter_name_in_cli}")
+                    if parameter_value_in_work:
+                        args.append(f"{parameter_name_in_cli}")
+                    elif parameter.secondary_opts:
+                        # An on/off flag (e.g. --trace/--no-trace) set to False
+                        args.append(f"{parameter.secondary_opts[-1]}")
+                    # A plain flag set to False is left off
                 else:
                     space_or_equals = ""
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.4](https://github.com/CHIMEFRB/workflow/compare/v1.12.3...v1.12.4) (2026-11-01)
+
+
+### Bug Fixes
+
+* **lifecycle:** keep failed commands' output, cap it at 1024 lines, pass false parameters ([#162](https://github.com/CHIMEFRB/workflow/issues/162)) ([8071431](https://github.com/CHIMEFRB/workflow/commit/8071431e53956ea56973b853b110ecf1a5ebda82))
+
 ## [1.12.3](https://github.com/CHIMEFRB/workflow/compare/v1.12.2...v1.12.3) (2026-09-29)
 
 

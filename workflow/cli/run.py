@@ -2,6 +2,7 @@
 
 import platform
 import signal
+from contextlib import nullcontext
 from pathlib import Path
 from sys import stderr, stdout
 from threading import Event
@@ -228,13 +229,19 @@ def run(
             "[bold]Starting Workflow Lifecycle[/bold]",
             extra=dict(markup=True, color="green"),
         )
-        console = Console(force_terminal=True, tab_size=4)
-        with console.status(
-            status="",
-            spinner="aesthetic" if tty else "dots",
-            spinner_style="bold green",
-            refresh_per_second=10 if tty else 1,
-        ):
+        # Without a terminal (e.g. a container's logs) every spinner frame would be
+        # written to the logs, so it's only shown in a terminal
+        spinner = (
+            Console(force_terminal=True, tab_size=4).status(
+                status="",
+                spinner="aesthetic",
+                spinner_style="bold green",
+                refresh_per_second=10,
+            )
+            if tty
+            else nullcontext()
+        )
+        with spinner:
             lifecycle(
                 buckets=buckets,
                 function=function,

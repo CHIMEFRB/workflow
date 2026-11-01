@@ -43,3 +43,27 @@ def test_complete_work_run():
     assert response["parameters"] == {"alpha": 7, "beta": 11}
     assert response["results"] == results
     ctx.buckets.delete_many(pipeline="complete", force=True)
+
+
+def test_run_without_a_terminal_writes_no_spinner(monkeypatch):
+    """Without a terminal (e.g. a container's logs) no spinner frames are written."""
+    import time
+    from types import SimpleNamespace
+
+    import workflow.cli.run as cli
+
+    # nothing reaches the workspace file or the backends
+    monkeypatch.setattr(cli.configure, "workspace", lambda workspace: None)
+    monkeypatch.setattr(cli.read, "workspace", lambda path: {"sites": ["local"]})
+    monkeypatch.setattr(cli.configure, "loki", lambda logger, config: False)
+    buckets = SimpleNamespace(info=lambda: {"version": "test"})
+    monkeypatch.setattr(
+        cli, "HTTPContext", lambda backends: SimpleNamespace(buckets=buckets)
+    )
+    monkeypatch.setattr(cli, "lifecycle", lambda **kwargs: time.sleep(1.5))
+
+    result = CliRunner().invoke(run, ["--site=local", "--lives=1", "complete"])
+
+    assert result.exit_code == 0
+    assert "Lifecycle" in result.output
+    assert not any(0x2800 <= ord(char) <= 0x28FF for char in result.output)

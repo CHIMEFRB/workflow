@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.5](https://github.com/CHIMEFRB/workflow/compare/v1.12.4...v1.12.5) (2026-11-10)
+
+
+### Bug Fixes
+
+* **workspace:** write the active workspace atomically ([#164](https://github.com/CHIMEFRB/workflow/issues/164)) ([9de555b](https://github.com/CHIMEFRB/workflow/commit/9de555b76c462032d5f0df6297175bc82f1ad4c8))
+
 ## [1.12.4](https://github.com/CHIMEFRB/workflow/compare/v1.12.3...v1.12.4) (2026-11-01)
 
 

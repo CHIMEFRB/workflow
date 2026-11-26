@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.6](https://github.com/CHIMEFRB/workflow/compare/v1.12.5...v1.12.6) (2026-11-26)
+
+
+### Bug Fixes
+
+* **cd:** publish to PyPI with Python 3.11 ([#166](https://github.com/CHIMEFRB/workflow/issues/166)) ([402c8d6](https://github.com/CHIMEFRB/workflow/commit/402c8d6d4e87ce403182e01d22c8e3ec4fe230e1))
+
 ## [1.12.5](https://github.com/CHIMEFRB/workflow/compare/v1.12.4...v1.12.5) (2026-11-10)
 
 
